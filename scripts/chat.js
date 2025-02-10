@@ -26,6 +26,11 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         }
     }
 
+    if (evd.sender.hasTag('darkoak:muted')) {
+        evd.cancel = true
+        return
+    }
+
     chatRankDefaults()
 
     const tags = evd.sender.getTags()

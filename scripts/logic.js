@@ -73,12 +73,20 @@ export function listGetValues(key) {
 }
 
 // Returns an array of all the online players names
-export function playerNameArray() {
-    var u = []
-    for (const p of world.getAllPlayers()) {
-        u.push(p.name)
+export function playerNameArray(tag) {
+    if (tag === undefined) {
+        var u = []
+        for (const p of world.getAllPlayers()) {
+            u.push(p.name)
+        }
+        return u
+    } else {
+        var u = []
+        for (const p of world.getPlayers({tags: [tag]})) {
+            u.push(p.name)
+        }
+        return u
     }
-    return u
 }
 
 // Returns an array of a inputted players effects

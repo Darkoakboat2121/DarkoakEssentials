@@ -150,6 +150,12 @@ export function playerPunishmentsMainUI(player) {
             case 1:
                 unbanPlayerUI(player)
                 break
+            case 2:
+                mutePlayerUI(player)
+                break
+            case 3:
+                unmutePlayerUI(player)
+                break
         }
     })
 }
@@ -188,6 +194,36 @@ export function unbanPlayerUI(player) {
         wSet(ids[evd.selection], )
     })
 
+}
+
+export function mutePlayerUI(player) {
+    let f = new ModalFormData()
+    f.title('Mute A Player')
+
+    const names = playerNameArray()
+    f.dropdown('\nPlayer:', names)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        player.runCommandAsync(`tag ${names[evd.formValues[0]]} add darkoak:muted`)
+    })
+}
+
+export function unmutePlayerUI(player) {
+    let f = new ModalFormData()
+    f.title('Unmute A Player')
+
+    const names = playerNameArray('darkoak:muted')
+    if (names === undefined || names.length === 0) {
+        player.sendMessage('No Mutes Found')
+        return
+    }
+    f.dropdown('\nPlayer:', names)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        player.runCommandAsync(`tag ${names[evd.formValues[0]]} remove darkoak:muted`)
+    })
 }
 
 // main ui for chat settings

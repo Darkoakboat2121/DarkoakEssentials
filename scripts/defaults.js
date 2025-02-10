@@ -6,13 +6,6 @@ import { listGet, listGetValues, wGet, wSet } from "./logic"
 
 // Defaults for ranks
 export function chatRankDefaults() {
-    for (const [index, cr] of listGetValues('darkoak:cr:').entries()) {
-        if (cr === undefined) {
-            const t = listGet('darkoak:cr:')
-            wSet(t[index], '')
-        }
-    }
-
     if (wGet('darkoak:cr:defaultrank') === undefined) {
         wSet('darkoak:cr:defaultrank', 'New')
     }
