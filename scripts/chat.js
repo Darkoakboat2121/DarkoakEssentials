@@ -31,6 +31,13 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         return
     }
 
+    for (const c of listGetValues('darkoak:censor:')) {
+        if (evd.message.contains(c.toLowerCase())) {
+            evd.cancel = true
+            return
+        }
+    }
+
     chatRankDefaults()
 
     const tags = evd.sender.getTags()

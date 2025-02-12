@@ -1,4 +1,4 @@
-import { world, system, Effect } from "@minecraft/server"
+import { world, system } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { wGet, wSet, uuid, listGet, listGetValues, playerNameArray, timeUuid, randomString, randomNumber, playerEffectsArray, playerTagsArray, isHost } from "./logic"
 
@@ -67,7 +67,7 @@ export function worldInteractionSettings(player) {
     
     f.slider('Players Can Break Blocks?\n1 = Yes\n2 = Can\'t Break Item Frames\n3 = Can\'t Break Any Blocks\nValue', 1, 3, 1, wGet('darkoak:cws:breakblocks')) // 0
     f.slider('Players Can Interact With Blocks?\n1 = Yes\n2 = Can\'t Interact With Item Frames\n3 = Can\'t Interact With Ender Chests\n4 = Can\'t Interact With Ender Chests Or Item Frames\n5 = Can\'t Interact With Any\nValue', 1, 5, 1, wGet('darkoak:cws:interactwithblocks')) // 1
-    f.slider('Players Can Interact With Entities?\n1 = Yes\n2 = ')
+    f.slider('Players Can Interact With Entities?\n1 = Yes\n2 = ', 1, 3, 1)
     
 
     f.show(player).then((evd) => {
@@ -338,6 +338,33 @@ export function chatCommandsViewUI(player) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
+    })
+}
+
+export function censorSettingsMainUI(player) {
+    let f = new ActionFormData()
+    f.title('Censor Settings')
+
+    f.button('Add New Word')
+    f.button('Remove A Word')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch(evd.selection) {
+            case 0:
+                censorSettingsAddUI(player)
+        }
+    })
+}
+
+export function censorSettingsAddUI(player) {
+    let f = new ModalFormData()
+    f.title('Add New Censor')
+
+    f.textField('(Be Careful!)\nWord To Ban:', 'Example: skibidi')
+
+    f.show(player).then((evd) => {
+        wSet(`darkoak:censor:${timeUuid()}`)
     })
 }
 
