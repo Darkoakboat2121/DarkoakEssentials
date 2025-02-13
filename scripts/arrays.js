@@ -1,7 +1,7 @@
 
 // This file holds data
 
-// List of usernames to ban automatically if prebans is set to true
+/**List of usernames to ban automatically if prebans is set to true*/
 export const preBannedList = [
     'Noki5160',
     'TheMr8bit',
@@ -13,7 +13,7 @@ export const preBannedList = [
     'ION1209765'
 ]
 
-// List of blocks that shouldnt be placed by non-admins
+/**List of blocks that shouldnt be placed by non-admins*/
 export const badBlocksList = [
     'minecraft:bedrock',
     'minecraft:command_block',
@@ -45,7 +45,7 @@ export const badBlocksList = [
     'minecraft:bubble_column'
 ]
 
-// List of common names of hacked items
+/**List of common names of hacked items*/
 export const hackedItemsList = [
     '§g§lBeehive Minecart Command',
     '§g§lBeehive NPC Command',

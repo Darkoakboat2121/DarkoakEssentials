@@ -1,7 +1,7 @@
 import { world, system } from "@minecraft/server";
 
 // Note: DO NOT TOUCH THIS
-// Generates a fake uuid in the correct format
+/**Generates a fake uuid in the correct format*/
 export function uuid() {
     var u='', i=0
     while(i++<36) {
@@ -11,7 +11,7 @@ export function uuid() {
     return u
 }
 
-// Generates a unique number starting with a random number and ending with the current exact time
+/**Generates a unique number starting with a random number and ending with the current exact time*/
 export function timeUuid() {
     const t = new Date()
     const r = Math.floor(Math.random() * 100)
@@ -19,12 +19,16 @@ export function timeUuid() {
     return `R${r.toString()}T${t.getTime()}`
 }
 
-// Returns a random number between 0 and the inputted number
+/**Returns a random number between 0 and the inputted number
+ * @param {number} high
+*/
 export function randomNumber(high) {
     return Math.floor(Math.random() * high)
 }
 
-// Returns a random string based on the inputted length and whether to include numbers
+/**Returns a random string based on the inputted length and whether to include numbers
+ * @param {boolean} num
+*/
 export function randomString(length, num) {
     var characters = ''
     if (num === false || num === undefined) {
@@ -40,22 +44,29 @@ export function randomString(length, num) {
     return result
 }
 
-// Sets a dynamic property globally
+/**Sets a global dynamic property
+ * @param {string} id 
+ * @param {any} setTo 
+*/
 export function wSet(id, setTo) {
     world.setDynamicProperty(id, setTo)
 }
 
-// Gets a global dynamic property
+/**Gets a global dynamic property
+ * @param {string} id 
+*/
 export function wGet(id) {
     return world.getDynamicProperty(id)
 }
 
-// Returns an array of dynamic property ids that starts with the inputted key
+/**Returns an array of dynamic property ids that starts with the inputted key*/
 export function listGet(key) {
     return world.getDynamicPropertyIds().filter(e => e.startsWith(key))
 }
 
-// Returns an array of dynamic property ids value that starts with the inputted key
+/**Returns an array of dynamic property ids value that starts with the inputted key
+ * @param {string | 'all'} key If the inputted key is 'all', it returns every property value
+*/
 export function listGetValues(key) {
     if (key === 'all') {
         var u = []
@@ -72,7 +83,9 @@ export function listGetValues(key) {
     }
 }
 
-// Returns an array of all the online players names
+/**Returns an array of all the online players names
+ * @param {string | undefined} tag If tag is not undefined, it returns all online players with the inputted tag
+*/
 export function playerNameArray(tag) {
     if (tag === undefined) {
         var u = []
@@ -89,7 +102,9 @@ export function playerNameArray(tag) {
     }
 }
 
-// Returns an array of a inputted players effects
+/**Returns an array of a inputted players effects
+ * @param {Player} player 
+*/
 export function playerEffectsArray(player) {
     var u = []
     for (const e of player.getEffects()) {
@@ -103,7 +118,9 @@ export function playerEffectsArray(player) {
     }
 }
 
-// Returns an array of a inputted players tags
+/**Returns an array of a inputted players tags
+ * @param {Player} player 
+*/
 export function playerTagsArray(player) {
     var u = []
     for (const t of player.getTags()) {
@@ -113,7 +130,9 @@ export function playerTagsArray(player) {
     return u
 }
 
-// Checks if the inputted player is the host by checking its id
+/**Checks if the inputted player is the host by checking its id
+ * @param {Player} player 
+*/
 export function isHost(player) {
     if (player.id == -4294967295) {
         return true
@@ -122,10 +141,17 @@ export function isHost(player) {
     }
 }
 
+/**Returns whether the inputted player has op permissions
+ * @param {Player} player 
+ * @returns {boolean}
+ */
 export function isOp(player) {
     return player.isOp()
 }
 
+/**Returns whether the player is in an ideal state for creating the world (has op and is in creative mode)
+ * @param {Player} player 
+ */
 export function isCreating(player) {
     if (isOp(player) === true) {
         if (player.getGameMode() === 'creative') {

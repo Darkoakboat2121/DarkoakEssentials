@@ -1,7 +1,7 @@
 import { world, system } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./interfaces"
-import { wGet, wSet, listGet, listGetValues, randomString } from "./logic"
+import { wGet, wSet, listGet, listGetValues, randomString, randomNumber } from "./logic"
 import { chatRankDefaults } from "./defaults"
 
 // This file handles all chat interactions such as:
@@ -32,7 +32,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     }
 
     for (const c of listGetValues('darkoak:censor:')) {
-        if (evd.message.contains(c.toLowerCase())) {
+        if (evd.message.includes(c.toLowerCase())) {
             evd.cancel = true
             return
         }
@@ -76,8 +76,8 @@ function hashtag(hashtagKey, sender) {
             while(i++<100) {
                 world.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
             }
-        case 'realm':
-            world.sendMessage(randomString(11))
+        case 'random':
+            world.sendMessage(randomNumber(100).toString())
             break
     }
 }

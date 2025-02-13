@@ -246,6 +246,9 @@ export function chatSettingsUI(player) {
             case 1:
                 chatCommandsMainUI(player)
                 break
+            case 2:
+                censorSettingsMainUI(player)
+                break
         }
     })
 }
@@ -304,7 +307,7 @@ export function chatCommandsAddUI(player) {
     f.title('Add New Chat Command')
 
     f.textField('Message:', 'Example: !spawn')
-    f.textField('Command:', 'Example: tp @s 0 0 0')
+    f.textField('Add A Command Or Hashtag Key. Hashtag Keys Include:\n#commands - Lists All Commands\n#noob - (Joke) Says Stuff in Chat\n#datadeleter - Opens UI For Deleting Data\n#cc - Clear Chat\n#random - Says A Random Number In Chat (1 To 100)\nCommand:', 'Example: tp @s 0 0 0')
     f.textField('Required Tag:', 'Example: Admin')
 
     f.show(player).then((evd) => {
@@ -353,6 +356,10 @@ export function censorSettingsMainUI(player) {
         switch(evd.selection) {
             case 0:
                 censorSettingsAddUI(player)
+                break
+            case 1:
+                censorSettingsRemoveUI(player)
+                break
         }
     })
 }
@@ -364,7 +371,26 @@ export function censorSettingsAddUI(player) {
     f.textField('(Be Careful!)\nWord To Ban:', 'Example: skibidi')
 
     f.show(player).then((evd) => {
-        wSet(`darkoak:censor:${timeUuid()}`)
+        if (evd.canceled) return
+        wSet(`darkoak:censor:${timeUuid()}`, evd.formValues[0])
+    })
+}
+
+export function censorSettingsRemoveUI(player) {
+    let f = new ModalFormData()
+
+    const words = listGetValues('darkoak:censor:')
+    const wordRaw = listGet('darkoak:censor:')
+
+    if (words === undefined || words.length === 0) {
+        player.sendMessage('No Words Found')
+        return
+    }
+    f.dropdown('\nWord:', words)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        wSet(wordRaw[evd.formValues[0]])
     })
 }
 
