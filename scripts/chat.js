@@ -42,11 +42,11 @@ world.beforeEvents.chatSend.subscribe((evd) => {
 
     const tags = evd.sender.getTags()
     let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => tag.replace('rank:', ''))
-    const start = world.getDynamicProperty('darkoak:cr:start')
-    const middle = world.getDynamicProperty('darkoak:cr:middle')
-    const end = world.getDynamicProperty('darkoak:cr:end')
-    const bridge = world.getDynamicProperty('darkoak:cr:bridge')
-    const defaultrank = world.getDynamicProperty('darkoak:cr:defaultrank')
+    const start = mcl.wGet('darkoak:cr:start')
+    const middle = mcl.wGet('darkoak:cr:middle')
+    const end = mcl.wGet('darkoak:cr:end')
+    const bridge = mcl.wGet('darkoak:cr:bridge')
+    const defaultrank = mcl.wGet('darkoak:cr:defaultrank')
 
     ranks = ranks.length ? ranks : [`${defaultrank}`]
 

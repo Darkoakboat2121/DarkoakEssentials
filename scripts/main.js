@@ -85,7 +85,13 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
 if (mcl.wGet('darkoak:actionbar') != '' && mcl.wGet('darkoak:actionbar') != undefined) {
     system.runInterval(() => {
         for (const player of world.getAllPlayers()) {
-            const text = mcl.wGet('darkoak:actionbar').replaceAll('#name#', player.name).replaceAll('#health#', player.getComponent("minecraft:health").currentValue).replaceAll('#location#', `${parseInt(player.location.x)}, ${parseInt(player.location.y)}, ${parseInt(player.location.z)}`)
+            var text = mcl.wGet('darkoak:actionbar')
+            const replacements = arrays.actionbarReplacements(player)
+            for (const hashtag in replacements) {
+                if (text.includes(hashtag)) {
+                    text = text.replaceAll(hashtag, replacements[hashtag])
+                }
+            }
             player.runCommandAsync(`titleraw @s actionbar {"rawtext":[{"text":"${text}"}]}`)
         }
     })

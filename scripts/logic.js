@@ -29,6 +29,7 @@ export class mcl {
 
     /**Returns a random string based on the inputted length and whether to include numbers
      * @param {boolean} num
+     * @param {number} length 
     */
     static randomString(length, num) {
         var characters = ''
@@ -77,23 +78,7 @@ export class mcl {
         player.getDynamicProperty(id)
     }
 
-    /**Sends the specified player a private message
-     * @param {Player | string} player If this is a string, it looks for a player with this string as their name
-     * @param {string} message 
-     * @param {string | undefined} tag If tag does not equal undefined, only sends the player the message if they have that tag
-     */
-    static pSM(player, message, tag) {
-        if (player != Player) {
-            const p = world.getPlayers({name: player})[0]
-            if (p.hasTag(tag) || tag === undefined) {
-                p.sendMessage(message)
-            }
-        } else {
-            if (player.hasTag(tag) || tag === undefined) {
-                player.sendMessage(message)
-            }
-        }
-    }
+    
 
     /**Returns an array of dynamic property ids that starts with the inputted key
      * @param {string | undefined} key If the inputted key is undefined, it returns every property id
@@ -195,7 +180,7 @@ export class mcl {
      * @param {Player} player 
      */
     static isCreating(player) {
-        if (isOp(player) === true) {
+        if (mcl.isOp(player) === true) {
             if (player.getGameMode() === 'creative') {
                 return true
             } else {
@@ -204,6 +189,23 @@ export class mcl {
         } else {
             return false
         }
+    }
+
+    /**Returns the players health
+     * @param {*} player 
+     * @returns {number}
+     */
+    static healthValue(player) {
+        return player.getComponent("minecraft:health").currentValue
+    }
+
+    /**Returns the players score for the inputted objective
+     * @param {Player} player 
+     * @param {string} objective 
+     * @returns {number}
+     */
+    static getScore(player, objective) {
+        return world.scoreboard.getObjective(objective).getScore(player)
     }
 }
 

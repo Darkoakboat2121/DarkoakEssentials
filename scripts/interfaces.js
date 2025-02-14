@@ -33,9 +33,9 @@ export function mainUI(player) {
                 UIMakerUI(player)
                 break
             case 4:
-                player.sendMessage('§m----------------------§r')
+                player.sendMesage('§m----------------------§r')
                 for (const c of mcl.listGet()) {
-                    player.sendMessage(`${c} <> ${mcl.wGet(c)}`)
+                    player.sendMesage(`${c} <> ${mcl.wGet(c)}`)
                 }
                 dataDeleterUI(player)
                 break
@@ -182,7 +182,7 @@ export function unbanPlayerUI(player) {
     const values = mcl.listGetValues('darkoak:bans:')
 
     if (ids === undefined || ids.length === 0) {
-        player.sendMessage('No Bans Found')
+        player.sendMesage('No Bans Found')
         return
     }
     for (const p of values) {
@@ -515,7 +515,7 @@ export function actionBarUI(player) {
     let f = new ModalFormData()
     f.title('Action Bar')
 
-    f.textField('\nKeys:\n#name# - Player Name\n\\n - New Line\n#health# - Player Health\n#location# - Player Co-ordinates\nAction Bar:', 'Example: DarkoakGen', wGet('darkoak:actionbar'))
+    f.textField('\nKeys:\n\\n - New Line\n%%scorename%% - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity\nAction Bar:', 'Example: #name#\n#location#', mcl.wGet('darkoak:actionbar'))
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
