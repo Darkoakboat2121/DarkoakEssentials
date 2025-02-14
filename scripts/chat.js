@@ -1,7 +1,7 @@
 import { world, system } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./interfaces"
-import { wGet, wSet, listGet, listGetValues, randomString, randomNumber } from "./logic"
+import { mcl } from "./logic"
 import { chatRankDefaults } from "./defaults"
 
 // This file handles all chat interactions such as:
@@ -9,8 +9,8 @@ import { chatRankDefaults } from "./defaults"
 
 world.beforeEvents.chatSend.subscribe((evd) => {
 
-    for (const c of listGet('darkoak:command:')) {
-        const parts = wGet(c).split('|')
+    for (const c of mcl.listGet('darkoak:command:')) {
+        const parts = mcl.wGet(c).split('|')
         if (evd.message === parts[0]) {
             if (parts[2] === '' | evd.sender.hasTag(parts[2])) {
                 if (parts[1].startsWith('#')) {
@@ -31,7 +31,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         return
     }
 
-    for (const c of listGetValues('darkoak:censor:')) {
+    for (const c of mcl.listGetValues('darkoak:censor:')) {
         if (evd.message.includes(c.toLowerCase())) {
             evd.cancel = true
             return
@@ -58,7 +58,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
 function hashtag(hashtagKey, sender) {
     switch(hashtagKey.replaceAll('#', '')) {
         case 'commands':
-            for (const c of listGetValues('darkoak:command:').sort()) {
+            for (const c of mcl.listGetValues('darkoak:command:').sort()) {
                 sender.sendMessage(c.replaceAll('|', ' | '))
             }
             break
@@ -77,7 +77,7 @@ function hashtag(hashtagKey, sender) {
                 world.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
             }
         case 'random':
-            world.sendMessage(randomNumber(100).toString())
+            world.sendMessage(mcl.randomNumber(100).toString())
             break
     }
 }

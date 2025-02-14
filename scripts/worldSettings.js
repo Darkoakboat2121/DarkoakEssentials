@@ -1,10 +1,10 @@
 import { world, system } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import { isCreating, isOp, wGet } from "./logic"
+import { mcl } from "./logic"
 
 world.beforeEvents.playerBreakBlock.subscribe((evd) => {
-    if (isCreating(evd.player) === false) {
-        switch(wGet('darkoak:cws:breakblocks')) {
+    if (mcl.isCreating(evd.player) === false) {
+        switch(mcl.wGet('darkoak:cws:breakblocks')) {
             case 2:
                 if (evd.block.matches('minecraft:frame') || evd.block.matches('minecraft:glow_frame')) {
                     evd.cancel = true
@@ -19,8 +19,8 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
 })
 
 world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
-    if (isCreating(evd.player) === false) {
-        switch(wGet('darkoak:cws:interactwithblocks')) {
+    if (mcl.isCreating(evd.player) === false) {
+        switch(mcl.wGet('darkoak:cws:interactwithblocks')) {
             case 2:
                 if (evd.block.matches('minecraft:frame') || evd.block.matches('minecraft:glow_frame')) {
                     evd.cancel = true

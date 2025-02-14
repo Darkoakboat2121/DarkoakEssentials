@@ -1,6 +1,6 @@
 import { world, system } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import { wGet, wSet, uuid, listGet, listGetValues, playerNameArray, timeUuid, randomString, randomNumber, playerEffectsArray, playerTagsArray, isHost } from "./logic"
+import { mcl } from "./logic"
 
 // This file holds all the functions containing UI
 
@@ -34,8 +34,8 @@ export function mainUI(player) {
                 break
             case 4:
                 player.sendMessage('§m----------------------§r')
-                for (const c of world.getDynamicPropertyIds()) {
-                    player.sendMessage(`${c} <> ${wGet(c)}`)
+                for (const c of mcl.listGet()) {
+                    player.sendMessage(`${c} <> ${mcl.wGet(c)}`)
                 }
                 dataDeleterUI(player)
                 break
@@ -65,15 +65,15 @@ export function worldInteractionSettings(player) {
     let f = new ModalFormData()
     f.title('Interaction Settings')
     
-    f.slider('Players Can Break Blocks?\n1 = Yes\n2 = Can\'t Break Item Frames\n3 = Can\'t Break Any Blocks\nValue', 1, 3, 1, wGet('darkoak:cws:breakblocks')) // 0
-    f.slider('Players Can Interact With Blocks?\n1 = Yes\n2 = Can\'t Interact With Item Frames\n3 = Can\'t Interact With Ender Chests\n4 = Can\'t Interact With Ender Chests Or Item Frames\n5 = Can\'t Interact With Any\nValue', 1, 5, 1, wGet('darkoak:cws:interactwithblocks')) // 1
+    f.slider('Players Can Break Blocks?\n1 = Yes\n2 = Can\'t Break Item Frames\n3 = Can\'t Break Any Blocks\nValue', 1, 3, 1, mcl.wGet('darkoak:cws:breakblocks')) // 0
+    f.slider('Players Can Interact With Blocks?\n1 = Yes\n2 = Can\'t Interact With Item Frames\n3 = Can\'t Interact With Ender Chests\n4 = Can\'t Interact With Ender Chests Or Item Frames\n5 = Can\'t Interact With Any\nValue', 1, 5, 1, mcl.wGet('darkoak:cws:interactwithblocks')) // 1
     f.slider('Players Can Interact With Entities?\n1 = Yes\n2 = ', 1, 3, 1)
     
 
     f.show(player).then((evd) => {
         const e = evd.formValues
-        wSet('darkoak:cws:breakblocks', e[0])
-        wSet('darkoak:cws:interactwithblocks', e[1])
+        mcl.wSet('darkoak:cws:breakblocks', e[0])
+        mcl.wSet('darkoak:cws:interactwithblocks', e[1])
     })
 }
 
@@ -103,7 +103,7 @@ export function playerSettingsUI(player) {
 export function playerDataMainUI(player) {
     let f = new ModalFormData()
     f.title('Player Data')
-    const u = playerNameArray()
+    const u = mcl.playerNameArray()
 
     f.dropdown('\n\nPlayer:', u)
 
@@ -120,11 +120,11 @@ export function playerDataViewUI(playerToShow, playerToView) {
     f.title(`${player.name}`)
 
     f.body(`Name: ${player.name}, Shows as: ${player.nameTag}
-ID: ${player.id}, Is Host: ${isHost(player)}
+ID: ${player.id}, Is Host: ${mcl.isHost(player)}
 Gamemode: ${player.getGameMode()}
 Location: ${parseInt(player.location.x)} ${parseInt(player.location.y)} ${parseInt(player.location.z)}, Dimension: ${player.dimension.id}
-Effects: ${playerEffectsArray(player)}
-Tags: ${playerTagsArray(player)}
+Effects: ${mcl.playerEffectsArray(player)}
+Tags: ${mcl.playerTagsArray(player)}
         `)
 
     f.button('Dismiss')
@@ -164,12 +164,12 @@ export function banPlayerUI(player) {
     let f = new ModalFormData()
     f.title('Ban Player')
 
-    const names = playerNameArray()
+    const names = mcl.playerNameArray()
     f.dropdown('\nPlayer:', names)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        wSet(`darkoak:bans:${timeUuid()}`, names[evd.formValues[0]])
+        mcl.wSet(`darkoak:bans:${mcl.timeUuid()}`, names[evd.formValues[0]])
         player.runCommandAsync(`kill ${names[evd.formValues[0]]}`)
     })
 }
@@ -178,8 +178,8 @@ export function unbanPlayerUI(player) {
     let f = new ActionFormData()
     f.title('Unban A Player')
 
-    const ids = listGet('darkoak:bans:')
-    const values = listGetValues('darkoak:bans:')
+    const ids = mcl.listGet('darkoak:bans:')
+    const values = mcl.listGetValues('darkoak:bans:')
 
     if (ids === undefined || ids.length === 0) {
         player.sendMessage('No Bans Found')
@@ -191,7 +191,7 @@ export function unbanPlayerUI(player) {
     
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        wSet(ids[evd.selection], )
+        mcl.wSet(ids[evd.selection], )
     })
 
 }
@@ -200,7 +200,7 @@ export function mutePlayerUI(player) {
     let f = new ModalFormData()
     f.title('Mute A Player')
 
-    const names = playerNameArray()
+    const names = mcl.playerNameArray()
     f.dropdown('\nPlayer:', names)
 
     f.show(player).then((evd) => {
@@ -213,7 +213,7 @@ export function unmutePlayerUI(player) {
     let f = new ModalFormData()
     f.title('Unmute A Player')
 
-    const names = playerNameArray('darkoak:muted')
+    const names = mcl.playerNameArray('darkoak:muted')
     if (names === undefined || names.length === 0) {
         player.sendMessage('No Mutes Found')
         return
@@ -258,20 +258,20 @@ export function rankSettingsUI(player) {
     let form = new ModalFormData()
     form.title('Rank settings')
 
-    form.textField('Rank Start:', 'Example: [', wGet('darkoak:cr:start'))
-    form.textField('Rank Middle:', 'Example: ][', wGet('darkoak:cr:middle'))
-    form.textField('Rank End:', 'Example: ]', wGet('darkoak:cr:end'))
-    form.textField('Rank Bridge:', 'Example: ->', wGet('darkoak:cr:bridge'))
-    form.textField('Default Rank:', 'Example: Member', wGet('darkoak:cr:defaultrank'))
+    form.textField('Rank Start:', 'Example: [', mcl.wGet('darkoak:cr:start'))
+    form.textField('Rank Middle:', 'Example: ][', mcl.wGet('darkoak:cr:middle'))
+    form.textField('Rank End:', 'Example: ]', mcl.wGet('darkoak:cr:end'))
+    form.textField('Rank Bridge:', 'Example: ->', mcl.wGet('darkoak:cr:bridge'))
+    form.textField('Default Rank:', 'Example: Member', mcl.wGet('darkoak:cr:defaultrank'))
 
     form.show(player).then((evd) => {
         if (evd.canceled) return
         
-        wSet('darkoak:cr:start', evd.formValues[0])
-        wSet('darkoak:cr:middle', evd.formValues[1])
-        wSet('darkoak:cr:end', evd.formValues[2])
-        wSet('darkoak:cr:bridge', evd.formValues[3])
-        wSet('darkoak:cr:defaultrank', evd.formValues[4])
+        mcl.wSet('darkoak:cr:start', evd.formValues[0])
+        mcl.wSet('darkoak:cr:middle', evd.formValues[1])
+        mcl.wSet('darkoak:cr:end', evd.formValues[2])
+        mcl.wSet('darkoak:cr:bridge', evd.formValues[3])
+        mcl.wSet('darkoak:cr:defaultrank', evd.formValues[4])
     })
 }
 
@@ -312,7 +312,7 @@ export function chatCommandsAddUI(player) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        wSet(`darkoak:command:${timeUuid()}`, `${evd.formValues[0]}|${evd.formValues[1]}|${evd.formValues[2]}`)
+        mcl.wSet(`darkoak:command:${mcl.timeUuid()}`, `${evd.formValues[0]}|${evd.formValues[1]}|${evd.formValues[2]}`)
     })
 }
 
@@ -321,11 +321,11 @@ export function chatCommandsDeleteUI(player) {
     let f = new ModalFormData()
     f.title('Delete A Chat Command')
     
-    f.dropdown('Commands:', listGetValues('darkoak:command:'))
+    f.dropdown('Commands:', mcl.listGetValues('darkoak:command:'))
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        wSet(listGet('darkoak:command:')[evd.formValues[0]], )
+        mcl.wSet(mcl.listGet('darkoak:command:')[evd.formValues[0]], )
     })
 }
 
@@ -334,8 +334,8 @@ export function chatCommandsViewUI(player) {
     let f = new ActionFormData()
     f.title('View Chat Commands')
 
-    for (const c of listGet('darkoak:command:')) {
-        const parts = wGet(c).split('|')
+    for (const c of mcl.listGet('darkoak:command:')) {
+        const parts = mcl.wGet(c).split('|')
         f.button(`${parts[0]} | ${parts[2]}\n${parts[1]}`)
     }
 
@@ -372,15 +372,15 @@ export function censorSettingsAddUI(player) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        wSet(`darkoak:censor:${timeUuid()}`, evd.formValues[0])
+        mcl.wSet(`darkoak:censor:${mcl.timeUuid()}`, evd.formValues[0])
     })
 }
 
 export function censorSettingsRemoveUI(player) {
     let f = new ModalFormData()
 
-    const words = listGetValues('darkoak:censor:')
-    const wordRaw = listGet('darkoak:censor:')
+    const words = mcl.listGetValues('darkoak:censor:')
+    const wordRaw = mcl.listGet('darkoak:censor:')
 
     if (words === undefined || words.length === 0) {
         player.sendMessage('No Words Found')
@@ -390,7 +390,7 @@ export function censorSettingsRemoveUI(player) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        wSet(wordRaw[evd.formValues[0]])
+        mcl.wSet(wordRaw[evd.formValues[0]])
     })
 }
 
@@ -398,7 +398,7 @@ export function censorSettingsRemoveUI(player) {
 export function chestLockUI(player, loc) {
     let f = new ModalFormData()
 
-    const p = listGetValues('darkoak:chestlock:')
+    const p = mcl.listGetValues('darkoak:chestlock:')
     var t = ''
 
     for (const y of p) {
@@ -409,16 +409,16 @@ export function chestLockUI(player, loc) {
     }
     f.title(`Chest Lock`)
 
-    f.dropdown('Player who can open the chest:', playerNameArray())
+    f.dropdown('Player who can open the chest:', mcl.playerNameArray())
     f.toggle(`Delete Chest Lock For This Chest?\n(Player: ${t})`)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        const u = playerNameArray()
+        const u = mcl.playerNameArray()
         if (evd.formValues[1] === true) {
             
         } else {
-            wSet(`darkoak:chestlock:${timeUuid()}`, `${u[evd.formValues[0]]}|${loc.x}|${loc.y}|${loc.z}`)
+            mcl.wSet(`darkoak:chestlock:${mcl.timeUuid()}`, `${u[evd.formValues[0]]}|${loc.x}|${loc.y}|${loc.z}`)
         }
     })
 }
@@ -429,15 +429,15 @@ export function dataDeleterUI(player) {
     f.title('Delete Data')
 
     for (const c of world.getDynamicPropertyIds()) {
-        f.button(`Delete: ${wGet(c)}\n${c}`)
+        f.button(`Delete: ${mcl.wGet(c)}\n${c}`)
     }
     
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
 
-        const t = listGet('')
-        wSet(t.at(evd.selection), )
+        const t = mcl.listGet('')
+        mcl.wSet(t.at(evd.selection))
     })
 }
 
@@ -451,6 +451,7 @@ export function UIMakerUI(player) {
     f.button('Make An Action UI')
     f.button('Make A Modal UI')
     f.button('Delete A UI')
+    f.button('Set The Actionbar')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -466,6 +467,9 @@ export function UIMakerUI(player) {
             case 3:
                 UIDeleterUI(player)
                 break
+            case 4:
+                actionBarUI(player)
+                break
         }
     })
 }
@@ -475,16 +479,16 @@ export function UIDeleterUI(player) {
     let f = new ActionFormData()
     f.title('Delete A UI')
 
-    const u = listGet('darkoak:ui:')
+    const u = mcl.listGet('darkoak:ui:')
     for (const ui of u) {
-        const v = wGet(ui).split('|')
+        const v = mcl.wGet(ui).split('|')
         const n = ui.split(':')
         f.button(`Type: ${n[2]}, Title: ${v[0]}\nTag: ${v[4]}, Body: ${v[1]}`)
     }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        wSet(u[evd.selection], )
+        mcl.wSet(u[evd.selection])
     })
 }
 
@@ -503,7 +507,18 @@ export function messageUIMakerUI(player) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        wSet(`darkoak:ui:message:${timeUuid()}`, `${evd.formValues[0]}|${evd.formValues[1]}|${evd.formValues[2]}|${evd.formValues[3]}|${evd.formValues[4]}|${evd.formValues[5]}|${evd.formValues[6]}`)
+        mcl.wSet(`darkoak:ui:message:${mcl.timeUuid()}`, `${evd.formValues[0]}|${evd.formValues[1]}|${evd.formValues[2]}|${evd.formValues[3]}|${evd.formValues[4]}|${evd.formValues[5]}|${evd.formValues[6]}`)
     })
 }
 
+export function actionBarUI(player) {
+    let f = new ModalFormData()
+    f.title('Action Bar')
+
+    f.textField('\nKeys:\n#name# - Player Name\n\\n - New Line\n#health# - Player Health\n#location# - Player Co-ordinates\nAction Bar:', 'Example: DarkoakGen', wGet('darkoak:actionbar'))
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.wSet('darkoak:actionbar', evd.formValues[0])
+    })
+}

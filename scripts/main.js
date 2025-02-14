@@ -4,7 +4,7 @@ import * as interfaces from "./interfaces"
 import * as chat from "./chat"
 import * as defaults from "./defaults"
 import * as arrays from "./arrays"
-import { listGetValues } from "./logic"
+import { mcl } from "./logic"
 import * as anticheat from "./anticheat"
 import * as worldSettings from "./worldSettings"
 
@@ -23,7 +23,7 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
         p[0].runCommandAsync(`kick ${n}`)
     }
 
-    for (const n of listGetValues('darkoak:bans:')) {
+    for (const n of mcl.listGetValues('darkoak:bans:')) {
         const p = world.getAllPlayers()
         p[0].runCommandAsync(`kick ${n}`)
     }
@@ -38,7 +38,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
         evd.cancel = true
     } else {
         if (evd.block.matches('minecraft:chest')) {
-            for (const chest of listGetValues('darkoak:chestlock:')) {
+            for (const chest of mcl.listGetValues('darkoak:chestlock:')) {
                 const parts = chest.split('|')
                 if (evd.block.location.x.toString() === parts[1] && evd.block.location.y.toString() === parts[2] && evd.block.location.z.toString() === parts[3] && evd.player.name != parts[0]) {
                     evd.cancel = true
@@ -51,7 +51,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
 
 // system for handling message cui (see interfaces) based on the tag
 system.runInterval(() => {
-    for (const ui of listGetValues('darkoak:ui:message:')) {
+    for (const ui of mcl.listGetValues('darkoak:ui:message:')) {
         const parts = ui.split('|')
         for (const player of world.getPlayers()) {
             // index: 0 = title, 1 = body, 2 = button1, 3 = button2, 4 = tag, 5 = button1 command, 6 = button2 command
@@ -77,6 +77,16 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
             playerToShow.runCommandAsync(command1)
         } else if (evd.selection === 1 && command2 != '') {
             playerToShow.runCommandAsync(command2)
+        }
+    })
+}
+
+// System for displaying the actionbar
+if (mcl.wGet('darkoak:actionbar') != '' && mcl.wGet('darkoak:actionbar') != undefined) {
+    system.runInterval(() => {
+        for (const player of world.getAllPlayers()) {
+            const text = mcl.wGet('darkoak:actionbar').replaceAll('#name#', player.name).replaceAll('#health#', player.getComponent("minecraft:health").currentValue).replaceAll('#location#', `${parseInt(player.location.x)}, ${parseInt(player.location.y)}, ${parseInt(player.location.z)}`)
+            player.runCommandAsync(`titleraw @s actionbar {"rawtext":[{"text":"${text}"}]}`)
         }
     })
 }
