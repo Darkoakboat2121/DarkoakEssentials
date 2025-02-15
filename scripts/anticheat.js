@@ -1,5 +1,7 @@
-import { world, system } from "@minecraft/server"
+import { world, system, Container, ItemEnchantableComponent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
+import { mcl } from "./logic"
+import { logcheck } from "./defaults"
 
 
 
@@ -13,7 +15,7 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
 
     system.runTimeout(() => {
         if (player.getDynamicProperty('darkoak:ac:blocksbroken') > 5) {
-            world.sendMessage(`${player.name} triggered anti-nuker`)
+            log(`${player.name} triggered anti-nuker`)
             evd.cancel = true
         }
 
@@ -31,10 +33,47 @@ world.afterEvents.playerPlaceBlock.subscribe((evd) => {
 
     system.runTimeout(() => {
         if (player.getDynamicProperty('darkoak:ac:blocksplaced') > 5) {
-            world.sendMessage(`${player.name} triggered anti-fast-place`)
+            log(`${player.name} triggered anti-fast-place`)
         }
 
         player.setDynamicProperty('darkoak:ac:blocksplaced', 0)
     }, 5)
 })
 
+world.afterEvents.entityHitEntity.subscribe((evd) => {
+    if (evd.damagingEntity.typeId != 'minecraft:player') return
+    const player = evd.damagingEntity
+
+    const held = mcl.getHeldItem(player)
+    /**@type {ItemEnchantableComponent} */
+    if (held === undefined) return
+    const en = held.getComponent("minecraft:enchantable")
+    const t = en.getEnchantments()
+    for (const c of t) {
+        if (!en.canAddEnchantment(c)) {
+            en.removeAllEnchantments()
+        }
+        world.sendMessage(c.type.id)
+    }
+})
+
+
+system.runInterval(() => {
+    for (const player of world.getAllPlayers()) {
+
+        // Anti fly 1
+        if (player.getGameMode() != "creative" && player.getGameMode() != "spectator" && player.isFlying) {
+            log(`${player.name} triggered anti-fly 1`)
+        }
+
+        if (player.getVelocity().x > 3 || player.getVelocity().z > 3) {
+            log(`${player.name} triggered speed 1`)
+        }
+    }
+})
+
+
+function log(message) {
+    mcl.wSet(`darkoak:log:${mcl.timeUuid()}`, `${message}|${Date.now()}`)
+    logcheck()
+}

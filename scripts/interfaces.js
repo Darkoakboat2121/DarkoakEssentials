@@ -1,4 +1,4 @@
-import { world, system } from "@minecraft/server"
+import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "./logic"
 
@@ -14,7 +14,7 @@ export function mainUI(player) {
     f.button('Player Settings')
     f.button('Chat Settings')
     f.button('UI Settings')
-    f.button('Debug')
+    f.button('Dashboard')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -33,11 +33,7 @@ export function mainUI(player) {
                 UIMakerUI(player)
                 break
             case 4:
-                player.sendMesage('§m----------------------§r')
-                for (const c of mcl.listGet()) {
-                    player.sendMesage(`${c} <> ${mcl.wGet(c)}`)
-                }
-                dataDeleterUI(player)
+                dashboardMainUI(player)
                 break
         }
     })
@@ -423,7 +419,43 @@ export function chestLockUI(player, loc) {
     })
 }
 
-// ui for deleting dynamic properties
+/**
+ * @param {Player} player 
+ */
+export function dashboardMainUI(player) {
+    let f = new ActionFormData()
+
+    f.button('Print World Data')
+    f.button('Delete Data')
+    f.button('Reports')
+    f.button('Logs')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch(evd.selection) {
+            case 0:
+                player.sendMessage('§m----------------------§r')
+                for (const c of mcl.listGet()) {
+                    player.sendMessage(`${c} <> ${mcl.wGet(c)}`)
+                }
+                player.sendMessage(world.getDynamicPropertyTotalByteCount().toString())
+                break
+            case 1:
+                dataDeleterUI(player)
+                break
+            case 2:
+                reportsUI(player)
+                break
+            case 3:
+                logsUI(player)
+                break
+        }
+    })
+}
+
+/**ui for deleting dynamic properties
+ * @param {Player} player 
+*/
 export function dataDeleterUI(player) {
     let f = new ActionFormData()
     f.title('Delete Data')
@@ -438,6 +470,29 @@ export function dataDeleterUI(player) {
 
         const t = mcl.listGet('')
         mcl.wSet(t.at(evd.selection))
+        dataDeleterUI(player)
+    })
+}
+
+export function reportsUI(player) {
+
+}
+
+export function logsUI(player) {
+    let f = new ActionFormData()
+
+    const logs = mcl.listGetValues('darkoak:log:').sort((a, b) => {
+        const [aKey, aValue] = a.split(': ').map(Number)
+        const [bKey, bValue] = b.split(': ').map(Number)
+        return aKey - bKey || aValue - bValue
+    })
+    for (const log of logs) {
+        const parts = log.split('|')
+        f.button(`${parts[0]}\n${parts[1]}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
     })
 }
 

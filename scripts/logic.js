@@ -1,4 +1,4 @@
-import { world, system, Player } from "@minecraft/server";
+import { world, system, Player, ItemStack, Container } from "@minecraft/server";
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting api*/
 export class mcl {
@@ -93,6 +93,7 @@ export class mcl {
 
     /**Returns an array of dynamic property ids value that starts with the inputted key
      * @param {string | undefined} key If the inputted key is undefined, it returns every property value
+     * @returns {string[]}
     */
     static listGetValues(key) {
         if (key === undefined) {
@@ -191,6 +192,14 @@ export class mcl {
         }
     }
 
+    static adminMessage(message) {
+        for (const player of world.getAllPlayers()) {
+            if (mcl.isCreating(player)) {
+                player.sendMessage(message)
+            }
+        }
+    }
+
     /**Returns the players health
      * @param {*} player 
      * @returns {number}
@@ -206,6 +215,30 @@ export class mcl {
      */
     static getScore(player, objective) {
         return world.scoreboard.getObjective(objective).getScore(player)
+    }
+
+    /**Returns the held item
+     * @param {Player} player 
+     * @returns {ItemStack}
+     */
+    static getHeldItem(player) {
+        /**@type {Container} */
+        const container = player.getComponent("minecraft:inventory").container
+        return container.getItem(player.selectedSlotIndex)
+    }
+
+    /**WIP
+     * @param {*} player 
+     * @param {*} location 
+     */
+    static getCertainItem(player, location) {
+        /**@type {Container} */
+        const container = player.getComponent("minecraft:inventory").container
+    }
+
+
+    static secondsToTicks(seconds) {
+        return seconds * 20
     }
 }
 
