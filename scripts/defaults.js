@@ -47,7 +47,7 @@ export function logcheck() {
 
 system.runInterval(() => {
     const byte = world.getDynamicPropertyTotalByteCount()
-    if (byte > 5000) {
+    if (byte > 10000) {
         mcl.adminMessage(`Possibly Dangerous Property Count: ${byte.toString()}, Please Print The World Data`)
     }
 }, 6000)

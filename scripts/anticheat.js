@@ -66,7 +66,7 @@ system.runInterval(() => {
             log(`${player.name} triggered anti-fly 1`)
         }
 
-        if (player.getVelocity().x > 3 || player.getVelocity().z > 3) {
+        if (player.getVelocity().x >= 3 || player.getVelocity().z >= 3) {
             log(`${player.name} triggered speed 1`)
         }
     }

@@ -1,5 +1,6 @@
 import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
+import * as arrays from "./arrays"
 import { mcl } from "./logic"
 
 // This file holds all the functions containing UI
@@ -46,12 +47,16 @@ export function worldSettingsUI(player) {
     f.body('Manage World Settings')
 
     f.button('Interaction Settings')
+    f.button('Bind Custom Item')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         switch(evd.selection) {
             case 0:
                 worldInteractionSettings(player)
+                break
+            case 1:
+                itemBindsUI(player)
                 break
         }
     })
@@ -73,6 +78,19 @@ export function worldInteractionSettings(player) {
     })
 }
 
+export function itemBindsUI(player) {
+    let f = new ModalFormData()
+    f.title('Bind Custom Item')
+
+    f.slider('Item Number', 1, arrays.dummySize, 1)
+    f.textField('Command:', 'Example: tp @s 0 1 0')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.wSet(`darkoak:bind:${evd.formValues[0]}`, evd.formValues[1])
+    })
+}
+
 // main ui for player settings: player data lookup, punishments
 export function playerSettingsUI(player) {
     let f = new ActionFormData()
@@ -81,6 +99,7 @@ export function playerSettingsUI(player) {
 
     f.button('Player Data')
     f.button('Punishments')
+    f.button('Player Tracking')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -90,6 +109,9 @@ export function playerSettingsUI(player) {
                 break
             case 1:
                 playerPunishmentsMainUI(player)
+                break
+            case 2:
+                playerTrackingUI(player)
                 break
         }
     })
@@ -222,7 +244,27 @@ export function unmutePlayerUI(player) {
     })
 }
 
-// main ui for chat settings
+/**
+ * @param {Player} player 
+ */
+export function playerTrackingUI(player) {
+    let f = new ModalFormData()
+    f.title('Player Tracking')
+    
+    f.toggle('Flying', mcl.wGet('darkoak:track:flying'))
+    f.toggle('Gliding', mcl.wGet('darkoak:track:gliding'))
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+        mcl.wSet('darkoak:track:flying', e[0])
+        mcl.wSet('darkoak:track:gliding', e[1])
+    })
+}
+
+/**main ui for chat settings
+ * @param {Player} player 
+*/
 export function chatSettingsUI(player) {
     let f = new ActionFormData()
     f.title('Chat Settings')

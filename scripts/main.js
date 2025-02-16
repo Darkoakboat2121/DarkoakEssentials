@@ -8,11 +8,18 @@ import { mcl } from "./logic"
 import * as anticheat from "./anticheat"
 import * as worldSettings from "./worldSettings"
 
-// main ui opener, see interfaces
+// main ui opener, see interfaces, also manages bindable/dummy items
 world.afterEvents.itemUse.subscribe((evd) => {
     const player = evd.source
     if (player.hasTag('darkoak:admin') && evd.itemStack.typeId === 'darkoak:main') {
         interfaces.mainUI(player)
+    }
+
+    if (!evd.itemStack.typeId.startsWith('darkoak:dummy')) return
+    for (let index = 0; index <= arrays.dummySize; index++) {
+        if (evd.itemStack.typeId === `darkoak:dummy${index}`) {
+            evd.source.runCommandAsync(mcl.wGet(`darkoak:bind:${index}`))
+        }
     }
 })
 

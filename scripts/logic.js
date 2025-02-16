@@ -41,7 +41,7 @@ export class mcl {
         let result = ''
         const charactersLength = characters.length
         for (let i = 0; i < length; i++) {
-            result += characters.charAt(randomNumber(charactersLength))
+            result += characters.charAt(mcl.randomNumber(charactersLength))
         }
         return result
     }
@@ -192,9 +192,12 @@ export class mcl {
         }
     }
 
+    /**Sends a private message to admins
+     * @param {string} message 
+     */
     static adminMessage(message) {
         for (const player of world.getAllPlayers()) {
-            if (mcl.isCreating(player)) {
+            if (mcl.isCreating(player) && player.hasTag('darkoak:admin')) {
                 player.sendMessage(message)
             }
         }
@@ -236,9 +239,11 @@ export class mcl {
         const container = player.getComponent("minecraft:inventory").container
     }
 
-
+    /**Converts inputted seconds to tick value
+     * @param {number} seconds 
+     * @returns {number}
+     */
     static secondsToTicks(seconds) {
         return seconds * 20
     }
 }
-

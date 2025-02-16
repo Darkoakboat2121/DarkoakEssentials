@@ -6,14 +6,31 @@ import { Player } from "@minecraft/server"
 
 /**List of usernames to ban automatically if prebans is set to true*/
 export const preBannedList = [
-    'Noki5160',
-    'TheMr8bit',
-    'K4leonidas',
-    'HackerBase74',
-    'Player847806825',
-    'DEETH9605',
-    'Perri2207',
-    'ION1209765'
+    'Noki5160', //IP leaking
+    'TheMr8bit', //Basic
+    'K4leonidas', //Racism
+    'HackerBase74', //Basic
+    'Player847806825', //Alt
+    'DEETH9605', //Basic
+    'Perri2207', //Revenge hacking
+    'ION1209765', //Basic
+    'QuackStatue9260', //Basic
+    'Itsme643937', //Client dev
+    'o44w', //Basic*
+    'JayRSky', //Basic
+    'Intoprelised', //Client dev
+    'WellDanYT', //Client advertiser
+    'OcelotSquad', //Alt
+    'Qcrwhale', //Alt
+    'ShulkerDupe', //Alt
+    'AnchorPvP', //Alt
+    'Proton Client', //Alt
+    'Ocelot Client', //Alt
+    'CoordExploit', //Alt
+    'anti serval', //Alt
+    'undisputzd', //Client dev
+    'RanByGen', //Client dev
+    'LoreSkygen', //Alt
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -45,7 +62,7 @@ export const badBlocksList = [
     'minecraft:light_block_13',
     'minecraft:light_block_14',
     'minecraft:light_block_15',
-    'minecraft:bubble_column'
+    'minecraft:bubble_column',
 ]
 
 /**List of common names of hacked items*/
@@ -55,7 +72,7 @@ export const hackedItemsList = [
     '§g§lBucket Minecart Command',
     '§g§lBucket NPC Command',
     '§g§lMovingBlock Minecart Command',
-    '§g§lMovingBlock NPC Command'
+    '§g§lMovingBlock NPC Command',
 ]
 
 /**Definetly an array, don't question it. 
@@ -75,7 +92,8 @@ export function actionbarReplacements(player) {
         '#location#': `${parseInt(player.location.x)}, ${parseInt(player.location.y)}, ${parseInt(player.location.z)}`,
         '#slot#': `${player.selectedSlotIndex}`,
         '#block.type#': `${block.typeId}`,
-        '#velocity#': `${(player.getVelocity().x).toFixed(1)}, ${(player.getVelocity().y).toFixed(1)}, ${(player.getVelocity().z).toFixed(1)}`
+        '#velocity#': `${(player.getVelocity().x).toFixed(1)}, ${(player.getVelocity().y).toFixed(1)}, ${(player.getVelocity().z).toFixed(1)}`,
     }
 }
 
+export const dummySize = 12
