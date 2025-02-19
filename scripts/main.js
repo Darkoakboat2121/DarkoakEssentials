@@ -11,8 +11,25 @@ import * as worldSettings from "./worldSettings"
 // main ui opener, see interfaces, also manages bindable/dummy items
 world.afterEvents.itemUse.subscribe((evd) => {
     const player = evd.source
-    if (player.hasTag('darkoak:admin') && evd.itemStack.typeId === 'darkoak:main') {
-        interfaces.mainUI(player)
+    if (evd.itemStack.typeId === 'darkoak:main') {
+        if (player.hasTag('darkoak:admin')) {
+            interfaces.mainUI(player)
+        } else {
+            player.sendMessage('§cYou Aren\'t An Admin! Tag Yourself With darkoak:admin§r')
+        }
+    }
+
+    if (evd.itemStack.typeId === 'darkoak:community') {
+        if (player.isSneaking) {
+            const playerToView = evd.source.getEntitiesFromViewDirection({type: 'minecraft:player', maxDistance: 3})[0]
+            if (playerToView === undefined) {
+                interfaces.communityMain(player)
+                return
+            }
+            interfaces.viewProfile(player, playerToView.entity)
+        } else {
+            interfaces.communityMain(player)
+        }
     }
 
     if (!evd.itemStack.typeId.startsWith('darkoak:dummy')) return
@@ -25,32 +42,30 @@ world.afterEvents.itemUse.subscribe((evd) => {
 
 // preban, wip ban system
 world.afterEvents.playerSpawn.subscribe((evd) => {
+    const p = world.getAllPlayers()[0]
     for (const n of arrays.preBannedList) {
-        const p = world.getAllPlayers()
-        p[0].runCommandAsync(`kick ${n}`)
+        p.runCommandAsync(`kick "${n}"`)
     }
 
     for (const n of mcl.listGetValues('darkoak:bans:')) {
-        const p = world.getAllPlayers()
-        p[0].runCommandAsync(`kick ${n}`)
+        p.runCommandAsync(`kick "${n}"`)
     }
 })
 
 // chest lock system, wip
 world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
-    if (evd.player.hasTag('darkoak:admin') && evd.itemStack != undefined && evd.itemStack.typeId === 'darkoak:main' && evd.block.matches('minecraft:chest')) {
+    if (evd.player.hasTag('darkoak:admin') && evd.itemStack != undefined && evd.itemStack.typeId === 'darkoak:chest_lock' && evd.block.matches('minecraft:chest')) {
         system.runTimeout(() => {
             interfaces.chestLockUI(evd.player, evd.block.location)
         }, 1)
         evd.cancel = true
-    } else {
-        if (evd.block.matches('minecraft:chest')) {
-            for (const chest of mcl.listGetValues('darkoak:chestlock:')) {
-                const parts = chest.split('|')
-                if (evd.block.location.x.toString() === parts[1] && evd.block.location.y.toString() === parts[2] && evd.block.location.z.toString() === parts[3] && evd.player.name != parts[0]) {
-                    evd.cancel = true
-                    break
-                }
+    } else if (evd.block.matches('minecraft:chest')) {
+        for (const chest of mcl.listGetValues('darkoak:chestlock:')) {
+            const parts = chest.split('|')
+            const loc = evd.block.location
+            if (loc.x.toString() === parts[1] && loc.y.toString() === parts[2] && loc.z.toString() === parts[3] && evd.player.name != parts[0]) {
+                evd.cancel = true
+                break
             }
         }
     }
@@ -87,6 +102,8 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
         }
     })
 }
+
+
 
 // System for displaying the actionbar
 if (mcl.wGet('darkoak:actionbar') != '' && mcl.wGet('darkoak:actionbar') != undefined) {

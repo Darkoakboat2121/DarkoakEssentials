@@ -11,11 +11,12 @@ export function mainUI(player) {
     f.title('Main')
     f.body('Manage Various Settings')
 
-    f.button('World Settings')
-    f.button('Player Settings')
-    f.button('Chat Settings')
-    f.button('UI Settings')
-    f.button('Dashboard')
+    f.button('World Settings', 'textures/ui/World')
+    f.button('Player Settings', 'textures/ui/FriendsIcon')
+    f.button('Chat Settings', 'textures/ui/chat_send')
+    f.button('UI Settings', 'textures/ui/dialog_background_opaque')
+    f.button('Community Settings', 'textures/ui/icon_multiplayer')
+    f.button('Dashboard', 'textures/items/diamond')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -34,6 +35,9 @@ export function mainUI(player) {
                 UIMakerUI(player)
                 break
             case 4:
+                communitySettingsUI(player)
+                break
+            case 5:
                 dashboardMainUI(player)
                 break
         }
@@ -46,8 +50,11 @@ export function worldSettingsUI(player) {
     f.title('World Settings')
     f.body('Manage World Settings')
 
-    f.button('Interaction Settings')
-    f.button('Bind Custom Item')
+    f.button('Interaction Settings', 'textures/ui/interact')
+    f.button('Bind Custom Item', 'textures/ui/equipped_item_border')
+    f.button('Welcome Message')
+    f.button('World Border', 'textures/blocks/barrier')
+    f.button('Money ID', arrays.icons.minecoin)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -57,6 +64,15 @@ export function worldSettingsUI(player) {
                 break
             case 1:
                 itemBindsUI(player)
+                break
+            case 2:
+                welcomeMessageUI(player)
+                break
+            case 3:
+                worldBorderUI(player)
+                break
+            case 4:
+                moneyUI(player)
                 break
         }
     })
@@ -72,6 +88,7 @@ export function worldInteractionSettings(player) {
     
 
     f.show(player).then((evd) => {
+        if (evd.canceled) return
         const e = evd.formValues
         mcl.wSet('darkoak:cws:breakblocks', e[0])
         mcl.wSet('darkoak:cws:interactwithblocks', e[1])
@@ -91,14 +108,54 @@ export function itemBindsUI(player) {
     })
 }
 
+export function welcomeMessageUI(player) {
+    let f = new ModalFormData()
+    f.title('Welcome Message')
+
+    f.textField(`${arrays.hashtags}\nMessage:`, 'Example: Welcome to Super-Skygen!', mcl.wGet('darkoak:welcome'))
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.wSet('darkoak:welcome', evd.formValues[0])
+        player.sendMessage(mcl.wGet('darkoak:welcome'))
+    })
+}
+
+export function worldBorderUI(player) {
+    let f = new ModalFormData()
+    f.title('World Border')
+    f.textField('\n(Must Be A Number)\nSize:', 'Example: 3000', mcl.wGet('darkoak:cws:border'))
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        if (isNaN(evd.formValues[0])) {
+            worldBorderUI(player)
+            return
+        }
+        mcl.wSet('darkoak:cws:border', evd.formValues[0])
+    })
+}
+
+export function moneyUI(player) {
+    let f = new ModalFormData()
+    f.title('Money ID')
+
+    f.textField('\nScore Name For Money:', 'Example: Money', mcl.wGet('darkoak:moneyscore'))
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.wSet('darkoak:moneyscore', evd.formValues[0])
+    })
+}
+
 // main ui for player settings: player data lookup, punishments
 export function playerSettingsUI(player) {
     let f = new ActionFormData()
     f.title('Player Settings')
     f.body('Manage Player Settings')
 
-    f.button('Player Data')
-    f.button('Punishments')
+    f.button('Player Data', 'textures/ui/glyph_inventory')
+    f.button('Punishments', 'textures/ui/cancel')
     f.button('Player Tracking')
 
     f.show(player).then((evd) => {
@@ -142,7 +199,7 @@ ID: ${player.id}, Is Host: ${mcl.isHost(player)}
 Gamemode: ${player.getGameMode()}
 Location: ${parseInt(player.location.x)} ${parseInt(player.location.y)} ${parseInt(player.location.z)}, Dimension: ${player.dimension.id}
 Effects: ${mcl.playerEffectsArray(player)}
-Tags: ${mcl.playerTagsArray(player)}
+Tags: ${mcl.playerTagsArray(player).join(', §r§f')}
         `)
 
     f.button('Dismiss')
@@ -188,7 +245,8 @@ export function banPlayerUI(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         mcl.wSet(`darkoak:bans:${mcl.timeUuid()}`, names[evd.formValues[0]])
-        player.runCommandAsync(`kill ${names[evd.formValues[0]]}`)
+        player.runCommandAsync(`gamemode s "${names[evd.formValues[0]]}"`)
+        player.runCommandAsync(`kill "${names[evd.formValues[0]]}"`)
     })
 }
 
@@ -200,7 +258,7 @@ export function unbanPlayerUI(player) {
     const values = mcl.listGetValues('darkoak:bans:')
 
     if (ids === undefined || ids.length === 0) {
-        player.sendMesage('No Bans Found')
+        player.sendMessage('No Bans Found')
         return
     }
     for (const p of values) {
@@ -209,7 +267,7 @@ export function unbanPlayerUI(player) {
     
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        mcl.wSet(ids[evd.selection], )
+        mcl.wSet(ids[evd.selection])
     })
 
 }
@@ -272,7 +330,7 @@ export function chatSettingsUI(player) {
 
     f.button('Manage Ranks')
     f.button('Chat Commands')
-    f.button('Censor Settings')
+    f.button('Censor Settings', 'textures/ui/Feedback')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -319,9 +377,10 @@ export function chatCommandsMainUI(player) {
     f.title('Chat Commands')
     f.body('Manage Chat Commands')
 
-    f.button('Add New')
-    f.button('Delete One')
-    f.button('View Chat Commands')
+    f.button('Add New', 'textures/ui/ThinPlus')
+    f.button('Delete One', 'textures/ui/icon_trash')
+    f.button('Edit One')
+    f.button('View Chat Commands', 'textures/ui/icon_preview')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -333,6 +392,9 @@ export function chatCommandsMainUI(player) {
                 chatCommandsDeleteUI(player)
                 break
             case 2:
+                chatCommandsEditPickerUI(player)
+                break
+            case 3:
                 chatCommandsViewUI(player)
                 break
         }
@@ -359,12 +421,54 @@ export function chatCommandsDeleteUI(player) {
     let f = new ModalFormData()
     f.title('Delete A Chat Command')
     
-    f.dropdown('Commands:', mcl.listGetValues('darkoak:command:'))
+    const commands = mcl.listGetValues('darkoak:command:')
+    const commandRaw = mcl.listGet('darkoak:command:')
+    f.dropdown('Commands:', commands)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        mcl.wSet(mcl.listGet('darkoak:command:')[evd.formValues[0]], )
+        mcl.wSet(commandRaw[evd.formValues[0]])
     })
+}
+
+/**Picker for editing
+ * @param {Player} player 
+ */
+export function chatCommandsEditPickerUI(player) {
+    let f = new ActionFormData()
+    f.title('Edit Picker')
+
+    const raw = mcl.listGet('darkoak:command:')
+    const values = mcl.listGetValues('darkoak:command:')
+
+    for (const c of raw) {
+        const parts = mcl.wGet(c).split('|')
+        f.button(`${parts[0]} | ${parts[2]}\n${parts[1]}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        chatCommandsEditUI(player, raw[evd.selection])
+    })
+}
+
+/**Edit chat commands
+ * @param {Player} player 
+ * @param {String} chatCommand 
+ */
+export function chatCommandsEditUI(player, chatCommand) {
+    let f = new ModalFormData()
+    const parts = mcl.wGet(chatCommand).split('|')
+
+    f.textField('\nEdit Message:', '', parts[0])
+    f.textField('Edit Command:', '', parts[1])
+    f.textField('Edit Tag:', '', parts[2])
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.wSet(chatCommand, `${evd.formValues[0]}|${evd.formValues[1]}|${evd.formValues[2]}`)
+    })
+
 }
 
 // ui for viewing chat commands
@@ -377,17 +481,15 @@ export function chatCommandsViewUI(player) {
         f.button(`${parts[0]} | ${parts[2]}\n${parts[1]}`)
     }
 
-    f.show(player).then((evd) => {
-        if (evd.canceled) return
-    })
+    f.show(player)
 }
 
 export function censorSettingsMainUI(player) {
     let f = new ActionFormData()
     f.title('Censor Settings')
 
-    f.button('Add New Word')
-    f.button('Remove A Word')
+    f.button('Add New Word', arrays.icons.thinPlus)
+    f.button('Remove A Word', arrays.icons.trash)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -445,16 +547,23 @@ export function chestLockUI(player, loc) {
             t = parts[0]
         }
     }
+
+    const u = mcl.playerNameArray()
     f.title(`Chest Lock`)
 
-    f.dropdown('Player who can open the chest:', mcl.playerNameArray())
+    f.dropdown('Player who can open the chest:', u)
     f.toggle(`Delete Chest Lock For This Chest?\n(Player: ${t})`)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        const u = mcl.playerNameArray()
         if (evd.formValues[1] === true) {
-            
+            for (const chest of mcl.listGet('darkoak:chestlock:')) {
+                const v = mcl.wGet(chest)
+                const p = v.split('|')
+                if (p[1] === loc.x.toString() && p[2] === loc.y.toString() && p[3] === loc.z.toString()) {
+                    mcl.wSet(chest)
+                }
+            }
         } else {
             mcl.wSet(`darkoak:chestlock:${mcl.timeUuid()}`, `${u[evd.formValues[0]]}|${loc.x}|${loc.y}|${loc.z}`)
         }
@@ -486,6 +595,10 @@ export function dashboardMainUI(player) {
                 dataDeleterUI(player)
                 break
             case 2:
+                if (mcl.listGet('darkoak:report:').length === 0) {
+                    player.sendMessage('§cNo Reports Found§r')
+                    return
+                }
                 reportsUI(player)
                 break
             case 3:
@@ -517,7 +630,21 @@ export function dataDeleterUI(player) {
 }
 
 export function reportsUI(player) {
+    let f = new ActionFormData()
+    f.title('Reports')
 
+    const raw = mcl.listGet('darkoak:report:')
+    const values = mcl.listGetValues('darkoak:report:')
+    for (const report of values) {
+        const parts = report.split('|')
+        // Report: 0 = name, 1 = reason
+        f.button(`${parts[0]}\n${parts[1]}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.wSet(raw[evd.selection])
+    })
 }
 
 export function logsUI(player) {
@@ -612,10 +739,278 @@ export function actionBarUI(player) {
     let f = new ModalFormData()
     f.title('Action Bar')
 
-    f.textField('\nKeys:\n\\n - New Line\n%%scorename%% - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity\nAction Bar:', 'Example: #name#\n#location#', mcl.wGet('darkoak:actionbar'))
+    f.textField(`${arrays.hashtags}\nAction Bar:`, 'Example: #name#: #location#', mcl.wGet('darkoak:actionbar'))
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         mcl.wSet('darkoak:actionbar', evd.formValues[0])
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function communitySettingsUI(player) {
+    let f = new ActionFormData()
+    f.title('Community Settings')
+
+    f.button('RTP Settings')
+    f.button('Shop Settings')
+    f.button('Report Settings')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        switch(evd.selection) {
+            case 0:
+                rtpUI(player)
+                break
+            case 1:
+                shopSettingsUI(player)
+                break
+            case 2:
+                reportSettingsUI(player)
+                break
+        }
+    })
+}
+
+
+export function rtpUI(player) {
+    let f = new ModalFormData()
+    f.title('RTP Settings')
+
+    f.toggle('Enabled?', mcl.wGet('darkoak:cws:rtp:enabled'))
+    f.textField('Center Co-ord:', 'Example: 0', mcl.wGet('darkoak:cws:rtp:center'))
+    f.textField('Max Distance:', 'Example: 10000', mcl.wGet('darkoak:cws:rtp:distance'))
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+        mcl.wSet('darkoak:cws:rtp:enabled', e[0])
+        mcl.wSet('darkoak:cws:rtp:center', e[1])
+        mcl.wSet('darkoak:cws:rtp:distance', e[2])
+    })
+}
+
+
+export function shopSettingsUI(player) {
+    let f = new ActionFormData()
+    f.title('Shop Settings')
+
+    f.button('Add Item')
+    f.button('Remove Item')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch(evd.selection) {
+            case 0:
+                shopAddUI(player)
+                break
+            case 1:
+                shopRemoveUI(player)
+                break
+        }
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function shopAddUI(player) {
+    let f = new ModalFormData()
+    f.title('Add Shop Item')
+
+    f.textField('\nItem ID:', 'Example: minecraft:diamond')
+    f.slider('Amount Of Items:', 1, 64, 1)
+    f.textField('Money Value:', 'Example: 100')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+        mcl.wSet(`darkoak:shopitem:${mcl.timeUuid()}`, `${e[0]}|${e[1]}|${e[2]}`)
+    })
+}
+
+/////////////////////////////////////////////////////////////Community Item//////////////////////////////////////////////////////////////
+/**Main community ui
+ * @param {Player} player 
+ */
+export function communityMain(player) {
+    let f = new ActionFormData()
+    f.title('Community')
+    f.body('Use This Item While Crouching And Looking At A Player To View Their Profile')
+
+    f.button('Pay', arrays.icons.minecoin)
+    f.button('RTP')
+    f.button('Report')
+    f.button('Shop')
+    f.button('My Profile')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        switch(evd.selection) {
+            case 0:
+                payUI(player)
+                break
+            case 1:
+                rtp(player)
+                break
+            case 2:
+                reportPlayerUI(player)
+                break
+            case 3:
+                shopUI(player)
+                break
+            case 4:
+                myProfile(player)
+                break
+        }
+    })
+}
+
+/**Pay another player
+ * @param {Player} player 
+ */
+export function payUI(player) {
+    let f = new ModalFormData()
+
+    const names = mcl.playerNameArray()
+
+    f.title('Pay')
+
+    f.dropdown('\nPlayer:', names)
+    f.textField('Amount:', 'Example: 100')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            communityMain(player)
+            return
+        }
+        const e = evd.formValues
+        const score = world.scoreboard.getObjective(mcl.wGet('darkoak:moneyscore')).getScore(player)
+        if (isNaN(e[1])) {
+            payUI(player)
+            return
+        }
+        if (score < e[1]) {
+            player.sendMessage('§cNot Enough Money§r')
+            return
+        }
+
+        player.runCommandAsync(`scoreboard players add ${names[e[0]]} ${mcl.wGet('darkoak:moneyscore')} ${e[1]}`)
+        player.runCommandAsync(`scoreboard players remove @s ${mcl.wGet('darkoak:moneyscore')} ${e[1]}`)
+    })
+}
+
+/**Profile editor
+ * @param {Player} player 
+ */
+export function myProfile(player) {
+    let f = new ModalFormData()
+    f.title('My Profile')
+
+    if (mcl.wGet(`darkoak:profile:${player.name}`) === undefined) {
+        mcl.wSet(`darkoak:profile:${player.name}`, '||||')
+    }
+    const parts = mcl.wGet(`darkoak:profile:${player.name}`).split('|')
+    // 0: Text / Description, 1: Pronouns, 2: Age
+
+    f.textField('\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', parts[0])
+    f.textField('Pronouns:', 'Example: He / Him', parts[1])
+    f.textField('Age:', 'Example: 17', parts[2])
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            communityMain(player)
+            return
+        }
+        const e = evd.formValues
+        mcl.wSet(`darkoak:profile:${player.name}`, `${e[0]}|${e[1]}|${e[2]}||`)
+    })
+}
+
+/**Profile
+ * @param {Player} playerToShow
+ * @param {Player} playerToView
+ */
+export function viewProfile(playerToShow, playerToView) {
+    let f = new ActionFormData()
+    const p = mcl.wGet(`darkoak:profile:${playerToView.name}`)
+    if (p === undefined) {
+        playerToShow.sendMessage(`§c${playerToView.name}'s Profile Hasn't Been Set-up Yet§r`)
+        return
+    }
+    const parts = p.split('|')
+    f.title(`${playerToView.name}'s Profile`)
+
+    f.body(`\nName: ${playerToView.name}, Pronouns: ${parts[1]}\nAge: ${parts[2]}\n\nDescription: ${parts[0]}\n\n`)
+
+    f.button('Dismiss')
+
+    f.show(playerToShow)
+}
+
+/**
+ * @param {Player} player 
+ */
+export function reportPlayerUI(player) {
+    let f = new ModalFormData()
+    f.title('Report A Player')
+
+    const names = mcl.playerNameArray()
+    f.dropdown('\nPlayer:', names)
+    f.textField('Reason:', 'Example: He Was Hacking')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+        mcl.wSet(`darkoak:report:${mcl.timeUuid()}`, `${names[e[0]]}|${e[1]}`)
+    })
+}
+
+/**RTP
+ * @param {Player} player 
+ */
+export function rtp(player) {
+    if (mcl.wGet('darkoak:cws:rtp:enabled') === true) {
+        const center = mcl.wGet('darkoak:cws:rtp:center')
+        const distance = mcl.wGet('darkoak:cws:rtp:distance')
+        player.runCommandAsync(`spreadplayers ${center} ${center} 1 ${distance} ${player.name}`)
+    }
+}
+
+
+/**
+ * @param {Player} player 
+ */
+export function shopUI(player) {
+    let f = new ActionFormData()
+    f.title('Shop')
+
+    const raw = mcl.listGet('darkoak:shopitem:')
+    const value = mcl.listGetValues('darkoak:shopitem:')
+    for (const item of value) {
+        const parts = item.split('|')
+        // shopitem: 0 = item type id / name / texture, 1 = amount per buy, 2 = money value
+        f.button(`${parts[0].replaceAll('minecraft:', '')} x${parts[1]} - $${parts[2]}`, `textures/items/${parts[0].replaceAll('minecraft:', '')}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            communityMain(player)
+            return
+        }
+        const score = world.scoreboard.getObjective(mcl.wGet('darkoak:moneyscore')).getScore(player)
+        const parts = value.at(evd.selection).split('|')
+        
+        if (score < parts[2]) {
+            player.sendMessage('§cNot Enough Money§r')
+            return
+        }
+
+        player.runCommandAsync(`scoreboard players remove @s ${mcl.wGet('darkoak:moneyscore')} ${parts[2]}`)
+        player.runCommandAsync(`give @s ${parts[0]} ${parts[1]}`)
     })
 }

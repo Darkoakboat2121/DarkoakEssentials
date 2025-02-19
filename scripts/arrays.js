@@ -96,4 +96,33 @@ export function actionbarReplacements(player) {
     }
 }
 
-export const dummySize = 12
+/**WIP
+ * @param {Player} player 
+ * @param {string} message 
+ * @returns {string}
+ */
+export function hashtagProcessing(player, message) {
+    const replacements = arrays.actionbarReplacements(player)
+    var text = message
+
+    for (const hashtag in replacements) {
+        if (text.includes(hashtag)) {
+            text = text.replaceAll(hashtag, replacements[hashtag])
+        }
+    }
+    return text
+}
+
+export const dummySize = 22
+
+export const hashtags = '\nKeys:\n\\n - New Line\n%%scorename%% - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity'
+
+/**Array of strings for textures*/
+export class icons {
+    static thinPlus = 'textures/ui/ThinPlus'
+    static trash = 'textures/ui/icon_trash'
+    static minecoin = 'textures/ui/icon_minecoin_9x9'
+}
+
+
+// chat rank format: 0 = message, 1 = command, 2 = tag

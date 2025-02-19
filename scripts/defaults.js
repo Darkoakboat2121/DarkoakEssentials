@@ -27,6 +27,12 @@ export function chatRankDefaults() {
     }
 }
 
+export function welcomeMessageDefaults() {
+    if (mcl.wGet('darkoak:welcome') === undefined) {
+        mcl.wSet('darkoak:welcome', '')
+    }
+}
+
 export function logcheck() {
     const logs = mcl.listGetValues('darkoak:log:');
     if (logs.length <= 20) return;

@@ -42,6 +42,8 @@ world.beforeEvents.chatSend.subscribe((evd) => {
 
     const tags = evd.sender.getTags()
     let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => tag.replace('rank:', ''))
+    let nameColors = tags.filter(tag => tag.startsWith('namecolor:')).map(tag => tag.replace('namecolor:', ''))
+    let chatColors = tags.filter(tag => tag.startsWith('chatcolor:')).map(tag => tag.replace('chatcolor:', ''))
     const start = mcl.wGet('darkoak:cr:start')
     const middle = mcl.wGet('darkoak:cr:middle')
     const end = mcl.wGet('darkoak:cr:end')
@@ -49,8 +51,10 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     const defaultrank = mcl.wGet('darkoak:cr:defaultrank')
 
     ranks = ranks.length ? ranks : [`${defaultrank}`]
+    nameColors = nameColors.length ? nameColors : [``]
+    chatColors = chatColors.length ? chatColors : [``]
 
-    const text = `${start}${ranks.join(middle)}${end}§r§f${evd.sender.name}${bridge} §r§f${evd.message}`
+    const text = `${start}${ranks.join(middle)}${end}§r§f${nameColors.join('')}${evd.sender.name}§r§f${bridge} §r§f${chatColors.join('')}${evd.message}`
     world.sendMessage({rawtext: [{text: text}]})
     evd.cancel = true
 })
