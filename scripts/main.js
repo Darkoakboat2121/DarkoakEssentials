@@ -48,7 +48,8 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
     }
 
     for (const n of mcl.listGetValues('darkoak:bans:')) {
-        p.runCommandAsync(`kick "${n}"`)
+        const data = JSON.parse(n)
+        p.runCommandAsync(`kick "${data.player}" ${data.message}`)
     }
 })
 
@@ -74,16 +75,49 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
 // system for handling message cui (see interfaces) based on the tag
 system.runInterval(() => {
     for (const ui of mcl.listGetValues('darkoak:ui:message:')) {
-        const parts = ui.split('|')
+        /** @type {{ title: string, body: string, button1: string, button2: string, tag: string, command1: string, command2: string }} */
+        const parts = JSON.parse(ui)
         for (const player of world.getPlayers()) {
             // index: 0 = title, 1 = body, 2 = button1, 3 = button2, 4 = tag, 5 = button1 command, 6 = button2 command
-            if (player.hasTag(parts[4])) {
-                messageUIBuilder(player, parts[0], parts[1], parts[2], parts[3], parts[5], parts[6])
-                player.removeTag(parts[4])
+            if (player.hasTag(parts.tag)) {
+                messageUIBuilder(player, parts.title, parts.body, parts.button1, parts.button2, parts.command1, parts.command2)
+                player.removeTag(parts.tag)
+            }
+        }
+    }
+
+    for (const ui of mcl.listGetValues('darkoak:ui:action:')) {
+        const parts = JSON.parse(ui)
+        for (const player of world.getPlayers()) {
+            // index: 0 = title, 1 = body, 2 = button1, 3 = button2, 4 = tag, 5 = button1 command, 6 = button2 command
+            if (player.hasTag(parts.tag)) {
+                actionUIBuilder(player, parts.title, parts.body, parts.buttons)
+                player.removeTag(parts.tag)
             }
         }
     }
 }, 20)
+
+
+function actionUIBuilder(playerToShow, title, body, buttons) {
+    let f = new ActionFormData()
+
+    f.title(title)
+    f.body(body)
+
+    for (const button of buttons) {
+        f.button(button.title)
+    }
+
+    f.show(playerToShow).then((evd) => {
+        if (evd.canceled) return
+        const selected = buttons[evd.selection]
+        if (selected.command) {
+            playerToShow.runCommandAsync(selected.command)
+        }
+    })
+    
+}
 
 // system for displaying message cui
 function messageUIBuilder(playerToShow, title, body, button1, button2, command1, command2) {
@@ -102,7 +136,6 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
         }
     })
 }
-
 
 
 // System for displaying the actionbar

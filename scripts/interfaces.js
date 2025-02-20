@@ -40,6 +40,9 @@ export function mainUI(player) {
             case 5:
                 dashboardMainUI(player)
                 break
+            default:
+                player.sendMessage('§cError§r')
+                break
         }
     })
 }
@@ -73,6 +76,9 @@ export function worldSettingsUI(player) {
                 break
             case 4:
                 moneyUI(player)
+                break
+            default:
+                player.sendMessage('§cError§r')
                 break
         }
     })
@@ -170,6 +176,9 @@ export function playerSettingsUI(player) {
             case 2:
                 playerTrackingUI(player)
                 break
+            default:
+                player.sendMessage('§cError§r')
+                break
         }
     })
 }
@@ -231,6 +240,9 @@ export function playerPunishmentsMainUI(player) {
             case 3:
                 unmutePlayerUI(player)
                 break
+            default:
+                player.sendMessage('§cError§r')
+                break
         }
     })
 }
@@ -241,12 +253,14 @@ export function banPlayerUI(player) {
 
     const names = mcl.playerNameArray()
     f.dropdown('\nPlayer:', names)
+    f.textField('Reason / Ban Message', 'Example: Hacking')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        mcl.wSet(`darkoak:bans:${mcl.timeUuid()}`, names[evd.formValues[0]])
-        player.runCommandAsync(`gamemode s "${names[evd.formValues[0]]}"`)
-        player.runCommandAsync(`kill "${names[evd.formValues[0]]}"`)
+        const e = evd.formValues
+        mcl.wSet(`darkoak:bans:${mcl.timeUuid()}`, JSON.stringify({player: names[e[0]], message: e[1]}))
+        player.runCommandAsync(`gamemode s "${names[e[0]]}"`)
+        player.runCommandAsync(`kill "${names[e[0]]}"`)
     })
 }
 
@@ -258,11 +272,12 @@ export function unbanPlayerUI(player) {
     const values = mcl.listGetValues('darkoak:bans:')
 
     if (ids === undefined || ids.length === 0) {
-        player.sendMessage('No Bans Found')
+        player.sendMessage('§cNo Bans Found§r')
         return
     }
     for (const p of values) {
-        f.button(`${p.toString()}`)
+        const data = JSON.parse(p)
+        f.button(`${data.player}\n${data.message}`)
     }
     
     f.show(player).then((evd) => {
@@ -345,6 +360,9 @@ export function chatSettingsUI(player) {
             case 2:
                 censorSettingsMainUI(player)
                 break
+            default:
+                player.sendMessage('§cError§r')
+                break
         }
     })
 }
@@ -396,6 +414,9 @@ export function chatCommandsMainUI(player) {
                 break
             case 3:
                 chatCommandsViewUI(player)
+                break
+            default:
+                player.sendMessage('§cError§r')
                 break
         }
     })
@@ -499,6 +520,9 @@ export function censorSettingsMainUI(player) {
                 break
             case 1:
                 censorSettingsRemoveUI(player)
+                break
+            default:
+                player.sendMessage('§cError§r')
                 break
         }
     })
@@ -604,6 +628,9 @@ export function dashboardMainUI(player) {
             case 3:
                 logsUI(player)
                 break
+            default:
+                player.sendMessage('§cError§r')
+                break
         }
     })
 }
@@ -636,9 +663,9 @@ export function reportsUI(player) {
     const raw = mcl.listGet('darkoak:report:')
     const values = mcl.listGetValues('darkoak:report:')
     for (const report of values) {
-        const parts = report.split('|')
+        const parts = JSON.parse(report)
         // Report: 0 = name, 1 = reason
-        f.button(`${parts[0]}\n${parts[1]}`)
+        f.button(`${parts.player}\n${parts.reason}`)
     }
 
     f.show(player).then((evd) => {
@@ -673,7 +700,6 @@ export function UIMakerUI(player) {
 
     f.button('Make A Message UI')
     f.button('Make An Action UI')
-    f.button('Make A Modal UI')
     f.button('Delete A UI')
     f.button('Set The Actionbar')
 
@@ -685,16 +711,67 @@ export function UIMakerUI(player) {
                 messageUIMakerUI(player)
                 break
             case 1:
-
+                actionUIPickerUI(player)
+                break
             case 2:
-
-            case 3:
                 UIDeleterUI(player)
                 break
-            case 4:
+            case 3:
                 actionBarUI(player)
                 break
+            default:
+                player.sendMessage('§cError§r')
+                break
         }
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function actionUIPickerUI(player) {
+    let f = new ModalFormData()
+
+    f.slider('Amount Of Buttons', 1, 10, 1)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        actionUIMakerUI(player, evd.formValues[0])
+    })
+}
+
+/**
+ * @param {Player} player 
+ * @param {number} amount 
+ */
+export function actionUIMakerUI(player, amount) {
+    let f = new ModalFormData()
+
+    f.textField('Title:', 'Example: Warps')
+    f.textField('Body:', 'Example: Click A Button To TP')
+    f.textField('Tag To Open:', 'Example: warpmenu')
+
+    for (let index = 1; index <= amount; index++) {
+        f.textField(`Button ${index}:`, '')
+        f.textField(`Command ${index}:`, '')
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+
+        const title = e[0]
+        const body = e[1]
+        const tag = e[2]
+
+        const buttons = []
+        for (let index = 3; index < e.length; index += 2) {
+            buttons.push({ title: e[index], command: e[index + 1] })
+        }
+
+        const ui = {title, body, tag, buttons}
+        
+        mcl.wSet(`darkoak:ui:action:${mcl.timeUuid()}`, JSON.stringify(ui))
     })
 }
 
@@ -705,9 +782,14 @@ export function UIDeleterUI(player) {
 
     const u = mcl.listGet('darkoak:ui:')
     for (const ui of u) {
-        const v = mcl.wGet(ui).split('|')
         const n = ui.split(':')
-        f.button(`Type: ${n[2]}, Title: ${v[0]}\nTag: ${v[4]}, Body: ${v[1]}`)
+        if (n[2] === 'message') {
+            const v = JSON.parse(mcl.wGet(ui))
+            f.button(`Type: ${n[2]}, Title: ${v.title}, Tag: ${v.tag}\nBody: ${v.body}`)
+        } else if (n[2] === 'action') {
+            const v = JSON.parse(mcl.wGet(ui))
+            f.button(`Type: ${n[2]}, Title: ${v.title}, Tag: ${v.tag}\nBody: ${v.body}`)
+        }
     }
 
     f.show(player).then((evd) => {
@@ -723,15 +805,17 @@ export function messageUIMakerUI(player) {
 
     f.textField('UI Title:', 'Example: Welcome!')
     f.textField('UI Body Text:', 'Example: Hello there!')
+    f.textField('Tag To Open:', 'Example: welcomemessage')
     f.textField('UI Button 1:', 'Example: Hi!')
     f.textField('UI Button 2:', 'Example: Hello!')
-    f.textField('Tag To Open:', 'Example: welcomemessage')
     f.textField('Button1 Command:', 'Example: tp @s 0 0 0')
     f.textField('Button2 Command:', 'Example: tp @s 6 2 7')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        mcl.wSet(`darkoak:ui:message:${mcl.timeUuid()}`, `${evd.formValues[0]}|${evd.formValues[1]}|${evd.formValues[2]}|${evd.formValues[3]}|${evd.formValues[4]}|${evd.formValues[5]}|${evd.formValues[6]}`)
+        const e = evd.formValues
+        const ui = {title: e[0], body: e[1], tag: e[2], button1: e[3], command1: e[5], button2: e[4], command2: e[6]}
+        mcl.wSet(`darkoak:ui:message:${mcl.timeUuid()}`, JSON.stringify(ui))
     })
 }
 
@@ -771,6 +855,9 @@ export function communitySettingsUI(player) {
             case 2:
                 reportSettingsUI(player)
                 break
+            default:
+                player.sendMessage('§cError§r')
+                break
         }
     })
 }
@@ -809,6 +896,9 @@ export function shopSettingsUI(player) {
                 break
             case 1:
                 shopRemoveUI(player)
+                break
+            default:
+                player.sendMessage('§cError§r')
                 break
         }
     })
@@ -866,6 +956,9 @@ export function communityMain(player) {
             case 4:
                 myProfile(player)
                 break
+            default:
+                player.sendMessage('§cError§r')
+                break
         }
     })
 }
@@ -912,14 +1005,15 @@ export function myProfile(player) {
     f.title('My Profile')
 
     if (mcl.wGet(`darkoak:profile:${player.name}`) === undefined) {
-        mcl.wSet(`darkoak:profile:${player.name}`, '||||')
+        const defaultP = {description: '', pronouns: '', age: ''}
+        mcl.wSet(`darkoak:profile:${player.name}`, JSON.stringify(defaultP))
     }
-    const parts = mcl.wGet(`darkoak:profile:${player.name}`).split('|')
+    const parts = JSON.parse(mcl.wGet(`darkoak:profile:${player.name}`))
     // 0: Text / Description, 1: Pronouns, 2: Age
 
-    f.textField('\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', parts[0])
-    f.textField('Pronouns:', 'Example: He / Him', parts[1])
-    f.textField('Age:', 'Example: 17', parts[2])
+    f.textField('\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', parts.description)
+    f.textField('Pronouns:', 'Example: He / Him', parts.pronouns)
+    f.textField('Age:', 'Example: 17', parts.age)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -927,7 +1021,8 @@ export function myProfile(player) {
             return
         }
         const e = evd.formValues
-        mcl.wSet(`darkoak:profile:${player.name}`, `${e[0]}|${e[1]}|${e[2]}||`)
+        const profile = {description: e[0], pronouns: e[1], age: e[2]}
+        mcl.wSet(`darkoak:profile:${player.name}`, JSON.stringify(profile))
     })
 }
 
@@ -942,10 +1037,10 @@ export function viewProfile(playerToShow, playerToView) {
         playerToShow.sendMessage(`§c${playerToView.name}'s Profile Hasn't Been Set-up Yet§r`)
         return
     }
-    const parts = p.split('|')
+    const parts = JSON.parse(p)
     f.title(`${playerToView.name}'s Profile`)
 
-    f.body(`\nName: ${playerToView.name}, Pronouns: ${parts[1]}\nAge: ${parts[2]}\n\nDescription: ${parts[0]}\n\n`)
+    f.body(`\nName: ${playerToView.name}, Pronouns: ${parts.pronouns}\nAge: ${parts.age}\n\nDescription: ${parts.description}\n\n`)
 
     f.button('Dismiss')
 
@@ -966,7 +1061,7 @@ export function reportPlayerUI(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
-        mcl.wSet(`darkoak:report:${mcl.timeUuid()}`, `${names[e[0]]}|${e[1]}`)
+        mcl.wSet(`darkoak:report:${mcl.timeUuid()}`, JSON.stringify({player: names[e[0]], reason: e[1]}))
     })
 }
 
