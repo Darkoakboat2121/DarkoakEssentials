@@ -1,7 +1,7 @@
 
 // This file holds data
 
-import { mcl } from "./logic"
+import { mcl } from "../logic"
 import { Player } from "@minecraft/server"
 
 /**List of usernames to ban automatically if prebans is set to true*/
@@ -31,6 +31,7 @@ export const preBannedList = [
     'undisputzd', //Client dev
     'RanByGen', //Client dev
     'LoreSkygen', //Alt
+    'cknighty21', //Basic
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -126,3 +127,4 @@ export class icons {
 
 
 // chat rank format: 0 = message, 1 = command, 2 = tag
+// dynamic propertys can hold 32767 characters

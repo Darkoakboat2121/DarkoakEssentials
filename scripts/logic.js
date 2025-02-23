@@ -61,6 +61,24 @@ export class mcl {
         return world.getDynamicProperty(id)
     }
 
+    /**Gets a global data object
+     * @param {string} id 
+     * @returns {object}
+     */
+    static jsonWGet(id) {
+        const t = world.getDynamicProperty(id)
+        return JSON.parse(t)
+    }
+
+    /**Sets a global data object
+     * @param {string} id 
+     * @param {object} data 
+     * @returns {string}
+     */
+    static jsonWSet(id, data) {
+        return world.setDynamicProperty(id, JSON.stringify(data))
+    }
+
     /**Sets a player dynamic property
      * @param {Player} player
      * @param {string} id 
@@ -78,7 +96,9 @@ export class mcl {
         player.getDynamicProperty(id)
     }
 
-    
+    static getPlayer(name) {
+        return world.getPlayers({name: name})[0]
+    }
 
     /**Returns an array of dynamic property ids that starts with the inputted key
      * @param {string | undefined} key If the inputted key is undefined, it returns every property id

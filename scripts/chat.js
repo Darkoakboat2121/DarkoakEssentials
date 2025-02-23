@@ -1,8 +1,8 @@
 import { world, system } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import * as i from "./interfaces"
+import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
-import { chatRankDefaults } from "./defaults"
+import { chatRankDefaults } from "./data/defaults"
 
 // This file handles all chat interactions such as:
 // Custom commands, ranks, possibly more at a later date

@@ -1,7 +1,8 @@
 import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import * as arrays from "./arrays"
-import { mcl } from "./logic"
+import * as arrays from "../data/arrays"
+import { mcl } from "../logic"
+import { createWarpUI, deleteWarpUI, tpaSettings, tpaUI } from "./interfacesTwo"
 
 // This file holds all the functions containing UI
 
@@ -15,7 +16,6 @@ export function mainUI(player) {
     f.button('Player Settings', 'textures/ui/FriendsIcon')
     f.button('Chat Settings', 'textures/ui/chat_send')
     f.button('UI Settings', 'textures/ui/dialog_background_opaque')
-    f.button('Community Settings', 'textures/ui/icon_multiplayer')
     f.button('Dashboard', 'textures/items/diamond')
 
     f.show(player).then((evd) => {
@@ -35,9 +35,6 @@ export function mainUI(player) {
                 UIMakerUI(player)
                 break
             case 4:
-                communitySettingsUI(player)
-                break
-            case 5:
                 dashboardMainUI(player)
                 break
             default:
@@ -604,6 +601,7 @@ export function dashboardMainUI(player) {
     f.button('Delete Data')
     f.button('Reports')
     f.button('Logs')
+    f.button('Docs')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -627,6 +625,9 @@ export function dashboardMainUI(player) {
                 break
             case 3:
                 logsUI(player)
+                break
+            case 4:
+                docsUI(player)
                 break
             default:
                 player.sendMessage('§cError§r')
@@ -664,33 +665,55 @@ export function reportsUI(player) {
     const values = mcl.listGetValues('darkoak:report:')
     for (const report of values) {
         const parts = JSON.parse(report)
-        // Report: 0 = name, 1 = reason
-        f.button(`${parts.player}\n${parts.reason}`)
+        f.button(`${parts.player} Reported By: ${parts.submitter}\n${parts.reason}`)
     }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        mcl.wSet(raw[evd.selection])
+        const data = JSON.parse(values[evd.selection])
+        let rf = new ActionFormData()
+        rf.title(data.player)
+
+        rf.body(`\nPlayer: ${data.player}\nSubmitted By: ${data.submitter}\n\nReason: ${data.reason}\n`)
+
+        rf.button('Take Action')
+        rf.button('Dismiss')
+
+        rf.show(player).then((revd) => {
+            if (revd.canceled) return
+            if (revd.selection === 0) {
+                playerPunishmentsMainUI(player)
+            }
+        })
     })
 }
 
 export function logsUI(player) {
     let f = new ActionFormData()
 
-    const logs = mcl.listGetValues('darkoak:log:').sort((a, b) => {
-        const [aKey, aValue] = a.split(': ').map(Number)
-        const [bKey, bValue] = b.split(': ').map(Number)
-        return aKey - bKey || aValue - bValue
-    })
-    for (const log of logs) {
-        const parts = log.split('|')
-        f.button(`${parts[0]}\n${parts[1]}`)
+    const logs = JSON.parse(mcl.wGet('darkoak:log'))
+    for (const log of logs.logs) {
+        f.button(`${log.message}`)
     }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
+    }).catch((error) => {
+        console.log(error)
     })
 }
+
+export function docsUI(player) {
+    let f = new ActionFormData()
+    f.title('Documentation')
+
+    f.body('wip')
+
+    f.button('Dismiss')
+
+    f.show(player)
+}
+
 
 // main ui for making new ui, works by feeding set data to a function that displays it
 // cui = custom ui (any ui made by this)
@@ -838,7 +861,7 @@ export function communitySettingsUI(player) {
     let f = new ActionFormData()
     f.title('Community Settings')
 
-    f.button('RTP Settings')
+    f.button('Warp / TP Settings')
     f.button('Shop Settings')
     f.button('Report Settings')
 
@@ -847,7 +870,7 @@ export function communitySettingsUI(player) {
 
         switch(evd.selection) {
             case 0:
-                rtpUI(player)
+                warpSettingsUI(player)
                 break
             case 1:
                 shopSettingsUI(player)
@@ -862,6 +885,37 @@ export function communitySettingsUI(player) {
     })
 }
 
+export function warpSettingsUI(player) {
+    let f = new ActionFormData()
+    f.title('Warp / TP Settings')
+
+    f.button('RTP Settings')
+    f.button('TPA Settings')
+    f.button('Create A Warp')
+    f.button('Delete A Warp')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        switch(evd.selection) {
+            case 0:
+                rtpUI(player)
+                break
+            case 1:
+                tpaSettings(player)
+                break
+            case 2:
+                createWarpUI(player)
+                break
+            case 3:
+                deleteWarpUI(player)
+                break
+            default:
+                player.sendMessage('§cError§r')
+                break
+        }
+    })
+}
 
 export function rtpUI(player) {
     let f = new ModalFormData()
@@ -907,19 +961,57 @@ export function shopSettingsUI(player) {
 /**
  * @param {Player} player 
  */
+export function shopRemoveUI(player) {
+    let f = new ActionFormData()
+    f.title('Remove Shop Item')
+
+    const raw = mcl.listGet('darkoak:shopitem:')
+    const value = mcl.listGetValues('darkoak:shopitem:')
+    for (const item of value) {
+        /** @type {{ sell: boolean, item: string, amount: number, price: number }} */
+        const parts = JSON.parse(item)
+        
+        f.button(`Sell:${parts.sell} ${parts.item.replace('minecraft:', '')} x${parts.amount} - $${parts.price}`, `textures/items/${parts.item.replace('minecraft:', '')}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        /** @type {{ sell: boolean, item: string, amount: number, price: number }} */
+        const data = JSON.parse(value.at(evd.selection))
+
+        mcl.wSet(raw[evd.selection])
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
 export function shopAddUI(player) {
     let f = new ModalFormData()
     f.title('Add Shop Item')
 
+    f.toggle('Sell?')
     f.textField('\nItem ID:', 'Example: minecraft:diamond')
     f.slider('Amount Of Items:', 1, 64, 1)
-    f.textField('Money Value:', 'Example: 100')
+    f.textField('Price:', 'Example: 100')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
-        mcl.wSet(`darkoak:shopitem:${mcl.timeUuid()}`, `${e[0]}|${e[1]}|${e[2]}`)
+        const data = {sell: e[0], item: e[1], amount: e[2], price: e[3]}
+        mcl.wSet(`darkoak:shopitem:${mcl.timeUuid()}`, JSON.stringify(data))
     })
+}
+
+
+export function creditsUI(player) {
+    let f = new ActionFormData()
+    f.title('Credits')
+
+    f.body('\nMade by Darkoakboat2121 (thats me lol)\n\nThanks CanineYeti24175 for being cool lol\n\n')
+
+    f.button('Dismiss', 'textures/items/boat_darkoak')
+    f.show(player)
 }
 
 /////////////////////////////////////////////////////////////Community Item//////////////////////////////////////////////////////////////
@@ -931,34 +1023,94 @@ export function communityMain(player) {
     f.title('Community')
     f.body('Use This Item While Crouching And Looking At A Player To View Their Profile')
 
-    f.button('Pay', arrays.icons.minecoin)
-    f.button('RTP')
+    f.button('Pay / Shop', arrays.icons.minecoin)
+    f.button('Warps')
     f.button('Report')
-    f.button('Shop')
     f.button('My Profile')
+    f.button('Credits')
+    if (player.hasTag('darkoak:admin')) { 
+        f.button('Community Settings\n(Admins Only)', 'textures/ui/icon_multiplayer')
+    }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
 
         switch(evd.selection) {
             case 0:
-                payUI(player)
+                communityMoneyUI(player)
                 break
             case 1:
-                rtp(player)
+                warpsUI(player)
                 break
             case 2:
                 reportPlayerUI(player)
                 break
             case 3:
-                shopUI(player)
-                break
-            case 4:
                 myProfile(player)
                 break
-            default:
-                player.sendMessage('§cError§r')
+            case 4:
+                creditsUI(player)
                 break
+            default:
+                if (player.hasTag('darkoak:admin')) { 
+                    communitySettingsUI(player)
+                } else {
+                    player.sendMessage('§cError§r')
+                }
+                break
+        }
+    })
+}
+
+
+export function communityMoneyUI(player) {
+    let f = new ActionFormData()
+    f.title('Money')
+
+    f.button('Pay')
+    f.button('Shop')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch(evd.selection) {
+            case 0:
+                payUI(player)
+                break
+            case 1:
+                shopUI(player)
+                break
+        }
+    })
+}
+
+
+export function warpsUI(player) {
+    let f = new ActionFormData()
+    f.title('Warps')
+
+    f.button('RTP')
+    f.button('TPA')
+
+    const warps = mcl.listGetValues('darkoak:warp:')
+    for (const warp of warps) {
+        const data = JSON.parse(warp)
+        f.button(`${data.name}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.selection
+        if (e === 0) {
+            rtp(player)
+        } else if (e === 1) {
+            tpaUI(player)
+        } else {
+            const data = JSON.parse(warps[evd.selection - 2])
+            let parts = ''
+            if (data != undefined) {
+                parts = data.coords.split(' ')
+            }
+            player.runCommandAsync(`tp @s ${parts[0]} ${parts[1]} ${parts[2]}`)
         }
     })
 }
@@ -1061,7 +1213,7 @@ export function reportPlayerUI(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
-        mcl.wSet(`darkoak:report:${mcl.timeUuid()}`, JSON.stringify({player: names[e[0]], reason: e[1]}))
+        mcl.wSet(`darkoak:report:${mcl.timeUuid()}`, JSON.stringify({player: names[e[0]], reason: e[1], submitter: player.name}))
     })
 }
 
@@ -1073,7 +1225,7 @@ export function rtp(player) {
         const center = mcl.wGet('darkoak:cws:rtp:center')
         const distance = mcl.wGet('darkoak:cws:rtp:distance')
         player.runCommandAsync(`spreadplayers ${center} ${center} 1 ${distance} ${player.name}`)
-    }
+    } else player.sendMessage('§cRTP Is Disabled§r')
 }
 
 
@@ -1087,9 +1239,13 @@ export function shopUI(player) {
     const raw = mcl.listGet('darkoak:shopitem:')
     const value = mcl.listGetValues('darkoak:shopitem:')
     for (const item of value) {
-        const parts = item.split('|')
-        // shopitem: 0 = item type id / name / texture, 1 = amount per buy, 2 = money value
-        f.button(`${parts[0].replaceAll('minecraft:', '')} x${parts[1]} - $${parts[2]}`, `textures/items/${parts[0].replaceAll('minecraft:', '')}`)
+        /** @type {{ sell: boolean, item: string, amount: number, price: number }} */
+        const parts = JSON.parse(item)
+        if (parts.sell === true) {
+            f.button(`Sell: ${parts.item.replace('minecraft:', '')} x${parts.amount} - $${parts.price}`, `textures/items/${parts.item.replace('minecraft:', '')}`)
+        } else {
+            f.button(`Buy: ${parts.item.replace('minecraft:', '')} x${parts.amount} - $${parts.price}`, `textures/items/${parts.item.replace('minecraft:', '')}`)
+        }
     }
 
     f.show(player).then((evd) => {
@@ -1098,14 +1254,27 @@ export function shopUI(player) {
             return
         }
         const score = world.scoreboard.getObjective(mcl.wGet('darkoak:moneyscore')).getScore(player)
-        const parts = value.at(evd.selection).split('|')
+        /** @type {{ sell: boolean, item: string, amount: number, price: number }} */
+        const parts = JSON.parse(value.at(evd.selection))
         
-        if (score < parts[2]) {
-            player.sendMessage('§cNot Enough Money§r')
-            return
-        }
+        if (parts.sell === true) {
+            player.runCommandAsync(`testfor @s [hasitem={item=${parts.item} , quantity=${parts.amount}..}]`).then((evd) => {
+                if (evd.successCount > 0) {
+                    player.runCommandAsync(`clear @s ${parts.item} 0 ${parts.amount}`)
+                    player.runCommandAsync(`scoreboard players add @s ${mcl.wGet('darkoak:moneyscore')} ${parts.price}`)
+                } else {
+                    player.sendMessage('§cNot Enough Items§r')
+                    return
+                }
+            })
+        } else {
+            if (score < parts.price) {
+                player.sendMessage('§cNot Enough Money§r')
+                return
+            }
 
-        player.runCommandAsync(`scoreboard players remove @s ${mcl.wGet('darkoak:moneyscore')} ${parts[2]}`)
-        player.runCommandAsync(`give @s ${parts[0]} ${parts[1]}`)
+            player.runCommandAsync(`scoreboard players remove @s ${mcl.wGet('darkoak:moneyscore')} ${parts.price}`)
+            player.runCommandAsync(`give @s ${parts.item} ${parts.amount}`)
+        }
     })
 }

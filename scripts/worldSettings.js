@@ -1,6 +1,6 @@
 import { world, system, EntityDamageCause } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import * as arrays from "./arrays"
+import * as arrays from "./data/arrays"
 import { mcl } from "./logic"
 
 // This file holds world settings and player tracking
@@ -60,6 +60,7 @@ world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
 world.afterEvents.playerSpawn.subscribe((evd) => {
 
     system.runTimeout(() => {
+        if (!evd.initialSpawn) return
         const replacements = arrays.actionbarReplacements(evd.player)
         var text = mcl.wGet('darkoak:welcome')
 

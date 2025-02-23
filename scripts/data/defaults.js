@@ -1,6 +1,6 @@
 import { world, system } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import { mcl } from "./logic"
+import { mcl } from "../logic"
 
 // This file sets all dynamic propertys to their default state if they havent been setup yet and it manages data size / limits
 
@@ -34,26 +34,32 @@ export function welcomeMessageDefaults() {
 }
 
 export function logcheck() {
-    const logs = mcl.listGetValues('darkoak:log:');
-    if (logs.length <= 20) return;
+    const log = mcl.wGet('darkoak:log')
+    let data = JSON.parse(log)
 
-    // Parse the log entries and find the smallest value
-    const parsedLogs = logs.map((log, index) => {
-        const parts = log.split('|');
-        const timestamp = parseInt(parts[1], 10);
-        return { index, timestamp, log };
-    });
+    if (data.logs.length > 10) {
+        data.logs.shift()
+    }
 
-    // Find the log entry with the smallest timestamp
-    const smallestLog = parsedLogs.reduce((min, log) => log.timestamp < min.timestamp ? log : min, parsedLogs[0]);
-
-    // Delete the log entry with the smallest timestamp
-    mcl.wSet(mcl.listGet('darkoak:log:')[smallestLog.index], undefined);
+    mcl.wSet('darkoak:log', JSON.stringify(data))
 }
 
 system.runInterval(() => {
     const byte = world.getDynamicPropertyTotalByteCount()
-    if (byte > 10000) {
+    if (byte > 20000) {
         mcl.adminMessage(`Possibly Dangerous Property Count: ${byte.toString()}, Please Print The World Data`)
     }
 }, 6000)
+
+
+system.runInterval(() => {
+    for (const player of world.getAllPlayers()) {
+        if (mcl.pGet(player, 'darkoak:ac:blocksbroken') === undefined) {
+            mcl.pSet(player, 'darkoak:ac:blocksbroken', 0)
+        }
+
+        if (mcl.pGet(player, 'darkoak:ac:blocksplaced') === undefined) {
+            mcl.pSet(player, 'darkoak:ac:blocksplaced', 0)
+        }
+    }
+}, 100)

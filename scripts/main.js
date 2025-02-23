@@ -1,12 +1,13 @@
 import { world, system } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import * as interfaces from "./interfaces"
+import * as interfaces from "./uis/interfaces"
 import * as chat from "./chat"
-import * as defaults from "./defaults"
-import * as arrays from "./arrays"
+import * as defaults from "./data/defaults"
+import * as arrays from "./data/arrays"
 import { mcl } from "./logic"
 import * as anticheat from "./anticheat"
 import * as worldSettings from "./worldSettings"
+import * as interfacesTwo from "./uis/interfacesTwo"
 
 // main ui opener, see interfaces, also manages bindable/dummy items
 world.afterEvents.itemUse.subscribe((evd) => {
@@ -32,10 +33,22 @@ world.afterEvents.itemUse.subscribe((evd) => {
         }
     }
 
+    if (evd.itemStack.typeId === 'darkoak:generators' && player.hasTag('darkoak:admin')) {
+        interfacesTwo.genMainUI(player)
+    }
+
+    if (evd.itemStack.typeId === 'darkoak:hop_feather' && player.isOnGround) {
+        const direction = player.getViewDirection()
+        player.applyKnockback(direction.x, direction.z, 3, 1)
+    }
+
     if (!evd.itemStack.typeId.startsWith('darkoak:dummy')) return
     for (let index = 0; index <= arrays.dummySize; index++) {
         if (evd.itemStack.typeId === `darkoak:dummy${index}`) {
-            evd.source.runCommandAsync(mcl.wGet(`darkoak:bind:${index}`))
+            const command = mcl.wGet(`darkoak:bind:${index}`)
+            if (command != '' && command != undefined) {
+                evd.source.runCommandAsync(command)
+            }
         }
     }
 })
@@ -72,6 +85,15 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
     }
 })
 
+world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
+    if (evd.itemStack && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin')) {
+        system.runTimeout(() => {
+            interfacesTwo.dataEditorEntityUI(evd.player, evd.target)
+        }, 1)
+        evd.cancel = true
+    }
+})
+
 // system for handling message cui (see interfaces) based on the tag
 system.runInterval(() => {
     for (const ui of mcl.listGetValues('darkoak:ui:message:')) {
@@ -96,7 +118,16 @@ system.runInterval(() => {
             }
         }
     }
+
 }, 20)
+
+system.runInterval(() => {
+    for (const block of mcl.listGetValues('darkoak:gen:')) {
+        const b = JSON.parse(block)
+        const parts = b.coords.split(' ')
+        world.getDimension('overworld').runCommandAsync(`setblock ${parts[0]} ${parts[1]} ${parts[2]} ${b.block}`)
+    }
+})
 
 
 function actionUIBuilder(playerToShow, title, body, buttons) {
