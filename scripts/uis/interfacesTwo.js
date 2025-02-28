@@ -1,6 +1,9 @@
-import { world, system, Player, Entity } from "@minecraft/server"
+import { world, system, Player, Entity, ItemStack } from "@minecraft/server"
 import { ActionFormData, MessageFormData, ModalFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
+import * as interfaces from "./interfaces"
+import { customEnchantActions, customEnchantEvents } from "../enchanting"
+
 
 /**UI for data editor item
  * @param {Player} player 
@@ -233,5 +236,145 @@ export function tpaRecieveUI(reciever, sender) {
                 sender.sendMessage('§cTPA Request Denied§r')
                 break
         }
+    })
+}
+
+/**
+ * 
+ * @param {Player} player 
+ */
+export function anticheatMain(player) {
+    let f = new ActionFormData()
+    f.title('Anticheat')
+
+    if (!player.hasTag('darkoak:admin') && !player.hasTag('darkoak:mod')) {
+        player.sendMessage('§cYou Aren\'t An Admin Or Mod§r')
+        return
+    }
+
+    if (player.hasTag('darkoak:admin')) {
+        f.button('Anticheat Settings')
+    }
+    if (player.hasTag('darkoak:admin') || player.hasTag('darkoak:mod')) {
+        f.button('Punishments')
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        if (player.hasTag('darkoak:admin')) {
+            if (evd.selection === 0) {
+                anticheatSettings(player)
+            } else {
+                interfaces.playerPunishmentsMainUI(player)
+            }
+        } else {
+            interfaces.playerPunishmentsMainUI(player)
+        }
+
+    })
+}
+
+
+export function anticheatSettings(player) {
+    let f = new ModalFormData()
+    f.title('Anticheat Settings')
+
+    const d = mcl.jsonWGet('darkoak:anticheat')
+
+    f.toggle('Pre-bans', d.prebans)
+    f.toggle('Anti-nuker', d.antinuker)
+    f.toggle('Anti-fast-place', d.antifastplace)
+    f.toggle('Anti-fly 1', d.antifly1)
+    f.toggle('Anti-speed 1', d.antispeed1)
+    f.toggle('Anti-spam', d.antispam)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+        mcl.jsonWSet('darkoak:anticheat', {
+            prebans: e[0], 
+            antinuker: e[1], 
+            antifastplace: e[2],
+            antifly1: e[3],
+            antispeed1: e[4],
+            antispam: e[5]
+        })
+    })
+}
+
+
+export function auctionMain(player) {
+    let f = new ActionFormData()
+    f.title('Auction House')
+
+    f.button('Add Item')
+    f.button('Buy Item')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        switch(evd.selection) {
+            case 0:
+                auctionAddUI(player)
+                break
+            case 1:
+                auctionHouse(player)
+                break
+        }
+    })
+}
+
+export function auctionAddUI(player) {
+
+}
+
+export function auctionHouse(player) {
+    let f = new ActionFormData()
+    f.title('Auction House')
+
+    const raw = mcl.listGet('darkoak:auction:item')
+    const value = mcl.listGetValues('darkoak:auction:item')
+
+    for (const item of value) {
+        const d = JSON.parse(item)
+        f.button(`${d.item} for ${d.price}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+    })
+}
+
+/**
+ * 
+ * @param {Player} player 
+ */
+export function customEnchantsMain(player) {
+    let f = new ModalFormData()
+    f.title('Custom Enchant')
+
+    const events = customEnchantEvents
+    const actions = customEnchantActions
+
+    f.dropdown('\n(While Holding Item)\nEvent:', events)
+    f.dropdown('\nAction:', actions)
+
+    f.slider('\nExplode: Explosion Radius\nExtra Damage: Damage Amount\nDash: Dash Distance\nPower', 1, 10, 1)
+    
+    f.submitButton('Enchant Held Item?')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+
+        const ev = events[e[0]]
+        const ac = actions[e.at(1)]
+        const am = e[2]
+
+        const i = mcl.getHeldItem(player)
+        let item = new ItemStack(i.type, i.amount)
+        item.setLore([`§r§5${ev}-${ac}-${am}`])
+
+        mcl.getItemContainer(player).setItem(player.selectedSlotIndex, item)
     })
 }

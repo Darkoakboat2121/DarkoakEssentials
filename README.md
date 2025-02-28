@@ -2,8 +2,6 @@ This Minecraft bedrock addon is an essentials addon. Please credit me if you're 
 
 Plans:
 
-1. Enhanced Anti-Cheat Features
-Auto-Ban for Repeated Offenses: Automatically ban players who repeatedly trigger anti-cheat mechanisms.
 2. Player Management Features
 Player Statistics Tracking: Track and display various player statistics such as blocks broken, blocks placed, mobs killed, etc.
 Player Inventory Management: Allow admins to view and manage player inventories.
@@ -17,3 +15,15 @@ ykw:
     auction house*
     player shop*
     plots
+
+tracking:
+    blocks broken
+    blocks placed
+    minutes play
+    deaths
+    kills
+
+ac:
+
+other:
+    message logs

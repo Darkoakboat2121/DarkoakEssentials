@@ -1,4 +1,4 @@
-import { world, system } from "@minecraft/server"
+import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as interfaces from "./uis/interfaces"
 import * as chat from "./chat"
@@ -8,6 +8,8 @@ import { mcl } from "./logic"
 import * as anticheat from "./anticheat"
 import * as worldSettings from "./worldSettings"
 import * as interfacesTwo from "./uis/interfacesTwo"
+
+import * as external from "./external/external"
 
 // main ui opener, see interfaces, also manages bindable/dummy items
 world.afterEvents.itemUse.subscribe((evd) => {
@@ -37,6 +39,10 @@ world.afterEvents.itemUse.subscribe((evd) => {
         interfacesTwo.genMainUI(player)
     }
 
+    if (evd.itemStack.typeId === 'darkoak:anticheat') {
+        interfacesTwo.anticheatMain(player)
+    }
+
     if (evd.itemStack.typeId === 'darkoak:hop_feather' && player.isOnGround) {
         const direction = player.getViewDirection()
         player.applyKnockback(direction.x, direction.z, 3, 1)
@@ -56,8 +62,12 @@ world.afterEvents.itemUse.subscribe((evd) => {
 // preban, wip ban system
 world.afterEvents.playerSpawn.subscribe((evd) => {
     const p = world.getAllPlayers()[0]
-    for (const n of arrays.preBannedList) {
-        p.runCommandAsync(`kick "${n}"`)
+    const d = mcl.jsonWGet('darkoak:anticheat')
+
+    if (d.prebans) {
+        for (const n of arrays.preBannedList) {
+            p.runCommandAsync(`kick "${n}"`)
+        }
     }
 
     for (const n of mcl.listGetValues('darkoak:bans:')) {
@@ -126,6 +136,14 @@ system.runInterval(() => {
         const b = JSON.parse(block)
         const parts = b.coords.split(' ')
         world.getDimension('overworld').runCommandAsync(`setblock ${parts[0]} ${parts[1]} ${parts[2]} ${b.block}`)
+    }
+})
+
+
+system.afterEvents.scriptEventReceive.subscribe((evd) => {
+    if (!evd.sourceEntity) return
+    if (evd.id === 'darkoak:enchant') {
+        interfacesTwo.customEnchantsMain(evd.sourceEntity)
     }
 })
 

@@ -38,6 +38,22 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         }
     }
 
+    const d = mcl.jsonWGet('darkoak:anticheat')
+    const t = new Date()
+    if (mcl.pGet(evd.sender, 'darkoak:antispam') === undefined) {
+        mcl.pSet(evd.sender, 'darkoak:antispam', JSON.stringify({
+            message: evd.message
+        }))
+    }
+    const h = JSON.parse(mcl.pGet(evd.sender, 'darkoak:antispam'))
+    if (h.message === evd.message && !mcl.isOp(evd.sender) && d.antispam && !evd.sender.hasTag('darkoak:admin')) {
+        evd.cancel = true
+        return
+    }
+    mcl.pSet(evd.sender, 'darkoak:antispam', JSON.stringify({
+        message: evd.message
+    }))
+
     chatRankDefaults()
 
     const tags = evd.sender.getTags()

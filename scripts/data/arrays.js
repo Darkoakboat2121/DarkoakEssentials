@@ -6,8 +6,8 @@ import { Player } from "@minecraft/server"
 
 /**List of usernames to ban automatically if prebans is set to true*/
 export const preBannedList = [
-    'Noki5160', //IP leaking
-    'TheMr8bit', //Basic
+    'Noki5160', /*IP leaking*/
+    'TheMr8bit', /*Basic*/
     'K4leonidas', //Racism
     'HackerBase74', //Basic
     'Player847806825', //Alt
@@ -124,6 +124,7 @@ export class icons {
     static trash = 'textures/ui/icon_trash'
     static minecoin = 'textures/ui/icon_minecoin_9x9'
 }
+
 
 
 // chat rank format: 0 = message, 1 = command, 2 = tag

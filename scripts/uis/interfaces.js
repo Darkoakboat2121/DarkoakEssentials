@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { createWarpUI, deleteWarpUI, tpaSettings, tpaUI } from "./interfacesTwo"
+import { auctionMain, createWarpUI, deleteWarpUI, tpaSettings, tpaUI } from "./interfacesTwo"
 
 // This file holds all the functions containing UI
 
@@ -303,7 +303,7 @@ export function unmutePlayerUI(player) {
 
     const names = mcl.playerNameArray('darkoak:muted')
     if (names === undefined || names.length === 0) {
-        player.sendMessage('No Mutes Found')
+        player.sendMessage('§cNo Mutes Found§r')
         return
     }
     f.dropdown('\nPlayer:', names)
@@ -320,15 +320,31 @@ export function unmutePlayerUI(player) {
 export function playerTrackingUI(player) {
     let f = new ModalFormData()
     f.title('Player Tracking')
+    const d = mcl.jsonWGet('darkoak:tracking')
     
-    f.toggle('Flying', mcl.wGet('darkoak:track:flying'))
-    f.toggle('Gliding', mcl.wGet('darkoak:track:gliding'))
+    f.toggle('Flying', d.flying)
+    f.toggle('Gliding', d.gliding)
+    f.toggle('Climbing', d.climbing)
+    f.toggle('Emoting', d.emoting)
+    f.toggle('Falling', d.falling)
+    f.toggle('In Water', d.inwater)
+    f.toggle('Jumping', d.jumping)
+    f.toggle('On Ground', d.onground)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
-        mcl.wSet('darkoak:track:flying', e[0])
-        mcl.wSet('darkoak:track:gliding', e[1])
+        mcl.jsonWSet('darkoak:tracking', {
+            flying: e[0],
+            gliding: e[1],
+            climbing: e[2],
+            emoting: e[3],
+            falling: e[4],
+            inwater: e[5],
+            jumping: e[6],
+            onground: e[7]
+        })
+
     })
 }
 
@@ -441,7 +457,7 @@ export function chatCommandsDeleteUI(player) {
     
     const commands = mcl.listGetValues('darkoak:command:')
     const commandRaw = mcl.listGet('darkoak:command:')
-    f.dropdown('Commands:', commands)
+    f.dropdown('\nCommands:', commands)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -544,7 +560,7 @@ export function censorSettingsRemoveUI(player) {
     const wordRaw = mcl.listGet('darkoak:censor:')
 
     if (words === undefined || words.length === 0) {
-        player.sendMessage('No Words Found')
+        player.sendMessage('§cNo Words Found§r')
         return
     }
     f.dropdown('\nWord:', words)
@@ -707,7 +723,7 @@ export function docsUI(player) {
     let f = new ActionFormData()
     f.title('Documentation')
 
-    f.body('wip')
+    f.body('')
 
     f.button('Dismiss')
 
@@ -1069,7 +1085,7 @@ export function communityMoneyUI(player) {
 
     f.button('Pay')
     f.button('Shop')
-
+    f.button('Auction House')
     f.show(player).then((evd) => {
         if (evd.canceled) return
         switch(evd.selection) {
@@ -1078,6 +1094,9 @@ export function communityMoneyUI(player) {
                 break
             case 1:
                 shopUI(player)
+                break
+            case 2:
+                auctionMain(player)
                 break
         }
     })
@@ -1224,7 +1243,7 @@ export function rtp(player) {
     if (mcl.wGet('darkoak:cws:rtp:enabled') === true) {
         const center = mcl.wGet('darkoak:cws:rtp:center')
         const distance = mcl.wGet('darkoak:cws:rtp:distance')
-        player.runCommandAsync(`spreadplayers ${center} ${center} 1 ${distance} ${player.name}`)
+        player.runCommandAsync(`spreadplayers ${center} ${center} 1 ${distance} "${player.name}"`)
     } else player.sendMessage('§cRTP Is Disabled§r')
 }
 

@@ -1,4 +1,4 @@
-import { world, system, EntityDamageCause } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "./data/arrays"
 import { mcl } from "./logic"
@@ -82,17 +82,15 @@ system.runInterval(() => {
         const y = player.location.y
         const z = player.location.z
 
-        if (mcl.wGet('darkoak:track:flying') && player.isFlying) {
-            player.addTag('darkoak:flying')
-        } else {
-            player.removeTag('darkoak:flying')
+        const dr = mcl.wGet('darkoak:tracking')
+        if (dr === undefined) {
+            mcl.jsonWSet('darkoak:tracking', {
+                flying: false
+            })
         }
+        const d = JSON.parse(dr)
 
-        if (mcl.wGet('darkoak:track:gliding') && player.isGliding) {
-            player.addTag('darkoak:gliding')
-        } else {
-            player.removeTag('darkoak:gliding')
-        }
+        tracking(player, d)
 
         // World border
         const worldBorder = mcl.wGet('darkoak:cws:border')
@@ -113,3 +111,59 @@ system.runInterval(() => {
     }
 })
 
+/**
+ * @param {Player} player 
+ * @param {Object} d 
+ */
+function tracking(player, d) {
+    if (d.flying && player.isFlying) {
+        player.addTag('darkoak:flying')
+    } else {
+        player.removeTag('darkoak:flying')
+    }
+
+    if (d.gliding && player.isGliding) {
+        player.addTag('darkoak:gliding')
+    } else {
+        player.removeTag('darkoak:gliding')
+    }
+
+    if (d.climbing && player.isClimbing) {
+        player.addTag('darkoak:climbing')
+    } else {
+        player.removeTag('darkoak:climbing')
+    }
+
+    if (d.emoting && player.isEmoting) {
+        player.addTag('darkoak:emoting')
+    } else {
+        player.removeTag('darkoak:emoting')
+    }
+
+    if (d.falling && player.isFalling) {
+        player.addTag('darkoak:falling')
+    } else {
+        player.removeTag('darkoak:falling')
+    }
+
+    if (d.inwater && player.isInWater) {
+        player.addTag('darkoak:inwater')
+    } else {
+        player.removeTag('darkoak:inwater')
+    }
+
+    if (d.jumping && player.isJumping) {
+        player.addTag('darkoak:jumping')
+    } else {
+        player.removeTag('darkoak:jumping')
+    }
+
+    if (d.onground && player.isOnGround) {
+        player.addTag('darkoak:onground')
+    } else {
+        player.removeTag('darkoak:onground')
+    }
+    
+    
+
+}

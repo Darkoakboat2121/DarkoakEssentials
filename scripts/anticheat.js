@@ -7,6 +7,8 @@ import { logcheck } from "./data/defaults"
 
 // Anti nuker, works by checking the number of blocks broken in a small timeframe
 world.beforeEvents.playerBreakBlock.subscribe((evd) => {
+    const d = mcl.jsonWGet('darkoak:anticheat')
+    if (!d.antinuker) return
     const player = evd.player
     
     player.setDynamicProperty('darkoak:ac:blocksbroken', player.getDynamicProperty('darkoak:ac:blocksbroken') + 1)
@@ -23,6 +25,8 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
 
 // Anti fast place, works by checking the number of blocks placed in a small timeframe
 world.afterEvents.playerPlaceBlock.subscribe((evd) => {
+    const d = mcl.jsonWGet('darkoak:anticheat')
+    if (!d.antifastplace) return
     const player = evd.player
 
     player.setDynamicProperty('darkoak:ac:blocksplaced', player.getDynamicProperty('darkoak:ac:blocksplaced') + 1)
@@ -55,14 +59,27 @@ world.afterEvents.playerPlaceBlock.subscribe((evd) => {
 
 
 system.runInterval(() => {
+    const dq = mcl.wGet('darkoak:anticheat')
+    if (dq === undefined) {
+        mcl.jsonWSet('darkoak:anticheat', {
+            prebans: false, 
+            antinuker: false, 
+            antifastplace: false,
+            antifly1: false,
+            antispeed1: false,
+            antispam: false
+        })
+    }
+    const d = JSON.parse(dq)
+    
     for (const player of world.getAllPlayers()) {
 
         // Anti fly 1
-        if (player.getGameMode() != "creative" && player.getGameMode() != "spectator" && player.isFlying) {
+        if (player.getGameMode() != "creative" && player.getGameMode() != "spectator" && player.isFlying && d.antifly1) {
             log(`${player.name} -> anti-fly 1`)
         }
 
-        if (Math.abs(player.getVelocity().x) >= 3 || Math.abs(player.getVelocity().z) >= 3) {
+        if ((Math.abs(player.getVelocity().x) >= 3 || Math.abs(player.getVelocity().z) >= 3) && d.antispeed1) {
             log(`${player.name} -> speed 1`)
         }
     }

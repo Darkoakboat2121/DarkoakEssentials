@@ -1,4 +1,4 @@
-import { world, system, Player, ItemStack, Container } from "@minecraft/server";
+import { world, system, Player, ItemStack, Container, EntityComponentTypes } from "@minecraft/server";
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting api*/
 export class mcl {
@@ -93,7 +93,7 @@ export class mcl {
      * @param {*} id 
      */
     static pGet(player, id) {
-        player.getDynamicProperty(id)
+        return player.getDynamicProperty(id)
     }
 
     static getPlayer(name) {
@@ -242,12 +242,20 @@ export class mcl {
 
     /**Returns the held item
      * @param {Player} player 
-     * @returns {ItemStack}
+     * @returns {ItemStack | undefined}
      */
     static getHeldItem(player) {
         /**@type {Container} */
-        const container = player.getComponent("minecraft:inventory").container
+        const container = player.getComponent(EntityComponentTypes.Inventory).container
         return container.getItem(player.selectedSlotIndex)
+    }
+
+    /**Advanced item thing
+     * @param {Player} player 
+     * @returns {Container}
+     */
+    static getItemContainer(player) {
+        return player.getComponent(EntityComponentTypes.Inventory).container
     }
 
     /**WIP
