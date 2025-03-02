@@ -5,16 +5,16 @@ Plans:
 2. Player Management Features
 Player Statistics Tracking: Track and display various player statistics such as blocks broken, blocks placed, mobs killed, etc.
 Player Inventory Management: Allow admins to view and manage player inventories.
-3. World Management Features
-Region Protection: Implement a system to protect specific regions from being modified by players.
 
 
-ykw:
+community:
     giftcodes
     land claims
     auction house*
     player shop*
     plots
+    personal log
+    trading
 
 tracking:
     blocks broken
@@ -27,3 +27,10 @@ ac:
 
 other:
     message logs
+    clan system
+    sitting
+    secret items giver
+
+chat:
+    proximity chat
+    under name chat

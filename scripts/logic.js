@@ -1,16 +1,7 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes } from "@minecraft/server";
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent } from "@minecraft/server";
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting api*/
 export class mcl {
-    /**Generates a fake uuid in the correct format*/
-    static uuid() {
-        var u = '', i = 0
-        while (i++ < 36) {
-            var c = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'[i - 1], r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            u += (c == '-' || c == '4') ? c : v.toString(16)
-        }
-        return u
-    }
 
     /**Generates a unique number starting with a random number and ending with the current exact time, format: R[random]T[time]*/
     static timeUuid() {
@@ -82,20 +73,23 @@ export class mcl {
     /**Sets a player dynamic property
      * @param {Player} player
      * @param {string} id 
-     * @param {any | undefined} setTo
+     * @param {boolean | number | string | Vector3 | undefined} setTo
      */
     static pSet(player, id, setTo) {
         player.setDynamicProperty(id, setTo)
     }
 
     /**Gets a player dynamic property
-     * @param {*} player 
-     * @param {*} id 
+     * @param {Player} player 
+     * @param {string} id 
      */
     static pGet(player, id) {
         return player.getDynamicProperty(id)
     }
 
+    /**
+     * @param {string} name
+     */
     static getPlayer(name) {
         return world.getPlayers({name: name})[0]
     }
@@ -119,7 +113,7 @@ export class mcl {
         if (key === undefined) {
             var u = []
             for (const h of world.getDynamicPropertyIds()) {
-                u.push(wGet(h))
+                u.push(mcl.wGet(h))
             }
             return u
         } else {
@@ -131,8 +125,27 @@ export class mcl {
         }
     }
 
+    /**Returns a list of key value pairs of dynamic propertys
+     * @param {string} key 
+     */
+    static listGetBoth(key) {
+        if (key === undefined) {
+            var u = []
+            for (const h of world.getDynamicPropertyIds()) {
+                u.push({id: h, value: mcl.wGet(h)})
+            }
+            return u
+        } else {
+            var u = []
+            for (const h of world.getDynamicPropertyIds().filter(e => e.startsWith(key))) {
+                u.push({id: h, value: mcl.wGet(h)})
+            }
+            return u
+        }
+    }
+
     /**Returns an array of all the online players names
-     * @param {string | undefined} tag If tag is not undefined, it returns all online players with the inputted tag
+     * @param {string | undefined} tag If tag is defined, it returns all online players with the inputted tag
     */
     static playerNameArray(tag) {
         if (tag === undefined) {
@@ -175,7 +188,11 @@ export class mcl {
             u.push(t)
         }
 
-        return u
+        if (u.length === 0) {
+            return 'No Tags Found'
+        } else {
+            return u
+        }
     }
 
     /**Checks if the inputted player is the host by checking its id
@@ -216,15 +233,13 @@ export class mcl {
      * @param {string} message 
      */
     static adminMessage(message) {
-        for (const player of world.getAllPlayers()) {
-            if (mcl.isCreating(player) && player.hasTag('darkoak:admin')) {
-                player.sendMessage(message)
-            }
+        for (const player of world.getPlayers({tags: ['darkoak:admin']})) {
+            player.sendMessage(message)
         }
     }
 
     /**Returns the players health
-     * @param {*} player 
+     * @param {Player} player 
      * @returns {number}
      */
     static healthValue(player) {
@@ -250,7 +265,7 @@ export class mcl {
         return container.getItem(player.selectedSlotIndex)
     }
 
-    /**Advanced item thing
+    /**Advanced container inventory
      * @param {Player} player 
      * @returns {Container}
      */
@@ -259,12 +274,13 @@ export class mcl {
     }
 
     /**WIP
-     * @param {*} player 
-     * @param {*} location 
+     * @param {Player} player 
+     * @param {number} location 
      */
     static getCertainItem(player, location) {
         /**@type {Container} */
         const container = player.getComponent("minecraft:inventory").container
+        return container.getSlot(location)
     }
 
     /**Converts inputted seconds to tick value
@@ -274,4 +290,41 @@ export class mcl {
     static secondsToTicks(seconds) {
         return seconds * 20
     }
+
+    /**
+     * 
+     * @param {Block} block 
+     * @returns {{waxed: boolean, text: string, color: DyeColor}}
+     */
+    static getSign(block) {
+        /**@type {BlockSignComponent} */
+        const signed = block.getComponent(BlockComponentTypes.Sign)
+        return {waxed: signed.isWaxed, text: signed.getText(), color: signed.getTextDyeColor()}
+    }
+
+    /**Modifies a sign
+     * @param {Block} block 
+     * @param {boolean} wax 
+     * @param {string} text 
+     * @param {DyeColor} color 
+     */
+    static rewriteSign(block, wax, text, color) {
+        /**@type {BlockSignComponent} */
+        const signed = block.getComponent(BlockComponentTypes.Sign)
+        signed.setWaxed(wax)
+        signed.setText(text)
+        signed.setTextDyeColor(color)
+    }
+
+    /**Gets an items durability info
+     * @param {ItemStack} item 
+     * @returns {{durability: number, maxDurability: number}}
+     */
+    static getItemDurability(item) {
+        /**@type {ItemDurabilityComponent} */
+        const dura = item.getComponent(ItemComponentTypes.Durability)
+        return {durability: dura.damage, maxDurability: dura.maxDurability}
+    }
+
+    
 }

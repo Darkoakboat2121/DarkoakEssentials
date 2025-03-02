@@ -359,7 +359,7 @@ export function customEnchantsMain(player) {
     f.dropdown('\n(While Holding Item)\nEvent:', events)
     f.dropdown('\nAction:', actions)
 
-    f.slider('\nExplode: Explosion Radius\nExtra Damage: Damage Amount\nDash: Dash Distance\nPower', 1, 10, 1)
+    f.slider('\nExplode: Explosion Radius\nExtra Damage: Damage Amount\nDash: Dash Distance\nPower', 1, 20, 1)
     
     f.submitButton('Enchant Held Item?')
 
@@ -373,8 +373,100 @@ export function customEnchantsMain(player) {
 
         const i = mcl.getHeldItem(player)
         let item = new ItemStack(i.type, i.amount)
-        item.setLore([`§r§5${ev}-${ac}-${am}`])
+        let lore = i.getLore();
+        lore.push(`§r§5${ev}-${ac}-${am}`);
+        item.setLore(lore)
+        item.nameTag = i.nameTag || item.nameTag
 
         mcl.getItemContainer(player).setItem(player.selectedSlotIndex, item)
+    })
+}
+
+export function protectedAreasMain(player) {
+    let f = new ActionFormData()
+    f.title('World Protection')
+
+    f.button('World Protection')
+    f.button('Add New Area')
+    f.button('Remove An Area')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch(evd.selection) {
+            case 0:
+                worldProtection(player)
+                break
+            case 1:
+                protectedAreasAddUI(player)
+                break
+            case 2:
+                protectedAreasRemoveUI(player)
+                break
+        }
+    })
+}
+
+
+export function worldProtection(player) {
+    let f = new ModalFormData()
+    f.title('World Protection')
+
+    const value = mcl.wGet('darkoak:worldprotection')
+    if (value === undefined) {
+        mcl.jsonWSet('darkoak:worldprotection', {boats: false})
+    }
+    const data = JSON.parse(value)
+
+    f.toggle('Ban Boats?', data.boats)
+    f.toggle('Ban Ender Pearls?', data.pearls)
+    f.toggle('Ban Water Buckets?', data.water)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+        mcl.jsonWSet('darkoak:worldprotection', {boats: e[0]})
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function protectedAreasAddUI(player) {
+    let f = new ModalFormData()
+    f.title('Add Protected Area')
+    const loc = player.location
+
+    f.textField('\n(x z)\nCoordinates 1:', 'Example: 0 0')
+    f.textField('\n(x z)\nCoordinates 2:', 'Example: 10 20', `${loc.x.toFixed(0)} ${loc.z.toFixed(0)}`)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        const coords1 = evd.formValues[0].trim().split(' ')
+        const coords2 = evd.formValues[1].trim().split(' ')
+        
+        const pa = {
+            p1: {x: coords1[0], z: coords1[1]},
+            p2: {x: coords2[0], z: coords2[1]}
+        }
+        mcl.jsonWSet(`darkoak:protection:${mcl.timeUuid()}`, pa)
+    })
+}
+
+export function protectedAreasRemoveUI(player) {
+    let f = new ActionFormData()
+    f.title('Remove Protected Area')
+
+    const raw = mcl.listGet('darkoak:protection:')
+    const values = mcl.listGetValues('darkoak:protection:')
+
+    for (const area of values) {
+        const p = JSON.parse(area)
+        f.button(`${p.p1.x} ${p.p1.z} to ${p.p2.x} ${p.p2.z}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.wSet(raw[evd.selection])
     })
 }

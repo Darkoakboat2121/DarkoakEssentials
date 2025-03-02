@@ -5,7 +5,7 @@ import { mcl } from "./logic"
 import { chatRankDefaults } from "./data/defaults"
 
 // This file handles all chat interactions such as:
-// Custom commands, ranks, possibly more at a later date
+// Custom commands, ranks, censoring
 
 world.beforeEvents.chatSend.subscribe((evd) => {
 
@@ -26,18 +26,35 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         }
     }
 
+    // mutes
     if (evd.sender.hasTag('darkoak:muted')) {
         evd.cancel = true
         return
     }
 
+    // censoring
     for (const c of mcl.listGetValues('darkoak:censor:')) {
-        if (evd.message.includes(c.toLowerCase())) {
+        /**@type {string} */
+        let message = evd.message
+        let newMessage = ''
+
+        for (let index = 0; index < message.length; index++) {
+            if (message.charAt(index - 1) == '§' && index > 0) {
+                // Skip the current character
+                continue
+            }
+            newMessage += message.charAt(index)
+        }
+
+        newMessage = newMessage.replaceAll('1', 'i').replaceAll('0', 'o').replaceAll('4', 'a').replaceAll('8', 'b')
+
+        if (newMessage.toLowerCase().replaceAll('§', '').includes(c.toLowerCase())) {
             evd.cancel = true
             return
         }
     }
 
+    // anti spam
     const d = mcl.jsonWGet('darkoak:anticheat')
     const t = new Date()
     if (mcl.pGet(evd.sender, 'darkoak:antispam') === undefined) {

@@ -8,6 +8,7 @@ import { mcl } from "./logic"
 import * as anticheat from "./anticheat"
 import * as worldSettings from "./worldSettings"
 import * as interfacesTwo from "./uis/interfacesTwo"
+import * as worldProtection from "./worldProtection"
 
 import * as external from "./external/external"
 
@@ -24,7 +25,7 @@ world.afterEvents.itemUse.subscribe((evd) => {
 
     if (evd.itemStack.typeId === 'darkoak:community') {
         if (player.isSneaking) {
-            const playerToView = evd.source.getEntitiesFromViewDirection({type: 'minecraft:player', maxDistance: 3})[0]
+            const playerToView = evd.source.getEntitiesFromViewDirection({ type: 'minecraft:player', maxDistance: 3 })[0]
             if (playerToView === undefined) {
                 interfaces.communityMain(player)
                 return
@@ -43,17 +44,23 @@ world.afterEvents.itemUse.subscribe((evd) => {
         interfacesTwo.anticheatMain(player)
     }
 
+    if (evd.itemStack.typeId === 'darkoak:world_protection' && player.hasTag('darkoak:admin')) {
+        interfacesTwo.protectedAreasMain(player)
+    }
+
     if (evd.itemStack.typeId === 'darkoak:hop_feather' && player.isOnGround) {
         const direction = player.getViewDirection()
         player.applyKnockback(direction.x, direction.z, 3, 1)
     }
 
-    if (!evd.itemStack.typeId.startsWith('darkoak:dummy')) return
-    for (let index = 0; index <= arrays.dummySize; index++) {
-        if (evd.itemStack.typeId === `darkoak:dummy${index}`) {
-            const command = mcl.wGet(`darkoak:bind:${index}`)
-            if (command != '' && command != undefined) {
-                evd.source.runCommandAsync(command)
+
+    if (evd.itemStack.typeId.startsWith('darkoak:dummy')) {
+        for (let index = 0; index <= arrays.dummySize; index++) {
+            if (evd.itemStack.typeId === `darkoak:dummy${index}`) {
+                const command = mcl.wGet(`darkoak:bind:${index}`)
+                if (command != '' && command != undefined) {
+                    evd.source.runCommandAsync(command)
+                }
             }
         }
     }
@@ -165,7 +172,7 @@ function actionUIBuilder(playerToShow, title, body, buttons) {
             playerToShow.runCommandAsync(selected.command)
         }
     })
-    
+
 }
 
 // system for displaying message cui

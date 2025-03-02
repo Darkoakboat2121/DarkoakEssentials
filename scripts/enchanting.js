@@ -2,6 +2,8 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "./logic"
 
+const nerf = 4
+
 world.afterEvents.entityHitEntity.subscribe((evd) => {
     if (evd.damagingEntity.typeId != 'minecraft:player') return
 
@@ -16,35 +18,24 @@ world.afterEvents.entityHitEntity.subscribe((evd) => {
 
     for (const enchant of item) {
         const parts = enchant.split('-')
-        if (parts[0].trim().replace('§r§5', '') != 'On Hit') return
+        if (parts[0].trim().replace('§r§5', '') != 'On Hit') continue
         const amount = parseInt(parts[2])
 
         switch (parts[1]) {
             case 'Explode':
-                world.getDimension(entity.dimension.id).createExplosion(entity.location, amount, { breaksBlocks: false, causesFire: false })
+                world.getDimension(entity.dimension.id).createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                 break
             case 'Extra Damage':
                 entity.applyDamage(amount)
                 break
             case 'Dash':
                 const lk = player.getViewDirection()
-                player.applyKnockback(lk.x, lk.z, amount / 2, 0)
+                player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
                 break
             case 'Extinguish':
                 player.extinguishFire(false)
                 break
-            case 'Pull':
-                const direction = {
-                    x: player.location.x - entity.location.x,
-                    z: player.location.z - entity.location.z
-                }
-                const magnitude = Math.sqrt(direction.x ** 2 + direction.y ** 2 + direction.z ** 2)
-                const normal = {
-                    x: direction.x / magnitude,
-                    z: direction.z / magnitude
-                }
-                entity.applyKnockback(normal.x, normal.z, amount, 0.5)
-                break
+
         }
     }
 })
@@ -65,28 +56,29 @@ world.afterEvents.entityDie.subscribe((evd) => {
 
         for (const enchant of item) {
             const parts = enchant.split('-')
-            if (parts[0].trim().replace('§r§5', '') != 'On Kill') return
+            if (parts[0].trim().replace('§r§5', '') != 'On Kill') continue
             const amount = parseInt(parts[2])
 
             switch (parts[1]) {
                 case 'Explode':
-                    world.getDimension(entity.dimension.id).createExplosion(entity.location, amount, { breaksBlocks: false, causesFire: false })
+                    world.getDimension(entity.dimension.id).createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                     break
                 case 'Extra Damage':
                     entity.applyDamage(amount)
                     break
                 case 'Dash':
                     const lk = entity.getViewDirection()
-                    entity.applyKnockback(lk.x, lk.z, 0, amount / 2)
+                    entity.applyKnockback(lk.x, lk.z, 0, amount / nerf)
                     break
                 case 'Extinguish':
                     entity.extinguishFire(false)
                     break
+
             }
         }
 
-    // on kill
-    } else {
+        // on kill
+    } else if (evd.damageSource.damagingEntity === 'minecraft:player') {
         const player = evd.damageSource.damagingEntity
         const entity = evd.deadEntity
 
@@ -97,25 +89,130 @@ world.afterEvents.entityDie.subscribe((evd) => {
 
         for (const enchant of item) {
             const parts = enchant.split('-')
-            if (parts[0].trim().replace('§r§5', '') != 'On Kill') return
+            if (parts[0].trim().replace('§r§5', '') != 'On Kill') continue
             const amount = parseInt(parts[2])
 
             switch (parts[1]) {
                 case 'Explode':
-                    world.getDimension(player.dimension.id).createExplosion(entity.location, amount, { breaksBlocks: false, causesFire: false })
+                    world.getDimension(player.dimension.id).createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                     break
                 case 'Extra Damage':
                     player.applyDamage(amount)
                     break
                 case 'Dash':
                     const lk = player.getViewDirection()
-                    player.applyKnockback(lk.x, lk.z, amount / 2, 0)
+                    player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
                     break
                 case 'Extinguish':
                     player.extinguishFire(false)
                     break
-                
+
             }
+        }
+    }
+})
+
+world.afterEvents.itemUse.subscribe((evd) => {
+    const player = evd.source
+
+    const i = mcl.getHeldItem(player)
+    if (i === undefined) return
+    const item = i.getLore()
+    if (item === undefined) return
+
+    for (const enchant of item) {
+        const parts = enchant.split('-')
+        if (parts[0].trim().replace('§r§5', '') != 'On Use') continue
+        const amount = parseInt(parts[2])
+
+        switch (parts[1]) {
+            case 'Explode':
+                world.getDimension(player.dimension.id).createExplosion(player.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                break
+            case 'Extra Damage':
+                player.applyDamage(amount)
+                break
+            case 'Dash':
+                const lk = player.getViewDirection()
+                player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
+                break
+            case 'Extinguish':
+                player.extinguishFire(false)
+                break
+
+        }
+    }
+})
+
+system.runInterval(() => {
+    for (const player of world.getPlayers()) {
+        if (player.isOnGround) mcl.pSet(player, 'darkoak:enchant:jumping', false)
+        if (!player.isJumping || mcl.pGet(player, 'darkoak:enchant:jumping') === true) return
+        mcl.pSet(player, 'darkoak:enchant:jumping', true)
+
+        const i = mcl.getHeldItem(player)
+        if (i === undefined) return
+        const item = i.getLore()
+        if (item === undefined) return
+
+        for (const enchant of item) {
+            const parts = enchant.split('-')
+            if (parts[0].trim().replace('§r§5', '') != 'On Jump') continue
+            const amount = parseInt(parts[2])
+
+            switch (parts[1]) {
+                case 'Explode':
+                    world.getDimension(player.dimension.id).createExplosion(player.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                    break
+                case 'Extra Damage':
+                    player.applyDamage(amount)
+                    break
+                case 'Dash':
+                    const lk = player.getViewDirection()
+                    player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
+                    break
+                case 'Extinguish':
+                    player.extinguishFire(false)
+                    break
+
+            }
+        }
+
+    }
+})
+
+world.afterEvents.entityHurt.subscribe((evd) => {
+    if (evd.hurtEntity.typeId != 'minecraft:player') return
+    if (!evd.damageSource.damagingEntity) return
+
+    const player = evd.hurtEntity
+    const entity = evd.damageSource.damagingEntity
+
+    const i = mcl.getHeldItem(player)
+    if (i === undefined) return
+    const item = i.getLore()
+    if (item === undefined) return
+
+    for (const enchant of item) {
+        const parts = enchant.split('-')
+        if (parts[0].trim().replace('§r§5', '') != 'On Damaged') continue
+        const amount = parseInt(parts[2])
+
+        switch (parts[1]) {
+            case 'Explode':
+                world.getDimension(entity.dimension.id).createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                break
+            case 'Extra Damage':
+                entity.applyDamage(amount)
+                break
+            case 'Dash':
+                const lk = player.getViewDirection()
+                player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
+                break
+            case 'Extinguish':
+                player.extinguishFire(false)
+                break
+
         }
     }
 })
@@ -125,6 +222,9 @@ export const customEnchantEvents = [
     "On Kill",
     "On Death",
     "On Hit",
+    "On Use",
+    "On Jump",
+    "On Damaged"
 ]
 
 export const customEnchantActions = [
@@ -132,7 +232,4 @@ export const customEnchantActions = [
     "Extra Damage",
     "Dash",
     "Extinguish",
-    "Pull",
-    "Stop",
-    "Rotate",
 ]

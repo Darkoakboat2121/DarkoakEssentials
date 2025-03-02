@@ -32,6 +32,7 @@ export const preBannedList = [
     'RanByGen', //Client dev
     'LoreSkygen', //Alt
     'cknighty21', //Basic
+    'Grumm3678'
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -74,6 +75,20 @@ export const hackedItemsList = [
     '§g§lBucket NPC Command',
     '§g§lMovingBlock Minecart Command',
     '§g§lMovingBlock NPC Command',
+]
+
+export const worldProtectionBadItems = [
+    'minecraft:flint_and_steel',
+    'minecraft:water_bucket',
+    'minecraft:axolotl_bucket',
+    'minecraft:cod_bucket',
+    'minecraft:lava_bucket',
+    'minecraft:powder_snow_bucket',
+    'minecraft:pufferfish_bucket',
+    'minecraft:salmon_bucket',
+    'minecraft:tadpole_bucket',
+    'minecraft:tropical_fish_bucket',
+    'minecraft:fire_charge',
 ]
 
 /**Definetly an array, don't question it. 
