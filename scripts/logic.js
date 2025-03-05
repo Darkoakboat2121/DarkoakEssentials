@@ -326,5 +326,8 @@ export class mcl {
         return {durability: dura.damage, maxDurability: dura.maxDurability}
     }
 
-    
+    static getEntityByTypeId(typeId, dimension) {
+        return world.getDimension(dimension.id).getEntities({type: typeId})
+    }
+
 }

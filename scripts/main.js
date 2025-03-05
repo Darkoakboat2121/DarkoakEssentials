@@ -1,13 +1,24 @@
+// first is minecraft resources
 import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import * as interfaces from "./uis/interfaces"
-import * as chat from "./chat"
+
+// second is setting defaults
 import * as defaults from "./data/defaults"
 import * as arrays from "./data/arrays"
+
+// third initializing mcl module
 import { mcl } from "./logic"
+
+// fourth initialize the interfaces
+import * as interfaces from "./uis/interfaces"
+import * as interfacesTwo from "./uis/interfacesTwo"
+
+// fifth initialize chat
+import * as chat from "./chat"
+
+// sixth initialize world based things
 import * as anticheat from "./anticheat"
 import * as worldSettings from "./worldSettings"
-import * as interfacesTwo from "./uis/interfacesTwo"
 import * as worldProtection from "./worldProtection"
 
 import * as external from "./external/external"

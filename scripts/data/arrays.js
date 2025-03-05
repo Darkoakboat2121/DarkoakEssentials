@@ -140,7 +140,116 @@ export class icons {
     static minecoin = 'textures/ui/icon_minecoin_9x9'
 }
 
+export const emojis = [
+    {m: ':dark_oak_boat:', e: ''},
+    {m: ':elytra:', e: ''},
+    {m: ':golden_horse_armor:', e: ''},
+    {m: ':amethyst_shard:', e: ''},
+    {m: ':spawn_egg_1:', e: ''},
+    {m: ':empty_chestplate_1:', e: ''},
+    {m: ':sherd_1:', e: ''},
+    {m: ':flint:', e: ''},
+    {m: ':empty_chestplate_2:', e: ''},
+    {m: ':lever:', e: ''},
+    {m: ':banner_pattern_1:', e: ''},
+    {m: ':empty_boots_1:', e: ''},
+]
 
 
-// chat rank format: 0 = message, 1 = command, 2 = tag
 // dynamic propertys can hold 32767 characters
+
+
+/**
+items:
+    main
+    anticheat
+    chestlock
+    community
+    data_editor
+    hop_feather
+    generators
+    world_protection
+    20+ bindable items
+
+features:
+
+    miscellanious:
+        no resource pack
+        uses vanilla textures
+        works on 1.21.60+
+
+    generators:
+        has customizible generators
+        can gen any block including modded ones
+
+    world settings:
+
+        interaction settings:
+            can change if players can interact with certain things
+            can disable annoying item frame rotation
+
+        customizible welcome message
+        customizible world border
+
+    player settings:
+        player data menu that can see tags and effects among other things
+        player punishments like banning / unbanning and muting / unmuting
+        player tracking which tracks player actions to tags, for example if a player is emoting they get the tag darkoak:emoting
+
+    chat settings:
+        customizible ranks, beginning, end, middle, and bridge parts
+        make your own chat commands (edit, add, delete and view)
+        censoring, you can customize which words cant be sent in chat (begon brainrot!)
+
+    chestlocking, lock chest where only certain players can open it
+
+    admin dashboard:
+        print the world data
+        delete data (for bug fixing locally)
+        look at reports
+        anticheat logs
+        documentation
+
+    ui making:
+        make a message ui
+        make a action form ui
+        customize the actionbar
+        delete ui's
+
+    community item settings:
+        manage warps
+        manage rtp and tpa
+        manage shop
+        
+    community item menu:
+        an item / menu to bring the community together
+        pay people
+        buy from shop
+        warp to a warp
+        report a player
+        customizible profile
+
+    data editor:
+        change values of entity and block propertys
+
+    anticheat options:
+        prebans from a list dark wrote
+        antinuker
+        antifastplace
+        antifly1
+        antispeed1
+        antispam
+        reliable
+
+    custom enchanting:
+        use this command while holding an item to enchant: /scriptevent darkoak:enchant
+
+    world protection:
+        general world protection like banning potentially dangerous things
+        area protection where players cant break, place or explode blocks in the area
+
+    external support:
+        wip feature where users can code their own ui and put it in the addon
+
+    
+ */

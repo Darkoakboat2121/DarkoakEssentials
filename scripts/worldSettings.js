@@ -62,13 +62,15 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
     system.runTimeout(() => {
         if (!evd.initialSpawn) return
         const replacements = arrays.actionbarReplacements(evd.player)
-        var text = mcl.wGet('darkoak:welcome')
+        /**@type {string} */
+        let text = mcl.wGet('darkoak:welcome')
 
         for (const hashtag in replacements) {
             if (text.includes(hashtag)) {
                 text = text.replaceAll(hashtag, replacements[hashtag])
             }
         }
+        if (!text || text.trim().length < 1) return
         evd.player.sendMessage(text)
     }, 100)
 })
@@ -82,19 +84,13 @@ system.runInterval(() => {
         const y = player.location.y
         const z = player.location.z
 
-        const dr = mcl.wGet('darkoak:tracking')
-        if (dr === undefined) {
-            mcl.jsonWSet('darkoak:tracking', {
-                flying: false
-            })
-        }
-        const d = JSON.parse(dr)
+        const d = mcl.jsonWGet('darkoak:tracking')
 
         tracking(player, d)
 
         // World border
         const worldBorder = mcl.wGet('darkoak:cws:border')
-        if (worldBorder != 0) {
+        if (worldBorder != 0 && worldBorder) {
 
             if (Math.abs(x) > worldBorder) {
                 player.applyDamage(1, { cause: EntityDamageCause.magic })

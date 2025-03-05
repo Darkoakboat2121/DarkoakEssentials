@@ -1043,6 +1043,7 @@ export function communityMain(player) {
     f.button('Warps')
     f.button('Report')
     f.button('My Profile')
+    f.button('Personal Log')
     f.button('Credits')
     if (player.hasTag('darkoak:admin')) { 
         f.button('Community Settings\n(Admins Only)', 'textures/ui/icon_multiplayer')
@@ -1065,6 +1066,9 @@ export function communityMain(player) {
                 myProfile(player)
                 break
             case 4:
+                personalLogUI(player)
+                break
+            case 5:
                 creditsUI(player)
                 break
             default:

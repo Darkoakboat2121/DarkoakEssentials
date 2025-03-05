@@ -2,7 +2,8 @@ import { world, system } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
-import { chatRankDefaults } from "./data/defaults"
+import { emojis } from "./data/arrays"
+
 
 // This file handles all chat interactions such as:
 // Custom commands, ranks, censoring
@@ -56,12 +57,6 @@ world.beforeEvents.chatSend.subscribe((evd) => {
 
     // anti spam
     const d = mcl.jsonWGet('darkoak:anticheat')
-    const t = new Date()
-    if (mcl.pGet(evd.sender, 'darkoak:antispam') === undefined) {
-        mcl.pSet(evd.sender, 'darkoak:antispam', JSON.stringify({
-            message: evd.message
-        }))
-    }
     const h = JSON.parse(mcl.pGet(evd.sender, 'darkoak:antispam'))
     if (h.message === evd.message && !mcl.isOp(evd.sender) && d.antispam && !evd.sender.hasTag('darkoak:admin')) {
         evd.cancel = true
@@ -71,8 +66,12 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         message: evd.message
     }))
 
-    chatRankDefaults()
+    let formattedMessage = evd.message
+    for (const replacement of emojis) {
+        formattedMessage = formattedMessage.replaceAll(replacement.m, replacement.e)
+    }
 
+    /**@type {Array<string>} */
     const tags = evd.sender.getTags()
     let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => tag.replace('rank:', ''))
     let nameColors = tags.filter(tag => tag.startsWith('namecolor:')).map(tag => tag.replace('namecolor:', ''))
@@ -87,7 +86,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     nameColors = nameColors.length ? nameColors : [``]
     chatColors = chatColors.length ? chatColors : [``]
 
-    const text = `${start}${ranks.join(middle)}${end}§r§f${nameColors.join('')}${evd.sender.name}§r§f${bridge} §r§f${chatColors.join('')}${evd.message}`
+    const text = `${start}${ranks.join(middle)}${end}§r§f${nameColors.join('')}${evd.sender.name}§r§f${bridge} §r§f${chatColors.join('')}${formattedMessage}`
     world.sendMessage({rawtext: [{text: text}]})
     evd.cancel = true
 })
@@ -113,6 +112,7 @@ function hashtag(hashtagKey, sender) {
             while(i++<100) {
                 world.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
             }
+            break
         case 'random':
             world.sendMessage(mcl.randomNumber(100).toString())
             break

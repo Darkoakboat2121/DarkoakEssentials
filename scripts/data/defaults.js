@@ -5,33 +5,7 @@ import { mcl } from "../logic"
 // This file sets all dynamic propertys to their default state if they havent been setup yet and it manages data size / limits
 
 // Defaults for ranks
-export function chatRankDefaults() {
-    if (mcl.wGet('darkoak:cr:defaultrank') === undefined) {
-        mcl.wSet('darkoak:cr:defaultrank', 'New')
-    }
 
-    if (mcl.wGet('darkoak:cr:bridge') === undefined) {
-        mcl.wSet('darkoak:cr:bridge', '->')
-    }
-
-    if (mcl.wGet('darkoak:cr:start') === undefined) {
-        mcl.wSet('darkoak:cr:start', '[')
-    }
-
-    if (mcl.wGet('darkoak:cr:middle') === undefined) {
-        mcl.wSet('darkoak:cr:middle', '][')
-    }
-
-    if (mcl.wGet('darkoak:cr:end') === undefined) {
-        mcl.wSet('darkoak:cr:end', ']')
-    }
-}
-
-export function welcomeMessageDefaults() {
-    if (mcl.wGet('darkoak:welcome') === undefined) {
-        mcl.wSet('darkoak:welcome', '')
-    }
-}
 
 export function logcheck() {
     const log = mcl.wGet('darkoak:log')
@@ -52,14 +26,57 @@ system.runInterval(() => {
 }, 6000)
 
 
+
 system.runInterval(() => {
     for (const player of world.getAllPlayers()) {
-        if (mcl.pGet(player, 'darkoak:ac:blocksbroken') === undefined) {
+        if (!mcl.pGet(player, 'darkoak:ac:blocksbroken')) {
             mcl.pSet(player, 'darkoak:ac:blocksbroken', 0)
         }
 
-        if (mcl.pGet(player, 'darkoak:ac:blocksplaced') === undefined) {
+        if (!mcl.pGet(player, 'darkoak:ac:blocksplaced')) {
             mcl.pSet(player, 'darkoak:ac:blocksplaced', 0)
         }
+
+        if (!mcl.pGet(player, 'darkoak:antispam')) {
+            mcl.pSet(player, 'darkoak:antispam', JSON.stringify({
+                message: 'placeholder'
+            }))
+        }
     }
-}, 100)
+
+    if (mcl.wGet('darkoak:cr:defaultrank') === undefined) {
+        mcl.wSet('darkoak:cr:defaultrank', 'New')
+    }
+
+    if (mcl.wGet('darkoak:cr:bridge') === undefined) {
+        mcl.wSet('darkoak:cr:bridge', '->')
+    }
+
+    if (mcl.wGet('darkoak:cr:start') === undefined) {
+        mcl.wSet('darkoak:cr:start', '[')
+    }
+
+    if (mcl.wGet('darkoak:cr:middle') === undefined) {
+        mcl.wSet('darkoak:cr:middle', '][')
+    }
+
+    if (mcl.wGet('darkoak:cr:end') === undefined) {
+        mcl.wSet('darkoak:cr:end', ']')
+    }
+
+    if (!mcl.wGet('darkoak:anticheat')) {
+        mcl.jsonWSet('darkoak:anticheat', {
+            prebans: false
+        })
+    }
+
+    if (!mcl.wGet('darkoak:tracking')) {
+        mcl.jsonWSet('darkoak:tracking', {
+            flying: false
+        })
+    }
+
+    if (!mcl.wGet('darkoak:welcome')) {
+        mcl.wSet('darkoak:welcome', 'Welcome! Use The Main UI Item To Start.')
+    }
+})

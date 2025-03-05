@@ -1,8 +1,7 @@
-import { world, system, Container, ItemEnchantableComponent } from "@minecraft/server"
+import { world, system, Container, ItemEnchantableComponent, ItemStack } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "./logic"
 import { logcheck } from "./data/defaults"
-
 
 
 // Anti nuker, works by checking the number of blocks broken in a small timeframe
@@ -10,7 +9,7 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
     const d = mcl.jsonWGet('darkoak:anticheat')
     if (!d.antinuker) return
     const player = evd.player
-    
+
     player.setDynamicProperty('darkoak:ac:blocksbroken', player.getDynamicProperty('darkoak:ac:blocksbroken') + 1)
 
     system.runTimeout(() => {
@@ -40,38 +39,11 @@ world.afterEvents.playerPlaceBlock.subscribe((evd) => {
     }, 5)
 })
 
-// world.afterEvents.entityHitEntity.subscribe((evd) => {
-//     if (evd.damagingEntity.typeId != 'minecraft:player') return
-//     const player = evd.damagingEntity
-
-//     const held = mcl.getHeldItem(player)
-//     /**@type {ItemEnchantableComponent} */
-//     if (held === undefined) return
-//     const en = held.getComponent("minecraft:enchantable")
-//     const t = en.getEnchantments()
-//     for (const c of t) {
-//         if (!en.canAddEnchantment(c)) {
-//             en.removeAllEnchantments()
-//         }
-//         world.sendMessage(c.type.id)
-//     }
-// })
 
 
 system.runInterval(() => {
-    const dq = mcl.wGet('darkoak:anticheat')
-    if (dq === undefined) {
-        mcl.jsonWSet('darkoak:anticheat', {
-            prebans: false, 
-            antinuker: false, 
-            antifastplace: false,
-            antifly1: false,
-            antispeed1: false,
-            antispam: false
-        })
-    }
-    const d = JSON.parse(dq)
-    
+    const d = mcl.jsonWGet('darkoak:anticheat')
+
     for (const player of world.getAllPlayers()) {
 
         // Anti fly 1
@@ -79,17 +51,39 @@ system.runInterval(() => {
             log(`${player.name} -> anti-fly 1`)
         }
 
+        // anti speed 1
         if ((Math.abs(player.getVelocity().x) >= 3 || Math.abs(player.getVelocity().z) >= 3) && d.antispeed1) {
             log(`${player.name} -> speed 1`)
         }
+
+        // anti illegal enchant
+        const held = mcl.getHeldItem(player)
+        if (!held || !d.antiillegalenchant) return
+
+        /**@type {ItemEnchantableComponent} */
+        const en = held.getComponent("minecraft:enchantable")
+        if (!en) return
+        const t = en.getEnchantments()
+        for (const c of t) {
+            if (c.level <= 5) return
+
+            log(`${player.nameTag} -> anti-illegal-enchant: ${c.type.id} ${c.level}`)
+            let item = new ItemStack(held.type, held.amount)
+
+            player.runCommandAsync('replaceitem entity @s slot.weapon.mainhand 0 air 1').finally(() => {
+                mcl.getItemContainer(player).setItem(player.selectedSlotIndex, item)
+            })
+        }
+
+
     }
 })
 
 
 function log(mess) {
-    const data1 = {message: mess}
+    const data1 = { message: mess }
     if (mcl.wGet(`darkoak:log`) === undefined) {
-        mcl.wSet('darkoak:log', JSON.stringify({logs: [{message: mess}]}))
+        mcl.wSet('darkoak:log', JSON.stringify({ logs: [{ message: mess }] }))
     }
     let data2 = JSON.parse(mcl.wGet(`darkoak:log`))
     data2.logs.push(data1)

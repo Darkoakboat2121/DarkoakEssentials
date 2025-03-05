@@ -48,7 +48,6 @@ export function genMainUI(player) {
             case 2:
                 genModifyPickerUI(player)
                 break
-
             default:
                 player.sendMessage('§cError§r')
                 break
@@ -287,6 +286,7 @@ export function anticheatSettings(player) {
     f.toggle('Anti-fly 1', d.antifly1)
     f.toggle('Anti-speed 1', d.antispeed1)
     f.toggle('Anti-spam', d.antispam)
+    f.toggle('Anti-illegal-enchant', d.antiillegalenchant)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -297,7 +297,8 @@ export function anticheatSettings(player) {
             antifastplace: e[2],
             antifly1: e[3],
             antispeed1: e[4],
-            antispam: e[5]
+            antispam: e[5],
+            antiillegalenchant: e[6]
         })
     })
 }
@@ -469,4 +470,12 @@ export function protectedAreasRemoveUI(player) {
         if (evd.canceled) return
         mcl.wSet(raw[evd.selection])
     })
+}
+
+
+export function personalLogUI(player) {
+    let f = new ModalFormData()
+    f.title('Personal Log')
+
+    f.textField('Log:', '')
 }

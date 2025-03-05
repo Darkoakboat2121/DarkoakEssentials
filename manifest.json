@@ -6,20 +6,20 @@
     ]
   },
   "header": {
-    "name": "Darkoak Essentials V2.0.4",
+    "name": "Darkoak Essentials V2.0.5",
     "description": "Made by Darkoakboat2121",
     "min_engine_version": [
       1,
       21,
       50
     ],
-    "uuid": "c9d2c362-78df-486f-b0b4-6878650d194d",
-    "version": [2,0,4]
+    "uuid": "9506c0be-216b-49fe-b0c7-f1c5536882f2",
+    "version": [2,0,5]
   },
   "modules": [
     {
       "type": "data",
-      "uuid": "31887743-2114-4b4a-8108-697bf3d79102",
+      "uuid": "8d96f528-5e8a-419d-9f95-7d48809614cd",
       "version": [
         1,
         0,
@@ -29,7 +29,7 @@
     {
       "type": "script",
       "language": "javascript",
-      "uuid": "c6408c3a-e2f8-45fa-9cbe-1fcac5ec58fe",
+      "uuid": "7c7bfda0-3738-4193-af28-012ee915fdc6",
       "entry": "scripts/main.js",
       "version": [
         1,

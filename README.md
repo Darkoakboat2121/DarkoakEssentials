@@ -3,7 +3,6 @@ This Minecraft bedrock addon is an essentials addon. Please credit me if you're 
 Plans:
 
 2. Player Management Features
-Player Statistics Tracking: Track and display various player statistics such as blocks broken, blocks placed, mobs killed, etc.
 Player Inventory Management: Allow admins to view and manage player inventories.
 
 
@@ -34,3 +33,4 @@ other:
 chat:
     proximity chat
     under name chat
+    

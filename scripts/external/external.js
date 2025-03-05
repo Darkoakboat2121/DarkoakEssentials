@@ -1,23 +1,9 @@
-import * as MCL from "../logic"
-
-/**Save function. Put your variable names in each slot
- * @param {string} id Your unique identifier
- *  @param {string} title UI title
- *  @param {string} body UI body text
- *  @param {string} tag Tag to open the UI
- *  @param {Array} buttons Buttons with commands
- */
-function save(id, title, body, tag, buttons) {
-    MCL.mcl.jsonWSet(`darkoak:ui:action:external:${name}`, {title, body, tag, buttons})
-}
-// DO NOT TOUCH ANYTHING ABOVE THIS //
-
-
+import * as external from "./external-logic"
 
 // Example
 
 // Your unique identifier
-const id = "YOUR USERNAME"
+const uniqueName = "YOUR ID (Anything as long as its different from other ui's)"
 
 // UI
 const title = "PUT TITLE HERE"
@@ -28,7 +14,7 @@ const buttons = [
     {title: "BUTTON2 TITLE", command: "BUTTON2 COMMAND"}
 ]
 
-save(id, title, body, tag, buttons)
+external.actionUI(uniqueName, title, body, tag, buttons)
 
 // Example
 
