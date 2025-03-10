@@ -91,6 +91,16 @@ export const worldProtectionBadItems = [
     'minecraft:fire_charge',
 ]
 
+export const worldProtectionWater = [
+    'minecraft:water_bucket',
+    'minecraft:axolotl_bucket',
+    'minecraft:cod_bucket',
+    'minecraft:pufferfish_bucket',
+    'minecraft:salmon_bucket',
+    'minecraft:tadpole_bucket',
+    'minecraft:tropical_fish_bucket',
+]
+
 /**Definetly an array, don't question it. 
  * @param {Player} player
 */
@@ -112,7 +122,31 @@ export function actionbarReplacements(player) {
     }
 }
 
-/**WIP
+/**
+ * 
+ * @param {Player} player 
+ * @param {string} string 
+ * @returns 
+ */
+export function replacer(player, string) {
+    const health = mcl.healthValue(player)
+    let block = undefined
+    if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block.isValid()) {
+        block = player.getBlockFromViewDirection().block
+    } else {
+        block = 'Undefined'
+    }
+    let formattedString = string
+    .replaceAll('#name#', player.name)
+    .replaceAll('#health#', health)
+    .replaceAll('#location#',  `${parseInt(player.location.x)}, ${parseInt(player.location.y)}, ${parseInt(player.location.z)}`)
+    .replaceAll('#slot#', player.selectedSlotIndex.toString())
+    .replaceAll('#block.type#', block.typeId)
+    .replaceAll('#velocity#', `${(player.getVelocity().x).toFixed(1)}, ${(player.getVelocity().y).toFixed(1)}, ${(player.getVelocity().z).toFixed(1)}`)
+    return formattedString
+}
+
+/**Hashtags for actionbar
  * @param {Player} player 
  * @param {string} message 
  * @returns {string}
@@ -132,6 +166,8 @@ export function hashtagProcessing(player, message) {
 export const dummySize = 22
 
 export const hashtags = '\nKeys:\n\\n - New Line\n%%scorename%% - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity'
+
+export const hashtagKeys = '#commands - Lists All Commands\n#noob - (Joke) Says Stuff in Chat\n#datadeleter - Opens UI For Deleting Data\n#cc - Clears Chat\n#random - Says A Random Number In Chat (1 To 100)\n#emojis - Lists All Emojis\n#cclocal - Clears The Senders Chat'
 
 /**Array of strings for textures*/
 export class icons {

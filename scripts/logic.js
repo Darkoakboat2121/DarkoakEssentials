@@ -1,4 +1,4 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent } from "@minecraft/server";
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity } from "@minecraft/server";
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting api*/
 export class mcl {
@@ -326,6 +326,11 @@ export class mcl {
         return {durability: dura.damage, maxDurability: dura.maxDurability}
     }
 
+    /**
+     * @param {string} typeId 
+     * @param {Dimension} dimension 
+     * @returns {Entity[]}
+     */
     static getEntityByTypeId(typeId, dimension) {
         return world.getDimension(dimension.id).getEntities({type: typeId})
     }

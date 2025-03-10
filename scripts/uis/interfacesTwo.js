@@ -412,11 +412,7 @@ export function worldProtection(player) {
     let f = new ModalFormData()
     f.title('World Protection')
 
-    const value = mcl.wGet('darkoak:worldprotection')
-    if (value === undefined) {
-        mcl.jsonWSet('darkoak:worldprotection', {boats: false})
-    }
-    const data = JSON.parse(value)
+    const data = mcl.jsonWGet('darkoak:worldprotection')
 
     f.toggle('Ban Boats?', data.boats)
     f.toggle('Ban Ender Pearls?', data.pearls)
@@ -425,7 +421,11 @@ export function worldProtection(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
-        mcl.jsonWSet('darkoak:worldprotection', {boats: e[0]})
+        mcl.jsonWSet('darkoak:worldprotection', {
+            boats: e[0],
+            pearls: e[1],
+            water: e[2]
+        })
     })
 }
 

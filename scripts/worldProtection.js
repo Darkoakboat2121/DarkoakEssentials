@@ -1,7 +1,7 @@
 import { world, system, Player } from "@minecraft/server";
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui";
 import { mcl } from "./logic";
-import { worldProtectionBadItems } from "./data/arrays";
+import { worldProtectionBadItems, worldProtectionWater } from "./data/arrays";
 
 world.beforeEvents.explosion.subscribe((evd) => {
     for (const place of mcl.listGetValues('darkoak:protection:')) {
@@ -110,3 +110,30 @@ world.beforeEvents.itemUseOn.subscribe((evd) => {
 
     }
 })
+
+system.runInterval(() => {
+    const d = mcl.jsonWGet('darkoak:worldprotection')
+    for (const player of world.getPlayers({ excludeTags: ['darkoak:admin'] })) {
+        const item = mcl.getHeldItem(player)
+        if (d.water) {
+            for (const i of worldProtectionWater) {
+                if (!item || !item.typeId) continue
+                if (item.typeId === i) {
+                    mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
+                    continue
+                }
+            }
+        }
+
+        if (d.pearls && item && item.typeId && item.typeId === 'minecraft:ender_pearl') {
+            mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
+        }
+
+        if (d.boats) {
+            for (const boat of mcl.getEntityByTypeId('minecraft:boat', player.dimension)) {
+                if (!boat || !boat.isValid()) continue
+                boat.kill()
+            }
+        }
+    }
+}, 10)

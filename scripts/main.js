@@ -21,6 +21,7 @@ import * as anticheat from "./anticheat"
 import * as worldSettings from "./worldSettings"
 import * as worldProtection from "./worldProtection"
 
+// seventh set up external uis / commands
 import * as external from "./external/external"
 
 // main ui opener, see interfaces, also manages bindable/dummy items
@@ -55,8 +56,12 @@ world.afterEvents.itemUse.subscribe((evd) => {
         interfacesTwo.anticheatMain(player)
     }
 
-    if (evd.itemStack.typeId === 'darkoak:world_protection' && player.hasTag('darkoak:admin')) {
-        interfacesTwo.protectedAreasMain(player)
+    if (evd.itemStack.typeId === 'darkoak:world_protection') {
+        if (player.hasTag('darkoak:admin')) {
+            interfacesTwo.protectedAreasMain(player)
+        } else {
+            player.sendMessage('§cYou Aren\'t An Admin! Tag Yourself With darkoak:admin§r')
+        }
     }
 
     if (evd.itemStack.typeId === 'darkoak:hop_feather' && player.isOnGround) {
@@ -196,9 +201,9 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
 
     f.show(playerToShow).then((evd) => {
         if (evd.canceled) return
-        if (evd.selection === 0 && command1 != '') {
+        if (evd.selection === 0 && command1) {
             playerToShow.runCommandAsync(command1)
-        } else if (evd.selection === 1 && command2 != '') {
+        } else if (evd.selection === 1 && command2) {
             playerToShow.runCommandAsync(command2)
         }
     })
@@ -206,10 +211,10 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
 
 
 // System for displaying the actionbar
-if (mcl.wGet('darkoak:actionbar') != '' && mcl.wGet('darkoak:actionbar') != undefined) {
-    system.runInterval(() => {
-        for (const player of world.getAllPlayers()) {
-            var text = mcl.wGet('darkoak:actionbar')
+system.runInterval(() => {
+    for (const player of world.getAllPlayers()) {
+        if (mcl.wGet('darkoak:actionbar')) {
+            let text = mcl.wGet('darkoak:actionbar')
             const replacements = arrays.actionbarReplacements(player)
             for (const hashtag in replacements) {
                 if (text.includes(hashtag)) {
@@ -218,5 +223,15 @@ if (mcl.wGet('darkoak:actionbar') != '' && mcl.wGet('darkoak:actionbar') != unde
             }
             player.runCommandAsync(`titleraw @s actionbar {"rawtext":[{"text":"${text}"}]}`)
         }
-    })
-}
+        if (mcl.wGet('darkoak:sidebar')) {
+            /**@type {{lines: ["a", "b"]}} */
+            let text = mcl.jsonWGet('darkoak:sidebar')
+            let newText = []
+            for (const line of text.lines) {
+                newText.push(arrays.replacer(player, line))
+            }
+
+            player.runCommandAsync(`titleraw @s title {"rawtext":[{"text":"${newText.join('\n')}"}]}`)
+        }
+    }
+}, 10)

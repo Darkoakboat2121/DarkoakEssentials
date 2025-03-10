@@ -1,4 +1,4 @@
-import { world, system } from "@minecraft/server"
+import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
@@ -10,16 +10,16 @@ import { emojis } from "./data/arrays"
 
 world.beforeEvents.chatSend.subscribe((evd) => {
 
-    for (const c of mcl.listGet('darkoak:command:')) {
-        const parts = mcl.wGet(c).split('|')
-        if (evd.message === parts[0]) {
-            if (parts[2] === '' | evd.sender.hasTag(parts[2])) {
-                if (parts[1].startsWith('#')) {
-                    hashtag(parts[1], evd.sender)
+    for (const c of mcl.listGetValues('darkoak:command:')) {
+        const p = JSON.parse(c)
+        if (evd.message === p.message) {
+            if (!p.tag | evd.sender.hasTag(p.tag)) {
+                if (p.command.startsWith('#')) {
+                    hashtag(p.command, evd.sender)
                     evd.cancel = true
                     return
                 } else {
-                    evd.sender.runCommandAsync(parts[1])
+                    evd.sender.runCommandAsync(p.command)
                     evd.cancel = true
                     return
                 }
@@ -58,12 +58,12 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     // anti spam
     const d = mcl.jsonWGet('darkoak:anticheat')
     const h = JSON.parse(mcl.pGet(evd.sender, 'darkoak:antispam'))
-    if (h.message === evd.message && !mcl.isOp(evd.sender) && d.antispam && !evd.sender.hasTag('darkoak:admin')) {
+    if (h.message === evd.message.trim() && !mcl.isOp(evd.sender) && d.antispam && !evd.sender.hasTag('darkoak:admin')) {
         evd.cancel = true
         return
     }
     mcl.pSet(evd.sender, 'darkoak:antispam', JSON.stringify({
-        message: evd.message
+        message: evd.message.trim()
     }))
 
     let formattedMessage = evd.message
@@ -71,31 +71,41 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         formattedMessage = formattedMessage.replaceAll(replacement.m, replacement.e)
     }
 
+    const ocs = mcl.jsonWGet('darkoak:chat:other')
+    if (ocs.nametag) {
+        /**@type {Player} */
+        const p = evd.sender
+        system.runTimeout(() => {
+            p.nameTag = `${p.name}\n${evd.message}`
+        })
+    }
+
     /**@type {Array<string>} */
     const tags = evd.sender.getTags()
     let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => tag.replace('rank:', ''))
     let nameColors = tags.filter(tag => tag.startsWith('namecolor:')).map(tag => tag.replace('namecolor:', ''))
     let chatColors = tags.filter(tag => tag.startsWith('chatcolor:')).map(tag => tag.replace('chatcolor:', ''))
-    const start = mcl.wGet('darkoak:cr:start')
-    const middle = mcl.wGet('darkoak:cr:middle')
-    const end = mcl.wGet('darkoak:cr:end')
-    const bridge = mcl.wGet('darkoak:cr:bridge')
-    const defaultrank = mcl.wGet('darkoak:cr:defaultrank')
+    let cr = mcl.jsonWGet('darkoak:chatranks')
 
-    ranks = ranks.length ? ranks : [`${defaultrank}`]
+    ranks = ranks.length ? ranks : [cr.defaultRank]
     nameColors = nameColors.length ? nameColors : [``]
     chatColors = chatColors.length ? chatColors : [``]
 
-    const text = `${start}${ranks.join(middle)}${end}§r§f${nameColors.join('')}${evd.sender.name}§r§f${bridge} §r§f${chatColors.join('')}${formattedMessage}`
-    world.sendMessage({rawtext: [{text: text}]})
+    const text = `${cr.start}${ranks.join(cr.middle)}${cr.end}§r§f${nameColors.join('')}${evd.sender.name}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage}`
+    world.sendMessage({ rawtext: [{ text: text }] })
     evd.cancel = true
 })
 
+/**
+ * @param {string} hashtagKey 
+ * @param {Player} sender 
+ */
 function hashtag(hashtagKey, sender) {
-    switch(hashtagKey.replaceAll('#', '')) {
+    switch (hashtagKey.replaceAll('#', '')) {
         case 'commands':
-            for (const c of mcl.listGetValues('darkoak:command:').sort()) {
-                sender.sendMessage(c.replaceAll('|', ' | '))
+            for (const c of mcl.listGetValues('darkoak:command:')) {
+                const p = JSON.parse(c)
+                sender.sendMessage(`${p.message} | ${p.tag} -> ${p.command}`)
             }
             break
         case 'noob':
@@ -108,13 +118,24 @@ function hashtag(hashtagKey, sender) {
             }, 20)
             break
         case 'cc':
-            var i = 0
-            while(i++<100) {
+            let i = 0
+            while (i++ < 100) {
                 world.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
+            }
+            break
+        case 'cclocal':
+            let o = 0
+            while (o++ < 100) {
+                sender.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
             }
             break
         case 'random':
             world.sendMessage(mcl.randomNumber(100).toString())
+            break
+        case 'emojis':
+            for (const emoji of emojis) {
+                sender.sendMessage(`${emoji.m} -> ${emoji.e}`)
+            }
             break
     }
 }

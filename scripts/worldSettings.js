@@ -79,6 +79,7 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
 // Player tracking and world border
 
 system.runInterval(() => {
+    const worldBorder = mcl.wGet('darkoak:cws:border')
     for (const player of world.getAllPlayers()) {
         const x = player.location.x
         const y = player.location.y
@@ -88,9 +89,9 @@ system.runInterval(() => {
 
         tracking(player, d)
 
+        
         // World border
-        const worldBorder = mcl.wGet('darkoak:cws:border')
-        if (worldBorder != 0 && worldBorder) {
+        if (worldBorder) {
 
             if (Math.abs(x) > worldBorder) {
                 player.applyDamage(1, { cause: EntityDamageCause.magic })
@@ -103,9 +104,10 @@ system.runInterval(() => {
                 const k = (z / worldBorder - 1) * -1
                 player.applyKnockback(0, k, Math.abs(k) * 2, 0)
             }
+
         }
     }
-})
+}, 10)
 
 /**
  * @param {Player} player 
