@@ -25,6 +25,28 @@ world.beforeEvents.explosion.subscribe((evd) => {
             }
         }
     }
+
+    for (const place of mcl.listGetValues('darkoak:landclaim:')) {
+        /**
+         * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }, players: ['', '']}}
+         */
+        const area = JSON.parse(place)
+
+        for (const block of evd.getImpactedBlocks()) {
+            const x = block.location.x
+            const z = block.location.z
+
+            const minX = Math.min(area.p1.x, area.p2.x)
+            const maxX = Math.max(area.p1.x, area.p2.x)
+            const minZ = Math.min(area.p1.z, area.p2.z)
+            const maxZ = Math.max(area.p1.z, area.p2.z)
+
+            if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+                evd.cancel = true
+                return
+            }
+        }
+    }
 })
 
 world.beforeEvents.playerBreakBlock.subscribe((evd) => {
@@ -52,9 +74,36 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
         }
 
     }
+
+    for (const place of mcl.listGetValues('darkoak:landclaim:')) {
+        /**
+         * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }}}
+         */
+        const area = JSON.parse(place)
+
+        const block = evd.block
+
+        const x = block.location.x
+        const z = block.location.z
+
+        const minX = Math.min(area.p1.x, area.p2.x)
+        const maxX = Math.max(area.p1.x, area.p2.x)
+        const minZ = Math.min(area.p1.z, area.p2.z)
+        const maxZ = Math.max(area.p1.z, area.p2.z)
+
+        if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+            for (const player of area.players) {
+                if (evd.player.name === player) return
+            }
+            evd.cancel = true
+            evd.player.sendMessage('§cThis Land Is Protected!§r')
+            return
+        }
+
+    }
 })
 
-world.afterEvents.playerPlaceBlock.subscribe((evd) => {
+world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
     if (mcl.isCreating(evd.player)) return
     for (const place of mcl.listGetValues('darkoak:protection:')) {
         /**
@@ -73,20 +122,14 @@ world.afterEvents.playerPlaceBlock.subscribe((evd) => {
         const maxZ = Math.max(area.p1.z, area.p2.z)
 
         if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
-            const l = block.location
-            world.getDimension(evd.dimension.id).runCommandAsync(`fill ${l.x} ${l.y} ${l.z} ${l.x} ${l.y} ${l.z} air destroy`)
+            evd.cancel = true
             evd.player.sendMessage('§cThis Land Is Protected!§r')
             return
         }
 
     }
-})
 
-world.beforeEvents.itemUseOn.subscribe((evd) => {
-    if (mcl.isCreating(evd.source)) return
-    if (!worldProtectionBadItems.includes(evd.itemStack.typeId)) return
-
-    for (const place of mcl.listGetValues('darkoak:protection:')) {
+    for (const place of mcl.listGetValues('darkoak:landclaim:')) {
         /**
          * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }}}
          */
@@ -103,13 +146,45 @@ world.beforeEvents.itemUseOn.subscribe((evd) => {
         const maxZ = Math.max(area.p1.z, area.p2.z)
 
         if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+            for (const player of area.players) {
+                if (evd.player.name === player) return
+            }
             evd.cancel = true
-            evd.source.sendMessage('§cThis Land Is Protected!§r')
+            evd.player.sendMessage('§cThis Land Is Protected!§r')
             return
         }
 
     }
 })
+
+// world.beforeEvents.itemUse.subscribe((evd) => {
+//     if (mcl.isCreating(evd.source)) return
+//     if (!worldProtectionBadItems.includes(evd.itemStack.typeId)) return
+
+//     for (const place of mcl.listGetValues('darkoak:protection:')) {
+//         /**
+//          * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }}}
+//          */
+//         const area = JSON.parse(place)
+
+//         const block = evd.block
+
+//         const x = block.location.x
+//         const z = block.location.z
+
+//         const minX = Math.min(area.p1.x, area.p2.x)
+//         const maxX = Math.max(area.p1.x, area.p2.x)
+//         const minZ = Math.min(area.p1.z, area.p2.z)
+//         const maxZ = Math.max(area.p1.z, area.p2.z)
+
+//         if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+//             evd.cancel = true
+//             evd.source.sendMessage('§cThis Land Is Protected!§r')
+//             return
+//         }
+
+//     }
+// })
 
 system.runInterval(() => {
     const d = mcl.jsonWGet('darkoak:worldprotection')
@@ -131,7 +206,6 @@ system.runInterval(() => {
 
         if (d.boats) {
             for (const boat of mcl.getEntityByTypeId('minecraft:boat', player.dimension)) {
-                if (!boat || !boat.isValid()) continue
                 boat.kill()
             }
         }

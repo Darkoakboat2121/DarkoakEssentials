@@ -1,0 +1,1 @@
+setblock ~ ~1 ~ minecraft:iron_ore

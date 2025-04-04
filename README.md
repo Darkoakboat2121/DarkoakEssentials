@@ -7,30 +7,67 @@ Player Inventory Management: Allow admins to view and manage player inventories.
 
 
 community:
+    admin settings to show/hide community buttons
     giftcodes
     land claims
-    auction house*
-    player shop*
+    auction house
+    player shop
     plots
     personal log
-    trading
+    item trading
 
 tracking:
     blocks broken
     blocks placed
-    minutes play
+    minutes played
     deaths
     kills
 
-ac:
-
 other:
-    message logs
     clan system
     sitting
     secret items giver
+    trails
+    safe op:
+        has special tools that emulate certain commands
+        can fly
+        breaks deny blocks near player and replaces blocks once away
+        only do-admins can change player to safe op and back
+        blocks do-admins from entering safe op
+    auto-chest refill
+
+
 
 chat:
-    proximity chat
-    under name chat
     
+    
+anticheat:
+    (toggle) detect if player has lots of valuable resources
+    (toggle) detect if player is near command block minecart
+    (toggle) detect if player is near npc entity
+    (toggle) anti-afk
+    (toggle) anti-gamemode-switcher
+    (dropdown) player picker [top option is empty] for hack test, uses /inputpermission then checks if player is still moving
+    (toggle) adds unique id to every item than checks items for duped ids, therefore duped item
+
+
+currently working on is below here
+
+Land claims and plots:
+Land claim button in community item that allows a player to claim up to 4 chunks (probably customizable). Claimed areas will only be breakable and buildable by players allowed by the owner.
+
+Plots are similar but build structures in a co-ord space. This will get a tutorial on youtube to explain how to use it.
+
+landclaim add
+landclaim remove
+
+
+
+changelog:
+    added:
+        ui's now go back
+        utility functions
+
+    fixed:
+        sidebar staying on screen with no text
+        some settings not defaulting in their respective ui's

@@ -34,27 +34,47 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
             case 2:
                 if (evd.block.matches('minecraft:frame') || evd.block.matches('minecraft:glow_frame')) {
                     evd.cancel = true
+                    return
                 }
                 break
             case 3:
                 if (evd.block.matches('minecraft:ender_chest')) {
                     evd.cancel = true
+                    return
                 }
                 break
             case 4:
                 if (evd.block.matches('minecraft:frame') || evd.block.matches('minecraft:glow_frame') || evd.block.matches('minecraft:ender_chest')) {
                     evd.cancel = true
+                    return
                 }
                 break
             case 5:
                 evd.cancel = true
+                return
                 break
         }
     }
+    // const loc = evd.block.location
+    // for (const command of mcl.listGetValues('darkoak:blockinteractcommand:')) {
+    //     const p = JSON.parse(command)
+    //     if (p.coords.x == loc.x && p.coords.y == loc.y && p.coords.z == loc.z) {
+    //         if (p.command) {
+    //             system.runTimeout(() => {
+    //                 evd.player.runCommand(p.command)
+    //             }, 0)
+    //         }
+    //     }
+    // }
 })
 
 world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
-
+    const command = evd.target.getDynamicProperty('darkoak:interactcommand')
+    if (command) {
+        system.runTimeout(() => {
+            evd.player.runCommand(command)
+        }, 0)
+    }
 })
 
 world.afterEvents.playerSpawn.subscribe((evd) => {
@@ -96,13 +116,15 @@ system.runInterval(() => {
             if (Math.abs(x) > worldBorder) {
                 player.applyDamage(1, { cause: EntityDamageCause.magic })
                 const k = (x / worldBorder - 1) * -1
-                player.applyKnockback(k, 0, Math.abs(k) * 2, 0)
+                // player.applyKnockback(k, 0, Math.abs(k) * 2, 0)
+                player.applyKnockback({x: k * Math.abs(k * 2), z: 0}, 0)
             }
 
             if (Math.abs(z) > worldBorder) {
                 player.applyDamage(1, { cause: EntityDamageCause.magic })
                 const k = (z / worldBorder - 1) * -1
-                player.applyKnockback(0, k, Math.abs(k) * 2, 0)
+                // player.applyKnockback(0, k, Math.abs(k) * 2, 0)
+                player.applyKnockback({x: 0, z: k * Math.abs(k * 2)}, 0)
             }
 
         }

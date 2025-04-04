@@ -12,7 +12,7 @@ export const preBannedList = [
     'HackerBase74', //Basic
     'Player847806825', //Alt
     'DEETH9605', //Basic
-    'Perri2207', //Revenge hacking
+    'Perri2207', //Revenge hacking, Racism
     'ION1209765', //Basic
     'QuackStatue9260', //Basic
     'Itsme643937', //Client dev
@@ -32,7 +32,10 @@ export const preBannedList = [
     'RanByGen', //Client dev
     'LoreSkygen', //Alt
     'cknighty21', //Basic
-    'Grumm3678'
+    'ComicSquare1434', //Basic
+    'DaniCR214874', //Basic
+    'herobrine229343', //Basic
+    'Zac10284', //Chat crasher tech
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -106,18 +109,18 @@ export const worldProtectionWater = [
 */
 export function actionbarReplacements(player) {
     const health = mcl.healthValue(player)
-    var block = undefined
-    if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block.isValid()) {
-        block = player.getBlockFromViewDirection().block
-    } else {
-        block = 'Undefined'
-    }
+    // var block = undefined
+    // if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block.isValid()) {
+    //     block = player.getBlockFromViewDirection().block
+    // } else {
+    //     block = 'Undefined'
+    // }
     return {
         '#name#': `${player.name}`,
         '#health#': `${health}`,
         '#location#': `${parseInt(player.location.x)}, ${parseInt(player.location.y)}, ${parseInt(player.location.z)}`,
         '#slot#': `${player.selectedSlotIndex}`,
-        '#block.type#': `${block.typeId}`,
+        // '#block.type#': `${block.typeId}`,
         '#velocity#': `${(player.getVelocity().x).toFixed(1)}, ${(player.getVelocity().y).toFixed(1)}, ${(player.getVelocity().z).toFixed(1)}`,
     }
 }
@@ -130,18 +133,18 @@ export function actionbarReplacements(player) {
  */
 export function replacer(player, string) {
     const health = mcl.healthValue(player)
-    let block = undefined
-    if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block.isValid()) {
-        block = player.getBlockFromViewDirection().block
-    } else {
-        block = 'Undefined'
-    }
+    // let block = undefined
+    // if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block) {
+    //     block = player.getBlockFromViewDirection().block
+    // } else {
+    //     block = 'Undefined'
+    // }
     let formattedString = string
     .replaceAll('#name#', player.name)
     .replaceAll('#health#', health)
     .replaceAll('#location#',  `${parseInt(player.location.x)}, ${parseInt(player.location.y)}, ${parseInt(player.location.z)}`)
     .replaceAll('#slot#', player.selectedSlotIndex.toString())
-    .replaceAll('#block.type#', block.typeId)
+    // .replaceAll('#block.type#', block.typeId)
     .replaceAll('#velocity#', `${(player.getVelocity().x).toFixed(1)}, ${(player.getVelocity().y).toFixed(1)}, ${(player.getVelocity().z).toFixed(1)}`)
     return formattedString
 }
@@ -167,7 +170,7 @@ export const dummySize = 22
 
 export const hashtags = '\nKeys:\n\\n - New Line\n%%scorename%% - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity'
 
-export const hashtagKeys = '#commands - Lists All Commands\n#noob - (Joke) Says Stuff in Chat\n#datadeleter - Opens UI For Deleting Data\n#cc - Clears Chat\n#random - Says A Random Number In Chat (1 To 100)\n#emojis - Lists All Emojis\n#cclocal - Clears The Senders Chat'
+export const hashtagKeys = '#commands - Lists All Commands\n#noob - (Joke) Says Stuff in Chat\n#datadeleter - Opens UI For Deleting Data\n#cc - Clears Chat\n#random - Says A Random Number In Chat (1 To 100)\n#emojis - Lists All Emojis\n#cclocal - Clears The Senders Chat\n#landclaim add - Claims Four Chunks Near The Player\n#landclaim remove - Removes Current Land Claim'
 
 /**Array of strings for textures*/
 export class icons {

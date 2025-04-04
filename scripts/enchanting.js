@@ -117,6 +117,7 @@ world.afterEvents.itemUse.subscribe((evd) => {
 
     const i = mcl.getHeldItem(player)
     if (i === undefined) return
+
     const item = i.getLore()
     if (item === undefined) return
 

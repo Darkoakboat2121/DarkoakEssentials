@@ -1,8 +1,9 @@
-import { world, system, Player, Entity, ItemStack } from "@minecraft/server"
-import { ActionFormData, MessageFormData, ModalFormData } from "@minecraft/server-ui"
+import { world, system, Player, Entity, ItemStack, Block } from "@minecraft/server"
+import { ActionFormData, MessageFormData, ModalFormData, uiManager, UIManager } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
 import { customEnchantActions, customEnchantEvents } from "../enchanting"
+import { preBannedList } from "../data/arrays"
 
 
 /**UI for data editor item
@@ -15,7 +16,7 @@ export function dataEditorEntityUI(player, entity) {
 
     f.textField('\nName:', '', entity.nameTag)
     f.toggle('Remove Entity?', false)
-    f.textField('Command On Interact:', 'Example: tp @s 0 0 0')
+    f.textField('Command On Interact:', 'Example: tp @s 0 0 0', entity.getDynamicProperty('darkoak:interactcommand') || '')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -23,7 +24,40 @@ export function dataEditorEntityUI(player, entity) {
         entity.nameTag = e[0]
         if (e[1]) {
             entity.remove()
+            return
         }
+        entity.setDynamicProperty('darkoak:interactcommand', e[2])
+    })
+}
+
+/**
+ * @param {Player} player 
+ * @param {Block} block 
+ */
+export function dataEditorBlockUI(player, block) {
+    let f = new ModalFormData()
+    f.title('Data Editor')
+
+    const loc = block.location
+    let d = ''
+
+    const defaults = mcl.listGetValues('darkoak:blockinteractcommand:')
+    for (const g of defaults) {
+        const p = JSON.parse(g)
+        if (p.coords.x === loc.x && p.coords.y === loc.y && p.coords.z === loc.z) {
+            d = p.command
+        }
+    }
+
+    f.textField('Command On Interact:', 'Example: tp @s 0 0 0', d)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        mcl.jsonWSet(`darkoak:blockinteractcommand:${mcl.timeUuid()}`, {
+            command: evd.formValues[0],
+            coords: { x: loc.x, z: loc.z, y: loc.y }
+        })
     })
 }
 
@@ -31,14 +65,14 @@ export function genMainUI(player) {
     let f = new ActionFormData()
     f.title('Generator Settings')
 
-    f.button('Add New')
-    f.button('Remove One')
-    f.button('Modify One')
+    f.button('Add New\n§7Create A New Generator')
+    f.button('Remove One\n§7Remove an Existing Generator')
+    f.button('Modify One\n§7Modify An Existing Generator')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
 
-        switch(evd.selection) {
+        switch (evd.selection) {
             case 0:
                 genAddUI(player)
                 break
@@ -63,10 +97,10 @@ export function genAddUI(player) {
 
     let b = player.getBlockFromViewDirection()
     let n = undefined
-    if (b != undefined && b.block.isValid()) {
+    if (b != undefined && b.block) {
         n = b.block.location
     } else {
-        n = {x: '', y: '', z: ''}
+        n = { x: '', y: '', z: '' }
     }
 
     f.textField('Block ID:', 'Example: minecraft:diamond_ore')
@@ -77,7 +111,7 @@ export function genAddUI(player) {
         const e = evd.formValues
         const blockId = e[0].trimStart()
         const coords1 = e[1].trimStart()
-        mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, {block: blockId, coords: coords1})
+        mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, { block: blockId, coords: coords1 })
     })
 }
 
@@ -120,7 +154,7 @@ export function genModifyPickerUI(player) {
         player.sendMessage('§cNo Generators Found§r')
         return
     }
-    
+
     f.show(player).then((evd) => {
         if (evd.canceled) return
         genModifyUI(player, raw[evd.selection])
@@ -140,21 +174,25 @@ export function genModifyUI(player, gen) {
         const e = evd.formValues
         const blockId = e[0].trimStart()
         const coords1 = e[1].trimStart()
-        mcl.jsonWSet(gen, {block: blockId, coords: coords1})
+        mcl.jsonWSet(gen, { block: blockId, coords: coords1 })
     })
 }
-
 
 export function tpaSettings(player) {
     let f = new ModalFormData()
 
-    f.toggle('Enabled?')
-    f.toggle('Can TP To Admins In Creative?')
+    const d = mcl.jsonWGet('darkoak:tpa')
+
+    f.toggle('Enabled?', d.enabled)
+    f.toggle('Can TP To Admins In Creative?', d.adminTp)
 
     f.show(player).then((evd) => {
-        if (evd.canceled) return
+        if (evd.canceled) {
+            interfaces.warpSettingsUI(player)
+            return
+        }
         const e = evd.formValues
-        mcl.jsonWSet('darkoak:tpa', {enabled: e[0], adminTp: e[1]})
+        mcl.jsonWSet('darkoak:tpa', { enabled: e[0], adminTp: e[1] })
     })
 }
 
@@ -166,9 +204,12 @@ export function createWarpUI(player) {
     f.textField('Co-ords To TP:', 'Example: 0 1 0')
 
     f.show(player).then((evd) => {
-        if (evd.canceled) return
+        if (evd.canceled) {
+            interfaces.warpSettingsUI(player)
+            return
+        }
         const e = evd.formValues
-        mcl.jsonWSet(`darkoak:warp:${mcl.timeUuid()}`, {name: e[0].trim(), coords: e[1].trim()})
+        mcl.jsonWSet(`darkoak:warp:${mcl.timeUuid()}`, { name: e[0].trim(), coords: e[1].trim() })
     })
 }
 
@@ -188,7 +229,10 @@ export function deleteWarpUI(player) {
     }
 
     f.show(player).then((evd) => {
-        if (evd.canceled) return
+        if (evd.canceled) {
+            interfaces.warpSettingsUI(player)
+            return
+        }
         mcl.wSet(raw[evd.selection])
     })
 }
@@ -201,10 +245,16 @@ export function tpaUI(player) {
     f.dropdown('\nPlayer:', names)
 
     const data = mcl.jsonWGet('darkoak:tpa')
-    if (!data.enabled) return
+    if (!data.enabled) {
+        player.sendMessage('§cTPA Is Disabled§r')
+        return
+    }
 
     f.show(player).then((evd) => {
-        if (evd.canceled) return
+        if (evd.canceled) {
+            interfaces.warpsUI(player)
+            return
+        }
         tpaRecieveUI(mcl.getPlayer(names[evd.formValues[0]]), player)
     })
 }
@@ -224,9 +274,9 @@ export function tpaRecieveUI(reciever, sender) {
 
     f.show(reciever).then((evd) => {
         if (evd.canceled) return
-        switch(evd.selection) {
+        switch (evd.selection) {
             case 0:
-                reciever.runCommandAsync(`tp ${sender.name} ${reciever.name}`)
+                reciever.runCommand(`tp "${sender.name}" "${reciever.name}"`)
                 sender.sendMessage('§aTPA Request Accepted!§r')
                 break
             case 1:
@@ -281,19 +331,47 @@ export function anticheatSettings(player) {
     const d = mcl.jsonWGet('darkoak:anticheat')
 
     f.toggle('Pre-bans', d.prebans)
+    f.label('Automatically Bans Hackers Darkoakboat2121 Knows About')
+    f.label(`Full list:\n${preBannedList.join(' | ')}`)
+
+    f.divider()
+
     f.toggle('Anti-nuker', d.antinuker)
+    f.label('Checks If A Player Is Breaking Blocks Too Fast')
+
+    f.divider()
+
     f.toggle('Anti-fast-place', d.antifastplace)
+    f.label('Checks If A Player Is Placing Blocks Too Fast')
+
+    f.divider()
+
     f.toggle('Anti-fly 1', d.antifly1)
+    f.label('Checks If A Player Is Flying Like In Creative Mode But Without Creative')
+
+    f.divider()
+
     f.toggle('Anti-speed 1', d.antispeed1)
+    f.label('Checks If Player Is Moving Too Fast')
+
+    f.divider()
+
     f.toggle('Anti-spam', d.antispam)
+    f.label('Checks The Players Recent Messages For Repeats, Automatically Formats To Ensure Spaces And Formatting Codes Don\'t Bypass It')
+
+    f.divider()
+
     f.toggle('Anti-illegal-enchant', d.antiillegalenchant)
+    f.label('Checks If The Held Item Of A Player Has Illegal Enchants')
+
+    f.divider()
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
         mcl.jsonWSet('darkoak:anticheat', {
-            prebans: e[0], 
-            antinuker: e[1], 
+            prebans: e[0],
+            antinuker: e[1],
             antifastplace: e[2],
             antifly1: e[3],
             antispeed1: e[4],
@@ -312,9 +390,12 @@ export function auctionMain(player) {
     f.button('Buy Item')
 
     f.show(player).then((evd) => {
-        if (evd.canceled) return
+        if (evd.canceled) {
+            interfaces.communityMoneyUI(player)
+            return
+        }
 
-        switch(evd.selection) {
+        switch (evd.selection) {
             case 0:
                 auctionAddUI(player)
                 break
@@ -326,9 +407,33 @@ export function auctionMain(player) {
 }
 
 export function auctionAddUI(player) {
+    let f = new ModalFormData()
+    f.title('Add Item')
 
+    f.textField('\nAdd An Item Into The Auction House? It\'s Permanant! Also This Will Remove Any Enchantments.\nPrice:', 'Example: 100')
+
+    f.slider('Slot', 1, 9, 1)
+
+    f.submitButton(`Add Item?`)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        if (isNaN(evd.formValues[0])) {
+            auctionAddUI(player)
+            return
+        }
+        const item = mcl.getItemContainer(player).getItem(evd.formValues[1])
+        mcl.jsonWSet(`darkoak:auction:item${mcl.timeUuid()}`, {
+            itemTypeId: item.typeId,
+            itemAmount: item.amount,
+            price: evd.formValues[0]
+        })
+    })
 }
 
+/**
+ * @param {Player} player 
+ */
 export function auctionHouse(player) {
     let f = new ActionFormData()
     f.title('Auction House')
@@ -338,11 +443,16 @@ export function auctionHouse(player) {
 
     for (const item of value) {
         const d = JSON.parse(item)
-        f.button(`${d.item} for ${d.price}`)
+        f.button(`${d.itemTypeId} x${d.itemAmount} for ${d.price}`)
     }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
+        const selected = JSON.parse(value[evd.selection])
+        if (mcl.buy(player, selected.price)) {
+            player.runCommand(`give "${player.name}" ${selected.itemTypeId} ${selected.itemAmount}`)
+            mcl.wSet(raw[evd.selection])
+        }
     })
 }
 
@@ -361,7 +471,7 @@ export function customEnchantsMain(player) {
     f.dropdown('\nAction:', actions)
 
     f.slider('\nExplode: Explosion Radius\nExtra Damage: Damage Amount\nDash: Dash Distance\nPower', 1, 20, 1)
-    
+
     f.submitButton('Enchant Held Item?')
 
     f.show(player).then((evd) => {
@@ -393,7 +503,7 @@ export function protectedAreasMain(player) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        switch(evd.selection) {
+        switch (evd.selection) {
             case 0:
                 worldProtection(player)
                 break
@@ -445,10 +555,10 @@ export function protectedAreasAddUI(player) {
 
         const coords1 = evd.formValues[0].trim().split(' ')
         const coords2 = evd.formValues[1].trim().split(' ')
-        
+
         const pa = {
-            p1: {x: coords1[0], z: coords1[1]},
-            p2: {x: coords2[0], z: coords2[1]}
+            p1: { x: coords1[0], z: coords1[1] },
+            p2: { x: coords2[0], z: coords2[1] }
         }
         mcl.jsonWSet(`darkoak:protection:${mcl.timeUuid()}`, pa)
     })
@@ -478,4 +588,16 @@ export function personalLogUI(player) {
     f.title('Personal Log')
 
     f.textField('Log:', '')
+}
+
+export function messageLogUI(player) {
+    let f = new ActionFormData()
+    f.title('Message Log')
+
+    for (const message of mcl.jsonWGet('darkoak:messagelogs').log) {
+        // add divider and label here!!!
+        f.button(message)
+    }
+
+    f.show(player)
 }

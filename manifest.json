@@ -6,15 +6,15 @@
     ]
   },
   "header": {
-    "name": "Darkoak Essentials V2.0.6",
+    "name": "Darkoak Essentials V2.1.0",
     "description": "Made by Darkoakboat2121",
     "min_engine_version": [
       1,
       21,
-      50
+      70
     ],
     "uuid": "9506c0be-216b-49fe-b0c7-f1c5536882f2",
-    "version": [2,0,6]
+    "version": [2,1,0]
   },
   "modules": [
     {
@@ -44,11 +44,11 @@
   "dependencies": [
     {
       "module_name": "@minecraft/server",
-      "version": "1.18.0-beta"
+      "version": "2.0.0-beta"
     },
     {
       "module_name": "@minecraft/server-ui",
-      "version": "1.4.0-beta"
+      "version": "2.0.0-beta"
     }
   ]
 }

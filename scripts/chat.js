@@ -6,10 +6,10 @@ import { emojis } from "./data/arrays"
 
 
 // This file handles all chat interactions such as:
-// Custom commands, ranks, censoring
+// Custom commands, ranks, censoring, antispam
 
 world.beforeEvents.chatSend.subscribe((evd) => {
-
+    
     for (const c of mcl.listGetValues('darkoak:command:')) {
         const p = JSON.parse(c)
         if (evd.message === p.message) {
@@ -19,7 +19,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
                     evd.cancel = true
                     return
                 } else {
-                    evd.sender.runCommandAsync(p.command)
+                    evd.sender.runCommand(p.command)
                     evd.cancel = true
                     return
                 }
@@ -47,7 +47,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
             newMessage += message.charAt(index)
         }
 
-        newMessage = newMessage.replaceAll('1', 'i').replaceAll('0', 'o').replaceAll('4', 'a').replaceAll('8', 'b')
+        newMessage = newMessage.replaceAll('1', 'i').replaceAll('0', 'o').replaceAll('4', 'a').replaceAll('6', 'k').replaceAll('8', 'b').replaceAll('9', 'q')
 
         if (newMessage.toLowerCase().replaceAll('§', '').includes(c.toLowerCase())) {
             evd.cancel = true
@@ -66,6 +66,22 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         message: evd.message.trim()
     }))
 
+    // message logs
+    if (mcl.jsonWGet('darkoak:chat:other')) {
+        /**@type {Array<string>} */
+        let logs2 = mcl.jsonWGet('darkoak:messagelogs').log || []
+        if (logs2.length > 50) {
+            logs2.shift()
+            if (logs2.length > 50) {
+                logs2.shift()
+            }
+        }
+        logs2.push(`${evd.sender.name} -> ${evd.message}`)
+        mcl.jsonWSet('darkoak:messagelogs', {
+            log: logs2
+        })
+    }
+
     let formattedMessage = evd.message
     for (const replacement of emojis) {
         formattedMessage = formattedMessage.replaceAll(replacement.m, replacement.e)
@@ -76,9 +92,10 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         /**@type {Player} */
         const p = evd.sender
         system.runTimeout(() => {
-            p.nameTag = `${p.name}\n${evd.message}`
+            p.nameTag = `${p.name}\n${formattedMessage}`
         })
     }
+
 
     /**@type {Array<string>} */
     const tags = evd.sender.getTags()
@@ -92,7 +109,14 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     chatColors = chatColors.length ? chatColors : [``]
 
     const text = `${cr.start}${ranks.join(cr.middle)}${cr.end}§r§f${nameColors.join('')}${evd.sender.name}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage}`
-    world.sendMessage({ rawtext: [{ text: text }] })
+
+    if (ocs.proximity) {
+        system.runTimeout(() => {
+            evd.sender.runCommand(`tellraw @a [r=15] {"rawtext": [{"text":"${text}"}]}`)
+        }, 1)
+    } else {
+        world.sendMessage({ rawtext: [{ text: text }] })
+    }
     evd.cancel = true
 })
 
@@ -103,10 +127,12 @@ world.beforeEvents.chatSend.subscribe((evd) => {
 function hashtag(hashtagKey, sender) {
     switch (hashtagKey.replaceAll('#', '')) {
         case 'commands':
+            sender.sendMessage('----------------------------------')
             for (const c of mcl.listGetValues('darkoak:command:')) {
                 const p = JSON.parse(c)
-                sender.sendMessage(`${p.message} | ${p.tag} -> ${p.command}`)
+                sender.sendMessage(`${p.message} | ${p.tag || 'No Tag'} -> ${p.command}`)
             }
+            sender.sendMessage('----------------------------------')
             break
         case 'noob':
             sender.sendMessage('ALL HAIL THE NOOBSLAYER')
@@ -136,6 +162,18 @@ function hashtag(hashtagKey, sender) {
             for (const emoji of emojis) {
                 sender.sendMessage(`${emoji.m} -> ${emoji.e}`)
             }
+            break
+        case 'landclaim add':
+
+            break
+        case 'landclaim remove':
+
+            break
+        case 'bind':
+            sender.sendMessage('Close Chat!')
+            system.runTimeout(() => {
+                sender.runCommand('scriptevent darkoak:bind')
+            }, 20)
             break
     }
 }

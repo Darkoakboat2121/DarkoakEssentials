@@ -69,8 +69,9 @@ system.runInterval(() => {
 
             log(`${player.nameTag} -> anti-illegal-enchant: ${c.type.id} ${c.level}`)
             let item = new ItemStack(held.type, held.amount)
+            item.setLore(held.getLore())
 
-            player.runCommandAsync('replaceitem entity @s slot.weapon.mainhand 0 air 1').finally(() => {
+            player.runCommand('replaceitem entity @s slot.weapon.mainhand 0 air 1').finally(() => {
                 mcl.getItemContainer(player).setItem(player.selectedSlotIndex, item)
             })
         }

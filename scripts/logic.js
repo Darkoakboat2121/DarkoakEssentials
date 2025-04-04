@@ -37,6 +37,18 @@ export class mcl {
         return result
     }
 
+    static numberProperties(num) {
+        let even = false
+        if (num % 2 === 0) {
+            even = true
+        }
+        return {
+            isEven: even,
+            isOdd: !even,
+            isNumber: !isNaN(num),
+        }
+    }
+
     /**Sets a global dynamic property
      * @param {string} id 
      * @param {any | undefined} setTo 
@@ -58,16 +70,19 @@ export class mcl {
      */
     static jsonWGet(id) {
         const t = world.getDynamicProperty(id)
-        return JSON.parse(t)
+        if (t == undefined) {
+            return undefined
+        } else {
+            return JSON.parse(t)
+        }
     }
 
     /**Sets a global data object
      * @param {string} id 
      * @param {object} data 
-     * @returns {string}
      */
     static jsonWSet(id, data) {
-        return world.setDynamicProperty(id, JSON.stringify(data))
+        world.setDynamicProperty(id, JSON.stringify(data))
     }
 
     /**Sets a player dynamic property
@@ -88,10 +103,50 @@ export class mcl {
     }
 
     /**
+     * @param {Player} player 
+     * @param {string} id 
+     * @param {object} data 
+     */
+    static jsonPSet(player, id, data) {
+        player.setDynamicProperty(id, JSON.stringify(data))
+    }
+
+    /**
+     * @param {Player} player 
+     * @param {id} id 
+     * @returns {object}
+     */
+    static jsonPGet(player, id) {
+        const t = player.getDynamicProperty(id)
+        if (t == undefined) {
+            return undefined
+        } else {
+            return JSON.parse(t)
+        }
+    }
+
+    /**
      * @param {string} name
      */
     static getPlayer(name) {
         return world.getPlayers({name: name})[0]
+    }
+
+    /**
+     * 
+     * @param {Player} player 
+     * @param {number} amount 
+     */
+    static buy(player, amount) {
+        if (isNaN(amount) || world.scoreboard.getObjective(mcl.wGet('darkoak:moneyscore')).getScore(player) == undefined) {
+            return false
+        }
+        if (world.scoreboard.getObjective(mcl.wGet('darkoak:moneyscore')).getScore(player) >= amount) {
+            player.runCommand(`scoreboard players remove "${player.name}" ${mcl.wGet('darkoak:moneyscore')} ${amount}`)
+            return true
+        } else {
+            return false
+        }
     }
 
     /**Returns an array of dynamic property ids that starts with the inputted key
@@ -126,7 +181,7 @@ export class mcl {
     }
 
     /**Returns a list of key value pairs of dynamic propertys
-     * @param {string} key 
+     * @param {string | undefined} key 
      */
     static listGetBoth(key) {
         if (key === undefined) {
@@ -212,6 +267,17 @@ export class mcl {
      */
     static isOp(player) {
         return player.isOp()
+    }
+
+    /**
+     * @param {Player} player 
+     */
+    static isDOBAdmin(player) {
+        if (player.hasTag('darkoak:admin') || mcl.isHost(player)) {
+            return true
+        } else {
+            return false
+        }
     }
 
     /**Returns whether the player is in an ideal state for creating the world (has op and is in creative mode)

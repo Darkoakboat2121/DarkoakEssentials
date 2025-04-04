@@ -1,5 +1,5 @@
 // first is minecraft resources
-import { world, system, Player } from "@minecraft/server"
+import { world, system, Player, GameMode } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 
 // second is setting defaults
@@ -64,9 +64,9 @@ world.afterEvents.itemUse.subscribe((evd) => {
         }
     }
 
-    if (evd.itemStack.typeId === 'darkoak:hop_feather' && player.isOnGround) {
+    if (evd.itemStack.typeId === 'darkoak:hop_feather' && (player.isOnGround || player.isClimbing)) {
         const direction = player.getViewDirection()
-        player.applyKnockback(direction.x, direction.z, 3, 1)
+        player.applyKnockback({x: direction.x * 2, z: direction.z * 2}, 1)
     }
 
 
@@ -75,7 +75,7 @@ world.afterEvents.itemUse.subscribe((evd) => {
             if (evd.itemStack.typeId === `darkoak:dummy${index}`) {
                 const command = mcl.wGet(`darkoak:bind:${index}`)
                 if (command != '' && command != undefined) {
-                    evd.source.runCommandAsync(command)
+                    evd.source.runCommand(command)
                 }
             }
         }
@@ -86,16 +86,21 @@ world.afterEvents.itemUse.subscribe((evd) => {
 world.afterEvents.playerSpawn.subscribe((evd) => {
     const p = world.getAllPlayers()[0]
     const d = mcl.jsonWGet('darkoak:anticheat')
+    const s = mcl.jsonWGet('darkoak:community:general')
 
     if (d.prebans) {
         for (const n of arrays.preBannedList) {
-            p.runCommandAsync(`kick "${n}"`)
+            p.runCommand(`kick "${n}"`)
         }
     }
 
     for (const n of mcl.listGetValues('darkoak:bans:')) {
         const data = JSON.parse(n)
-        p.runCommandAsync(`kick "${data.player}" ${data.message}`)
+        p.runCommand(`kick "${data.player}" ${data.message}`)
+    }
+
+    if (evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount === 0 && s.giveOnJoin) {
+        evd.player.runCommand('give @s darkoak:community')
     }
 })
 
@@ -116,14 +121,24 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
             }
         }
     }
+
 })
+
+// world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
+//     if (evd.itemStack && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin')) {
+//         evd.cancel
+//         system.runTimeout(() => {
+//             interfacesTwo.dataEditorBlockUI(evd.player, evd.block)
+//         }, 0)
+//     }
+// })
 
 world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
     if (evd.itemStack && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin')) {
+        evd.cancel = true
         system.runTimeout(() => {
             interfacesTwo.dataEditorEntityUI(evd.player, evd.target)
-        }, 1)
-        evd.cancel = true
+        }, 0)
     }
 })
 
@@ -158,7 +173,7 @@ system.runInterval(() => {
     for (const block of mcl.listGetValues('darkoak:gen:')) {
         const b = JSON.parse(block)
         const parts = b.coords.split(' ')
-        world.getDimension('overworld').runCommandAsync(`setblock ${parts[0]} ${parts[1]} ${parts[2]} ${b.block}`)
+        world.getDimension('overworld').runCommand(`setblock ${parts[0]} ${parts[1]} ${parts[2]} ${b.block}`)
     }
 })
 
@@ -167,6 +182,12 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
     if (!evd.sourceEntity) return
     if (evd.id === 'darkoak:enchant') {
         interfacesTwo.customEnchantsMain(evd.sourceEntity)
+    }
+    if (evd.id === 'darkoak:bind') {
+        interfacesTwo.itemBindingUI(evd.sourceEntity)
+    }
+    if (evd.id === 'darkoak:spawn') {
+        
     }
 })
 
@@ -185,7 +206,7 @@ function actionUIBuilder(playerToShow, title, body, buttons) {
         if (evd.canceled) return
         const selected = buttons[evd.selection]
         if (selected.command) {
-            playerToShow.runCommandAsync(selected.command)
+            playerToShow.runCommand(selected.command)
         }
     })
 
@@ -202,9 +223,9 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
     f.show(playerToShow).then((evd) => {
         if (evd.canceled) return
         if (evd.selection === 0 && command1) {
-            playerToShow.runCommandAsync(command1)
+            playerToShow.runCommand(command1)
         } else if (evd.selection === 1 && command2) {
-            playerToShow.runCommandAsync(command2)
+            playerToShow.runCommand(command2)
         }
     })
 }
@@ -221,17 +242,17 @@ system.runInterval(() => {
                     text = text.replaceAll(hashtag, replacements[hashtag])
                 }
             }
-            player.runCommandAsync(`titleraw @s actionbar {"rawtext":[{"text":"${text}"}]}`)
+            player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${text}"}]}`)
         }
         if (mcl.wGet('darkoak:sidebar')) {
-            /**@type {{lines: ["a", "b"]}} */
+            /**@type {{lines: ["a", "b", "c"]}} */
             let text = mcl.jsonWGet('darkoak:sidebar')
             let newText = []
             for (const line of text.lines) {
                 newText.push(arrays.replacer(player, line))
             }
 
-            player.runCommandAsync(`titleraw @s title {"rawtext":[{"text":"${newText.join('\n')}"}]}`)
+            player.runCommand(`titleraw @s title {"rawtext":[{"text":"${newText.join('\n')}"}]}`)
         }
     }
 }, 10)

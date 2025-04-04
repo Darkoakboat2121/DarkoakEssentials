@@ -1,0 +1,1 @@
+execute at @a [tag=darkoak:admin, hasitem={item=blaze_rod, location=slot.weapon.mainhand}] run tp @a [r=5, tag=!darkoak:admin] ^ ^ ^4.2
