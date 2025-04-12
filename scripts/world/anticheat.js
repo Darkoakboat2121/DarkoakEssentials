@@ -47,7 +47,7 @@ world.afterEvents.entityHitEntity.subscribe((evd) => {
     player.setDynamicProperty('darkoak:ac:cps', currentCPS + 1)
 
     if (!d.antikillaura) return
-    if (currentCPS > 12) {
+    if (currentCPS > 15) {
         log(`${player.name} -> anti-killaura (${currentCPS})`)
     }
 })

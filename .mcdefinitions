@@ -5,3 +5,7 @@ tag=darkoak:team4
 tag=darkoak:immune
 tag=darkoak:immune2
 function=gen/coal_ore_gen
+entity=darkoak:floating_text
+item=darkoak:anticheat
+item=darkoak:chest_lock
+item=darkoak:main

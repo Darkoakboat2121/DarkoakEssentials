@@ -212,6 +212,7 @@ function hashtag(hashtagKey, sender) {
             system.runTimeout(() => {
                 landclaimMainUI(sender)
             }, 20)
+            break
         case 'bind':
             sender.sendMessage('Close Chat!')
             system.runTimeout(() => {
