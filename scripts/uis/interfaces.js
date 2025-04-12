@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { auctionMain, createWarpUI, deleteWarpUI, messageLogUI, tpaSettings, tpaUI } from "./interfacesTwo"
+import { addRankUI, auctionMain, createWarpUI, deleteWarpUI, messageLogUI, removeRankUI, tpaSettings, tpaUI } from "./interfacesTwo"
 
 // This file holds all the functions containing UI
 
@@ -132,12 +132,21 @@ export function itemBindsUI(player) {
     f.slider('\nItem Number', 1, arrays.dummySize, 1)
     f.textField('Command:', 'Example: tp @s 0 1 0')
 
+    f.label('More Commands:')
+    f.textField('', '')
+    f.textField('', '')
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             worldSettingsUI(player)
             return
         }
-        mcl.wSet(`darkoak:bind:${evd.formValues[0]}`, evd.formValues[1])
+        const e = evd.formValues
+        mcl.jsonWSet(`darkoak:bind:${e[0]}`, {
+            command1: e[1],
+            command2: e[2],
+            command2: e[3],
+        })
     })
 }
 
@@ -199,6 +208,8 @@ export function playerSettingsUI(player) {
     f.button('Player Data\n§7View A Player\'s Data', 'textures/ui/glyph_inventory')
     f.button('Punishments\n§7Punish A Player', 'textures/ui/cancel')
     f.button('Player Tracking\n§7Modify Tracking Settings')
+    f.button('Add Rank To A Player')
+    f.button('Remove Rank From A Player')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -214,6 +225,12 @@ export function playerSettingsUI(player) {
                 break
             case 2:
                 playerTrackingUI(player)
+                break
+            case 3:
+                addRankUI(player)
+                break
+            case 4:
+                removeRankUI(player)
                 break
             default:
                 player.sendMessage('§cError§r')
@@ -245,7 +262,7 @@ export function playerDataViewUI(playerToShow, playerToView) {
     const player = world.getPlayers({ name: playerToView })[0]
     f.title(`${player.name}`)
 
-    f.body(`Name: ${player.name}, Shows as: ${player.nameTag}
+    f.body(`Name: ${player.name}, Shows as: [${player.nameTag}]
 ID: ${player.id}, Is Host: ${mcl.isHost(player)}
 Gamemode: ${player.getGameMode()}
 Location: ${parseInt(player.location.x)} ${parseInt(player.location.y)} ${parseInt(player.location.z)}, Dimension: ${player.dimension.id}
@@ -529,6 +546,9 @@ export function chatCommandsAddUI(player) {
     f.textField('Message:', 'Example: !spawn')
     f.textField(`Add A Command Or Hashtag Key. Hashtag Keys Include:\n${arrays.hashtagKeys}\nCommand:`, 'Example: tp @s 0 0 0')
     f.textField('Required Tag:', 'Example: Admin')
+    f.label('Add More Commands:')
+    f.textField('', '')
+    f.textField('', '')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -539,7 +559,9 @@ export function chatCommandsAddUI(player) {
         mcl.jsonWSet(`darkoak:command:${mcl.timeUuid()}`, {
             message: e[0],
             command: e[1],
-            tag: e[2]
+            tag: e[2],
+            command2: e[3],
+            command3: e[4]
         })
     })
 }
@@ -731,6 +753,11 @@ export function otherChatSettingsUI(player) {
 
     f.divider()
 
+    f.toggle('Health Display', default1.healthDisplay || false)
+    f.label('Displays The Players Health Under Their Nametag')
+
+    f.divider()
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             chatSettingsUI(player)
@@ -740,7 +767,8 @@ export function otherChatSettingsUI(player) {
         mcl.jsonWSet('darkoak:chat:other', {
             proximity: e[0],
             nametag: e[1],
-            chatLogs: e[2]
+            chatLogs: e[2],
+            healthDisplay: e[3]
         })
     })
 }
@@ -895,8 +923,17 @@ export function logsUI(player) {
 
     f.button('Message Logs')
 
-    const logs = mcl.jsonWGet('darkoak:log')
+    f.label('Sorted By Latest First')
+
+    let logs = mcl.jsonWGet('darkoak:log')
     if (logs != undefined) {
+
+        logs.logs.sort((a, b) => {
+            const numA = mcl.getStringBetweenChars(a.message, '[', ']')
+            const numB = mcl.getStringBetweenChars(b.message, '[', ']')
+            return numB - numA
+        })
+
         for (const log of logs.logs) {
             f.button(`${log.message}`)
         }
@@ -920,14 +957,26 @@ export function docsUI(player) {
 
     f.header('Scriptevents')
     f.label('darkoak:enchant -> Opens Custom Enchant Menu')
+    f.label('darkoak:spawn [itemtype] [amount] [x] [y] [z] -> Spawns An Item')
     f.divider()
     f.header('Tags')
+
     f.label('darkoak:admin -> Admin Tag For Almost Everything')
     f.label('darkoak:mod -> Allows The Tagged Player To Open the Punishment UI')
+
     f.label('darkoak:muted -> Mutes The Tagged Player')
+
     f.label('rank:yourrankhere -> Rank Tag, Replace \'yourrankhere\' With Anything You Want')
     f.label('namecolor:yourcolorhere -> Name Color Tag, Replace \'yourcolorhere\' With A Color Code')
     f.label('chatcolor:yourcolorhere -> Chat Color Tag, Replace \'yourcolorhere\' With A Color Code')
+
+    f.label('darkoak:team1 -> Teams Tag, If Two Players Have This Tag They Cannot Damage Each Other')
+    f.label('darkoak:team2 -> Teams Tag, If Two Players Have This Tag They Cannot Damage Each Other')
+    f.label('darkoak:team3 -> Teams Tag, If Two Players Have This Tag They Cannot Damage Each Other')
+    f.label('darkoak:team4 -> Teams Tag, If Two Players Have This Tag They Cannot Damage Each Other')
+
+    f.label('darkoak:immune -> If A Player Has This Tag, They Cannot Be Damaged At All')
+
     f.label('darkoak:flying -> Tracking Tag')
     f.label('darkoak:gliding -> Tracking Tag')
     f.label('darkoak:climbing -> Tracking Tag')
@@ -1111,12 +1160,15 @@ export function sidebarUI(player) {
 
     const d = mcl.jsonWGet('darkoak:sidebar') || def
 
-    f.textField(`\n${arrays.hashtags}\nLine 1:`, '', d.lines[0])
-    f.textField('Line 2:', '', d.lines[1])
-    f.textField('Line 3:', '', d.lines[2])
-    f.textField('Line 4:', '', d.lines[3])
-    f.textField('Line 5:', '', d.lines[4])
-    f.textField('Line 6:', '', d.lines[5])
+    f.textField(`\n${arrays.hashtags}\n\nLine 1:`, '', d.lines[0])
+    for (let index = 2; index < 13; index++) {
+        f.textField(`Line ${index}:`, '', d.lines[index - 1])
+    }
+    // f.textField('Line 2:', '', d.lines[1])
+    // f.textField('Line 3:', '', d.lines[2])
+    // f.textField('Line 4:', '', d.lines[3])
+    // f.textField('Line 5:', '', d.lines[4])
+    // f.textField('Line 6:', '', d.lines[5])
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1125,7 +1177,20 @@ export function sidebarUI(player) {
         }
         const e = evd.formValues
         mcl.jsonWSet('darkoak:sidebar', {
-            lines: [e[0], e[1], e[2], e[3], e[4], e[5]]
+            lines: [
+                e[0],
+                e[1],
+                e[2], 
+                e[3], 
+                e[4],
+                e[5],
+                e[6],
+                e[7],
+                e[8], 
+                e[9], 
+                e[10],
+                e[11],
+            ]
         })
     })
 }
@@ -1589,7 +1654,6 @@ export function myProfile(player) {
         mcl.wSet(`darkoak:profile:${player.name}`, JSON.stringify(defaultP))
     }
     const parts = JSON.parse(mcl.wGet(`darkoak:profile:${player.name}`))
-    // 0: Text / Description, 1: Pronouns, 2: Age
 
     f.textField('\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', parts.description)
     f.textField('Pronouns:', 'Example: He / Him', parts.pronouns)

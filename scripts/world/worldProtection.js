@@ -1,40 +1,20 @@
-import { world, system, Player } from "@minecraft/server";
-import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui";
-import { mcl } from "./logic";
-import { worldProtectionBadItems, worldProtectionWater } from "./data/arrays";
+import { world, system, Player } from "@minecraft/server"
+import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
+import { mcl } from "../logic"
+import { worldProtectionBadItems, worldProtectionWater } from "../data/arrays"
 
 world.beforeEvents.explosion.subscribe((evd) => {
-    for (const place of mcl.listGetValues('darkoak:protection:')) {
+    let places = mcl.listGetValues('darkoak:protection:')
+    let blocks = evd.getImpactedBlocks()
+    for (let index = 0; index < places.length; index++) {
         /**
          * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }}}
          */
-        const area = JSON.parse(place)
+        const area = JSON.parse(places[index])
 
-        for (const block of evd.getImpactedBlocks()) {
-            const x = block.location.x
-            const z = block.location.z
-
-            const minX = Math.min(area.p1.x, area.p2.x)
-            const maxX = Math.max(area.p1.x, area.p2.x)
-            const minZ = Math.min(area.p1.z, area.p2.z)
-            const maxZ = Math.max(area.p1.z, area.p2.z)
-
-            if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
-                evd.cancel = true
-                return
-            }
-        }
-    }
-
-    for (const place of mcl.listGetValues('darkoak:landclaim:')) {
-        /**
-         * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }, players: ['', '']}}
-         */
-        const area = JSON.parse(place)
-
-        for (const block of evd.getImpactedBlocks()) {
-            const x = block.location.x
-            const z = block.location.z
+        for (let index = 0; index < blocks.length; index++) {
+            const x = blocks[index].location.x
+            const z = blocks[index].location.z
 
             const minX = Math.min(area.p1.x, area.p2.x)
             const maxX = Math.max(area.p1.x, area.p2.x)
@@ -51,11 +31,12 @@ world.beforeEvents.explosion.subscribe((evd) => {
 
 world.beforeEvents.playerBreakBlock.subscribe((evd) => {
     if (mcl.isCreating(evd.player)) return
-    for (const place of mcl.listGetValues('darkoak:protection:')) {
+    let places = mcl.listGetValues('darkoak:protection:')
+    for (let index = 0; index < places.length; index++) {
         /**
          * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }}}
          */
-        const area = JSON.parse(place)
+        const area = JSON.parse(places[index])
 
         const block = evd.block
 
@@ -72,44 +53,18 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
             evd.player.sendMessage('§cThis Land Is Protected!§r')
             return
         }
-
-    }
-
-    for (const place of mcl.listGetValues('darkoak:landclaim:')) {
-        /**
-         * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }}}
-         */
-        const area = JSON.parse(place)
-
-        const block = evd.block
-
-        const x = block.location.x
-        const z = block.location.z
-
-        const minX = Math.min(area.p1.x, area.p2.x)
-        const maxX = Math.max(area.p1.x, area.p2.x)
-        const minZ = Math.min(area.p1.z, area.p2.z)
-        const maxZ = Math.max(area.p1.z, area.p2.z)
-
-        if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
-            for (const player of area.players) {
-                if (evd.player.name === player) return
-            }
-            evd.cancel = true
-            evd.player.sendMessage('§cThis Land Is Protected!§r')
-            return
-        }
-
+        
     }
 })
 
 world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
     if (mcl.isCreating(evd.player)) return
-    for (const place of mcl.listGetValues('darkoak:protection:')) {
+    let places = mcl.listGetValues('darkoak:protection:')
+    for (let index = 0; index < places.length; index++) {
         /**
          * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }}}
          */
-        const area = JSON.parse(place)
+        const area = JSON.parse(places[index])
 
         const block = evd.block
 
@@ -126,34 +81,6 @@ world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
             evd.player.sendMessage('§cThis Land Is Protected!§r')
             return
         }
-
-    }
-
-    for (const place of mcl.listGetValues('darkoak:landclaim:')) {
-        /**
-         * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }}}
-         */
-        const area = JSON.parse(place)
-
-        const block = evd.block
-
-        const x = block.location.x
-        const z = block.location.z
-
-        const minX = Math.min(area.p1.x, area.p2.x)
-        const maxX = Math.max(area.p1.x, area.p2.x)
-        const minZ = Math.min(area.p1.z, area.p2.z)
-        const maxZ = Math.max(area.p1.z, area.p2.z)
-
-        if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
-            for (const player of area.players) {
-                if (evd.player.name === player) return
-            }
-            evd.cancel = true
-            evd.player.sendMessage('§cThis Land Is Protected!§r')
-            return
-        }
-
     }
 })
 
@@ -188,12 +115,15 @@ world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
 
 system.runInterval(() => {
     const d = mcl.jsonWGet('darkoak:worldprotection')
-    for (const player of world.getPlayers({ excludeTags: ['darkoak:admin'] })) {
+    let players = world.getPlayers({ excludeTags: ['darkoak:admin'] })
+    for (let index = 0; index < players.length; index++) {
+        const player = players[index]
         const item = mcl.getHeldItem(player)
         if (d.water) {
-            for (const i of worldProtectionWater) {
+            let wpw = worldProtectionWater
+            for (let index = 0; index < wpw.length; index++) {
                 if (!item || !item.typeId) continue
-                if (item.typeId === i) {
+                if (item.typeId === wpw[index]) {
                     mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
                     continue
                 }
@@ -205,8 +135,9 @@ system.runInterval(() => {
         }
 
         if (d.boats) {
-            for (const boat of mcl.getEntityByTypeId('minecraft:boat', player.dimension)) {
-                boat.kill()
+            let boats = mcl.getEntityByTypeId('minecraft:boat', player.dimension)
+            for (let index = 0; index < array.length; index++) {
+                boats[index].kill()
             }
         }
     }

@@ -3,15 +3,17 @@ import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/serve
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
 import { emojis } from "./data/arrays"
+import { landclaimMainUI } from "./uis/interfacesTwo"
 
 
 // This file handles all chat interactions such as:
 // Custom commands, ranks, censoring, antispam
 
 world.beforeEvents.chatSend.subscribe((evd) => {
-    
-    for (const c of mcl.listGetValues('darkoak:command:')) {
-        const p = JSON.parse(c)
+
+    let commands = mcl.listGetValues('darkoak:command:')
+    for (let index = 0; index < commands.length; index++) {
+        const p = JSON.parse(commands[index])
         if (evd.message === p.message) {
             if (!p.tag | evd.sender.hasTag(p.tag)) {
                 if (p.command.startsWith('#')) {
@@ -19,7 +21,11 @@ world.beforeEvents.chatSend.subscribe((evd) => {
                     evd.cancel = true
                     return
                 } else {
-                    evd.sender.runCommand(p.command)
+                    system.runTimeout(() => {
+                        if (p.command) evd.sender.runCommand(p.command)
+                        if (p.command2) evd.sender.runCommand(p.command2)
+                        if (p.command3) evd.sender.runCommand(p.command3)
+                    })
                     evd.cancel = true
                     return
                 }
@@ -34,14 +40,15 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     }
 
     // censoring
-    for (const c of mcl.listGetValues('darkoak:censor:')) {
+    let censor = mcl.listGetValues('darkoak:censor:')
+    for (let index = 0; index < censor.length; index++) {
         /**@type {string} */
         let message = evd.message
         let newMessage = ''
 
         for (let index = 0; index < message.length; index++) {
             if (message.charAt(index - 1) == '§' && index > 0) {
-                // Skip the current character
+                // skip the current character
                 continue
             }
             newMessage += message.charAt(index)
@@ -49,7 +56,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
 
         newMessage = newMessage.replaceAll('1', 'i').replaceAll('0', 'o').replaceAll('4', 'a').replaceAll('6', 'k').replaceAll('8', 'b').replaceAll('9', 'q')
 
-        if (newMessage.toLowerCase().replaceAll('§', '').includes(c.toLowerCase())) {
+        if (newMessage.toLowerCase().replaceAll('§', '').includes(censor[index].toLowerCase())) {
             evd.cancel = true
             return
         }
@@ -70,9 +77,8 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     if (mcl.jsonWGet('darkoak:chat:other')) {
         /**@type {Array<string>} */
         let logs2 = mcl.jsonWGet('darkoak:messagelogs').log || []
-        if (logs2.length > 50) {
-            logs2.shift()
-            if (logs2.length > 50) {
+        if (logs2.length > 100) {
+            while (logs2.length > 100) {
                 logs2.shift()
             }
         }
@@ -87,15 +93,32 @@ world.beforeEvents.chatSend.subscribe((evd) => {
         formattedMessage = formattedMessage.replaceAll(replacement.m, replacement.e)
     }
 
+    const p = evd.sender
     const ocs = mcl.jsonWGet('darkoak:chat:other')
-    if (ocs.nametag) {
+    if (ocs.nametag && !ocs.healthDisplay) {
         /**@type {Player} */
-        const p = evd.sender
         system.runTimeout(() => {
             p.nameTag = `${p.name}\n${formattedMessage}`
         })
     }
-
+    if (ocs.healthDisplay && !ocs.nametag) {
+        /**@type {Player} */
+        system.runTimeout(() => {
+            p.nameTag = `${p.name}\n§aHealth: ${mcl.healthValue(p)}§r§f`
+        })
+    }
+    if (ocs.healthDisplay && ocs.nametag) {
+        /**@type {Player} */
+        system.runTimeout(() => {
+            p.nameTag = `${p.name}\n§aHealth: ${mcl.healthValue(p)}§r§f\n${formattedMessage}`
+        })
+    }
+    if (!ocs.healthDisplay && !ocs.nametag) {
+        /**@type {Player} */
+        system.runTimeout(() => {
+            p.nameTag = p.name
+        })
+    }
 
     /**@type {Array<string>} */
     const tags = evd.sender.getTags()
@@ -164,11 +187,31 @@ function hashtag(hashtagKey, sender) {
             }
             break
         case 'landclaim add':
-
+            const loc = sender.location
+            let places = mcl.listGetValues('darkoak:landclaim:')
+            for (let index = 0; index < places.length; index++) {
+                // WORK ON THIS PLEASE------------------------------------------------
+                let place = places[index]
+                if (place.p1.x === loc.x) {
+                    sender.sendMessage('§cLand Has Already Been Claimed!§r')
+                    return
+                }
+            }
+            mcl.jsonWSet(`darkoak:landclaim:${sender.name}`, {
+                p1: { x: sender.location.x + 16, z: sender.location.z + 16 },
+                p2: { x: sender.location.x - 16, z: sender.location.z - 16 },
+                owner: sender.name,
+                players: [""]
+            })
             break
         case 'landclaim remove':
-
+            mcl.wRemove(`darkoak:landclaim:${sender.name}`)
             break
+        case 'landclaim players':
+            sender.sendMessage('Close Chat!')
+            system.runTimeout(() => {
+                landclaimMainUI(sender)
+            }, 20)
         case 'bind':
             sender.sendMessage('Close Chat!')
             system.runTimeout(() => {

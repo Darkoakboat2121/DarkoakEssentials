@@ -23,7 +23,7 @@ export class mcl {
      * @param {number} length 
     */
     static randomString(length, num) {
-        var characters = ''
+        let characters = ''
         if (num === false || num === undefined) {
             characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
         } else {
@@ -49,6 +49,20 @@ export class mcl {
         }
     }
 
+    /**Gets strings from inbetween certain strings
+    * @param {string} str 
+    * @param {string} startChar 
+    * @param {string} endChar 
+    * @returns {string}
+    */
+    static getStringBetweenChars(str, startChar, endChar) {
+        const escapedStartChar = startChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special characters
+        const escapedEndChar = endChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');     // Escape special characters
+        const regex = new RegExp(`${escapedStartChar}(.*?)${escapedEndChar}`);
+        const match = str.match(regex)
+        return match ? match[1] : undefined
+    }
+
     /**Sets a global dynamic property
      * @param {string} id 
      * @param {any | undefined} setTo 
@@ -62,6 +76,13 @@ export class mcl {
     */
     static wGet(id) {
         return world.getDynamicProperty(id)
+    }
+
+    /**Removes / Resets a global dynamic property
+     * @param {string} id 
+     */
+    static wRemove(id) {
+        world.setDynamicProperty(id)
     }
 
     /**Gets a global data object
@@ -83,6 +104,15 @@ export class mcl {
      */
     static jsonWSet(id, data) {
         world.setDynamicProperty(id, JSON.stringify(data))
+    }
+
+    /**WIP
+     * @param {string} id 
+     * @param {string} updateKey 
+     * @param {any} data 
+     */
+    static jsonWUpdate(id, updateKey, data) {
+
     }
 
     /**Sets a player dynamic property
@@ -129,7 +159,7 @@ export class mcl {
      * @param {string} name
      */
     static getPlayer(name) {
-        return world.getPlayers({name: name})[0]
+        return world.getPlayers({ name: name })[0]
     }
 
     /**
@@ -166,15 +196,17 @@ export class mcl {
     */
     static listGetValues(key) {
         if (key === undefined) {
-            var u = []
-            for (const h of world.getDynamicPropertyIds()) {
-                u.push(mcl.wGet(h))
+            let u = []
+            let ids = world.getDynamicPropertyIds()
+            for (let index = 0; index < ids.length; index++) {
+                u.push(mcl.wGet(ids[index]))
             }
             return u
         } else {
-            var u = []
-            for (const h of world.getDynamicPropertyIds().filter(e => e.startsWith(key))) {
-                u.push(mcl.wGet(h))
+            let u = []
+            let ids = world.getDynamicPropertyIds().filter(e => e.startsWith(key))
+            for (let index = 0; index < ids.length; index++) {
+                u.push(mcl.wGet(ids[index]))
             }
             return u
         }
@@ -185,15 +217,17 @@ export class mcl {
      */
     static listGetBoth(key) {
         if (key === undefined) {
-            var u = []
-            for (const h of world.getDynamicPropertyIds()) {
-                u.push({id: h, value: mcl.wGet(h)})
+            let u = []
+            let ids = world.getDynamicPropertyIds()
+            for (let index = 0; index < array.length; index++) {
+                u.push({ id: ids[index], value: mcl.wGet(ids[index]) })
             }
             return u
         } else {
-            var u = []
-            for (const h of world.getDynamicPropertyIds().filter(e => e.startsWith(key))) {
-                u.push({id: h, value: mcl.wGet(h)})
+            let u = []
+            let ids = world.getDynamicPropertyIds().filter(e => e.startsWith(key))
+            for (let index = 0; index < array.length; index++) {
+                u.push({ id: ids[index], value: mcl.wGet(ids[index]) })
             }
             return u
         }
@@ -204,13 +238,14 @@ export class mcl {
     */
     static playerNameArray(tag) {
         if (tag === undefined) {
-            var u = []
-            for (const p of world.getAllPlayers()) {
-                u.push(p.name)
+            let u = []
+            let players = world.getAllPlayers()
+            for (let index = 0; index < players.length; index++) {
+                u.push(players[index].name)
             }
             return u
         } else {
-            var u = []
+            let u = []
             for (const p of world.getPlayers({ tags: [tag] })) {
                 u.push(p.name)
             }
@@ -222,31 +257,39 @@ export class mcl {
      * @param {Player} player 
     */
     static playerEffectsArray(player) {
-        var u = []
-        for (const e of player.getEffects()) {
-            u.push(e.typeId)
+        let u = []
+        let e = player.getEffects()
+        if (e.length == 0) return 'No Effects Found'
+        for (let index = 0; index < e.length; index++) {
+            u.push(e[index].displayName)
         }
-
-        if (u.length === 0) {
-            return 'No Effects Found'
-        } else {
-            return u
-        }
+        return u
     }
 
     /**Returns an array of a inputted players tags
-     * @param {Player} player 
+     * @param {Player | undefined} player 
     */
     static playerTagsArray(player) {
-        var u = []
-        for (const t of player.getTags()) {
-            u.push(t)
-        }
-
-        if (u.length === 0) {
-            return 'No Tags Found'
+        if (player != undefined) {
+            let tags = player.getTags()
+            if (tags.length == 0) {
+                return 'No Tags Found'
+            } else {
+                return tags
+            }
         } else {
-            return u
+            let u = []
+            let players = world.getAllPlayers()
+            for (let index = 0; index < players.length; index++) {
+                let tags = players[index].getTags()
+                if (tags.length == 0) continue
+                u.push(tags)
+            }
+            if (u.length === 0) {
+                return 'No Tags Found'
+            } else {
+                return [...new Set(u)]
+            }
         }
     }
 
@@ -256,9 +299,7 @@ export class mcl {
     static isHost(player) {
         if (player.id == -4294967295) {
             return true
-        } else {
-            return false
-        }
+        } else return false
     }
 
     /**Returns whether the inputted player has op permissions
@@ -299,8 +340,8 @@ export class mcl {
      * @param {string} message 
      */
     static adminMessage(message) {
-        for (const player of world.getPlayers({tags: ['darkoak:admin']})) {
-            player.sendMessage(message)
+        for (const player of world.getPlayers({ tags: ['darkoak:admin'] })) {
+            player.sendMessage(`§cAdmin Message:§r§f ${message}`)
         }
     }
 
@@ -365,7 +406,7 @@ export class mcl {
     static getSign(block) {
         /**@type {BlockSignComponent} */
         const signed = block.getComponent(BlockComponentTypes.Sign)
-        return {waxed: signed.isWaxed, text: signed.getText(), color: signed.getTextDyeColor()}
+        return { waxed: signed.isWaxed, text: signed.getText(), color: signed.getTextDyeColor() }
     }
 
     /**Modifies a sign
@@ -389,7 +430,7 @@ export class mcl {
     static getItemDurability(item) {
         /**@type {ItemDurabilityComponent} */
         const dura = item.getComponent(ItemComponentTypes.Durability)
-        return {durability: dura.damage, maxDurability: dura.maxDurability}
+        return { durability: dura.damage, maxDurability: dura.maxDurability }
     }
 
     /**
@@ -398,7 +439,6 @@ export class mcl {
      * @returns {Entity[]}
      */
     static getEntityByTypeId(typeId, dimension) {
-        return world.getDimension(dimension.id).getEntities({type: typeId})
+        return world.getDimension(dimension.id).getEntities({ type: typeId })
     }
-
 }

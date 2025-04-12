@@ -104,26 +104,6 @@ export const worldProtectionWater = [
     'minecraft:tropical_fish_bucket',
 ]
 
-/**Definetly an array, don't question it. 
- * @param {Player} player
-*/
-export function actionbarReplacements(player) {
-    const health = mcl.healthValue(player)
-    // var block = undefined
-    // if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block.isValid()) {
-    //     block = player.getBlockFromViewDirection().block
-    // } else {
-    //     block = 'Undefined'
-    // }
-    return {
-        '#name#': `${player.name}`,
-        '#health#': `${health}`,
-        '#location#': `${parseInt(player.location.x)}, ${parseInt(player.location.y)}, ${parseInt(player.location.z)}`,
-        '#slot#': `${player.selectedSlotIndex}`,
-        // '#block.type#': `${block.typeId}`,
-        '#velocity#': `${(player.getVelocity().x).toFixed(1)}, ${(player.getVelocity().y).toFixed(1)}, ${(player.getVelocity().z).toFixed(1)}`,
-    }
-}
 
 /**
  * 
@@ -146,31 +126,37 @@ export function replacer(player, string) {
     .replaceAll('#slot#', player.selectedSlotIndex.toString())
     // .replaceAll('#block.type#', block.typeId)
     .replaceAll('#velocity#', `${(player.getVelocity().x).toFixed(1)}, ${(player.getVelocity().y).toFixed(1)}, ${(player.getVelocity().z).toFixed(1)}`)
+    .replaceAll('#cps#', `${player.getDynamicProperty('darkoak:ac:cps').toString()}`)
+    .replaceAll('#effects#', mcl.playerEffectsArray(player))
+    .replaceAll('#tags#', mcl.playerTagsArray(player))
+
+    if (formattedString.includes('[') && formattedString.includes(']')) {
+        let score = mcl.getStringBetweenChars(formattedString, '[', ']')
+        formattedString = formattedString
+        .replaceAll(score, mcl.getScore(player, score).toString())
+        .replaceAll('[', '')
+        .replaceAll(']', '')
+    }
+
+    if (formattedString.includes('#hand#')) {
+        if (mcl.getHeldItem(player)) {
+            formattedString = formattedString
+            .replaceAll('#hand#', mcl.getHeldItem(player).typeId)
+        } else {
+            formattedString = formattedString
+            .replaceAll('#hand#', 'Hand')
+        }
+    }
+
     return formattedString
 }
 
-/**Hashtags for actionbar
- * @param {Player} player 
- * @param {string} message 
- * @returns {string}
- */
-export function hashtagProcessing(player, message) {
-    const replacements = arrays.actionbarReplacements(player)
-    var text = message
-
-    for (const hashtag in replacements) {
-        if (text.includes(hashtag)) {
-            text = text.replaceAll(hashtag, replacements[hashtag])
-        }
-    }
-    return text
-}
 
 export const dummySize = 22
 
-export const hashtags = '\nKeys:\n\\n - New Line\n%%scorename%% - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity'
+export const hashtags = '\nKeys:\n\\n - New Line\n[scorename] - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity\n#cps# - Players CPS\n#effects# - Players Effects\n#tags# - Players Tags'
 
-export const hashtagKeys = '#commands - Lists All Commands\n#noob - (Joke) Says Stuff in Chat\n#datadeleter - Opens UI For Deleting Data\n#cc - Clears Chat\n#random - Says A Random Number In Chat (1 To 100)\n#emojis - Lists All Emojis\n#cclocal - Clears The Senders Chat\n#landclaim add - Claims Four Chunks Near The Player\n#landclaim remove - Removes Current Land Claim'
+export const hashtagKeys = '#commands - Lists All Commands\n#noob - (Joke) Says Stuff in Chat\n#datadeleter - Opens UI For Deleting Data\n#cc - Clears Chat\n#random - Says A Random Number In Chat (1 To 100)\n#emojis - Lists All Emojis\n#cclocal - Clears The Senders Chat\n#landclaim add - Claims Four Chunks Near The Player\n#landclaim remove - Removes Current Land Claim\n#landclaim players - Opens UI For Adding Players To a Landclaim'
 
 /**Array of strings for textures*/
 export class icons {

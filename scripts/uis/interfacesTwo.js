@@ -42,8 +42,8 @@ export function dataEditorBlockUI(player, block) {
     let d = ''
 
     const defaults = mcl.listGetValues('darkoak:blockinteractcommand:')
-    for (const g of defaults) {
-        const p = JSON.parse(g)
+    for (let index = 0; index < defaults.length; index++) {
+        const p = JSON.parse(defaults[index])
         if (p.coords.x === loc.x && p.coords.y === loc.y && p.coords.z === loc.z) {
             d = p.command
         }
@@ -122,14 +122,14 @@ export function genRemoveUI(player) {
     const raw = mcl.listGet('darkoak:gen:')
     const gens = mcl.listGetValues('darkoak:gen:')
 
-    for (const gen of gens) {
-        const g = JSON.parse(gen)
-        f.button(`Delete: ${g.block}, ${g.coords}`)
-    }
-
     if (gens === undefined || gens.length === 0) {
         player.sendMessage('§cNo Generators Found§r')
         return
+    }
+
+    for (let index = 0; index < gens.length; index++) {
+        const g = JSON.parse(gens[index])
+        f.button(`Delete: ${g.block}, ${g.coords}`)
     }
 
     f.show(player).then((evd) => {
@@ -145,14 +145,14 @@ export function genModifyPickerUI(player) {
     const raw = mcl.listGet('darkoak:gen:')
     const gens = mcl.listGetValues('darkoak:gen:')
 
-    for (const gen of gens) {
-        const g = JSON.parse(gen)
-        f.button(`Modify: ${g.block}, ${g.coords}`)
-    }
-
     if (gens === undefined || gens.length === 0) {
         player.sendMessage('§cNo Generators Found§r')
         return
+    }
+
+    for (let index = 0; index < gens.length; index++) {
+        const g = JSON.parse(gens[index])
+        f.button(`Modify: ${g.block}, ${g.coords}`)
     }
 
     f.show(player).then((evd) => {
@@ -219,13 +219,15 @@ export function deleteWarpUI(player) {
 
     const raw = mcl.listGet('darkoak:warp:')
     const warps = mcl.listGetValues('darkoak:warp:')
-    for (const warp of warps) {
-        const data = JSON.parse(warp)
-        f.button(`${data.name}`)
-    }
+
     if (warps.length === 0 || warps === undefined) {
         player.sendMessage('§cNo Warps Found§r')
         return
+    }
+
+    for (let index = 0; index < array.length; index++) {
+        const data = JSON.parse(warps[index])
+        f.button(`${data.name}`)
     }
 
     f.show(player).then((evd) => {
@@ -330,39 +332,56 @@ export function anticheatSettings(player) {
 
     const d = mcl.jsonWGet('darkoak:anticheat')
 
-    f.toggle('Pre-bans', d.prebans)
+    f.label('')
+
+    f.toggle('Pre-bans', d.prebans || false)
     f.label('Automatically Bans Hackers Darkoakboat2121 Knows About')
     f.label(`Full list:\n${preBannedList.join(' | ')}`)
 
     f.divider()
 
-    f.toggle('Anti-nuker', d.antinuker)
+    f.toggle('Anti-nuker', d.antinuker || false)
     f.label('Checks If A Player Is Breaking Blocks Too Fast')
 
     f.divider()
 
-    f.toggle('Anti-fast-place', d.antifastplace)
+    f.toggle('Anti-fast-place', d.antifastplace || false)
     f.label('Checks If A Player Is Placing Blocks Too Fast')
 
     f.divider()
 
-    f.toggle('Anti-fly 1', d.antifly1)
+    f.toggle('Anti-fly 1', d.antifly1 || false)
     f.label('Checks If A Player Is Flying Like In Creative Mode But Without Creative')
 
     f.divider()
 
-    f.toggle('Anti-speed 1', d.antispeed1)
+    f.toggle('Anti-speed 1', d.antispeed1 || false)
     f.label('Checks If Player Is Moving Too Fast')
 
     f.divider()
 
-    f.toggle('Anti-spam', d.antispam)
+    f.toggle('Anti-spam', d.antispam || false)
     f.label('Checks The Players Recent Messages For Repeats, Automatically Formats To Ensure Spaces And Formatting Codes Don\'t Bypass It')
 
     f.divider()
 
-    f.toggle('Anti-illegal-enchant', d.antiillegalenchant)
+    f.toggle('Anti-illegal-enchant', d.antiillegalenchant || false)
     f.label('Checks If The Held Item Of A Player Has Illegal Enchants')
+
+    f.divider()
+
+    f.toggle('Anti-killaura', d.antikillaura || false)
+    f.label('Checks If The Players CPS Is Too High')
+
+    f.divider()
+
+    f.toggle('Anti-gamemode-switcher', d.antigamemode || false)
+    f.label('Prevents Non-Admins From Changing Gamemodes §c(Buggy)§r')
+
+    f.divider()
+
+    f.toggle('Npc detector', d.npcdetect || false)
+    f.label('Sends Chat Message To Admins When A Npc Is Interacted With, Also Prevents Usage Of Npc\'s §c(Don\'t Enable If You Use Npc\'s)§r')
 
     f.divider()
 
@@ -376,7 +395,10 @@ export function anticheatSettings(player) {
             antifly1: e[3],
             antispeed1: e[4],
             antispam: e[5],
-            antiillegalenchant: e[6]
+            antiillegalenchant: e[6],
+            antikillaura: e[7],
+            antigamemode: e[8],
+            npcdetect: e[9],
         })
     })
 }
@@ -441,8 +463,13 @@ export function auctionHouse(player) {
     const raw = mcl.listGet('darkoak:auction:item')
     const value = mcl.listGetValues('darkoak:auction:item')
 
-    for (const item of value) {
-        const d = JSON.parse(item)
+    if (value.length === 0 || value === undefined) {
+        player.sendMessage('§cNo Warps Found§r')
+        return
+    }
+
+    for (let index = 0; index < value.length; index++) {
+        const d = JSON.parse(value[index])
         f.button(`${d.itemTypeId} x${d.itemAmount} for ${d.price}`)
     }
 
@@ -571,8 +598,13 @@ export function protectedAreasRemoveUI(player) {
     const raw = mcl.listGet('darkoak:protection:')
     const values = mcl.listGetValues('darkoak:protection:')
 
-    for (const area of values) {
-        const p = JSON.parse(area)
+    if (values.length === 0 || values === undefined) {
+        player.sendMessage('§cNo Warps Found§r')
+        return
+    }
+
+    for (let index = 0; index < values.length; index++) {
+        const p = JSON.parse(values[index])
         f.button(`${p.p1.x} ${p.p1.z} to ${p.p2.x} ${p.p2.z}`)
     }
 
@@ -596,8 +628,104 @@ export function messageLogUI(player) {
 
     for (const message of mcl.jsonWGet('darkoak:messagelogs').log) {
         // add divider and label here!!!
-        f.button(message)
+        f.label(message)
+        f.divider()
     }
 
+    f.button('Dismiss')
+
     f.show(player)
+}
+
+export function landclaimMainUI(player) {
+    let f = new ActionFormData()
+    f.title('Landclaim Manager')
+
+    f.button('Add Player To Landclaim')
+    f.button('Remove Player From Landclaim')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch (evd.selection) {
+            case 0:
+                landclaimAddPlayerUI(player)
+                break
+            case 1:
+                landclaimRemovePlayerUI(player)
+                break
+        }
+    })
+}
+
+export function landclaimAddPlayerUI(player) {
+    let f = new ModalFormData()
+
+    f.title('Add Player')
+
+    let pl = mcl.playerNameArray()
+    f.dropdown('Player:', pl)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        let d = mcl.jsonWGet(`darkoak:landclaim:${player.name}`)
+        mcl.jsonWSet(`darkoak:landclaim:${player.name}`, {
+            p1: { x: d.p1.x, z: d.p1.z },
+            p2: { x: d.p2.x, z: d.p2.z },
+            owner: d.owner,
+            players: d.players.push(pl[evd.formValues[0]])
+        })
+    })
+}
+
+export function landclaimRemovePlayerUI(player) {
+    let f = new ModalFormData()
+    let d = mcl.jsonWGet(`darkoak:landclaim:${player.name}`)
+    f.title('Remove Player')
+
+    f.dropdown('Player:', d.players)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.jsonWSet(`darkoak:landclaim:${player.name}`, {
+            p1: { x: d.p1.x, z: d.p1.z },
+            p2: { x: d.p2.x, z: d.p2.z },
+            owner: d.owner,
+            players: d.players.slice(evd.formValues[0], evd.formValues[0])
+        })
+        // remove the player that was picked, not sure if working, check after poop
+    })
+}
+
+
+export function addRankUI(player) {
+    let f = new ModalFormData()
+    f.title('Add Rank')
+
+    const pl = mcl.playerNameArray()
+
+    f.dropdown('\nPlayer:', pl)
+    f.textField('Rank To Add:', 'Example: §1Admin§r')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        mcl.getPlayer(pl[evd.formValues[0]]).addTag(`rank:${evd.formValues[1]}`)
+    })
+}
+
+export function removeRankUI(player) {
+    let f = new ModalFormData()
+    f.title('Remove Rank')
+
+    const pl = mcl.playerNameArray()
+    const tl = mcl.playerTagsArray().filter(e => e.startsWith('rank:'))
+
+    f.dropdown('\nPlayer:', pl)
+    f.dropdown('Rank To Remove:', tl.map(e => e.replace('rank:', '')))
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        mcl.getPlayer(pl[evd.formValues[0]]).removeTag(tl[evd.formValues[1]])
+    })
 }

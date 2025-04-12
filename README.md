@@ -7,7 +7,6 @@ Player Inventory Management: Allow admins to view and manage player inventories.
 
 
 community:
-    admin settings to show/hide community buttons
     giftcodes
     land claims
     auction house
@@ -44,9 +43,6 @@ chat:
 anticheat:
     (toggle) detect if player has lots of valuable resources
     (toggle) detect if player is near command block minecart
-    (toggle) detect if player is near npc entity
-    (toggle) anti-afk
-    (toggle) anti-gamemode-switcher
     (dropdown) player picker [top option is empty] for hack test, uses /inputpermission then checks if player is still moving
     (toggle) adds unique id to every item than checks items for duped ids, therefore duped item
 
@@ -65,9 +61,10 @@ landclaim remove
 
 changelog:
     added:
-        ui's now go back
-        utility functions
+        new anticheat options (check the anticheat in-game)
+        new replacer hashtags, look in the sidebar editor
+        more slots in the sidebar editor
+        item spawner scriptevent (check the docs)
 
     fixed:
-        sidebar staying on screen with no text
-        some settings not defaulting in their respective ui's
+        small bug fixes

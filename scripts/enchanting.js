@@ -16,8 +16,8 @@ world.afterEvents.entityHitEntity.subscribe((evd) => {
     const item = i.getLore()
     if (item === undefined) return
 
-    for (const enchant of item) {
-        const parts = enchant.split('-')
+    for (let index = 0; index < item.length; index++) {
+        const parts = item[index].split('-')
         if (parts[0].trim().replace('§r§5', '') != 'On Hit') continue
         const amount = parseInt(parts[2])
 
@@ -54,8 +54,8 @@ world.afterEvents.entityDie.subscribe((evd) => {
         const item = i.getLore()
         if (item === undefined) return
 
-        for (const enchant of item) {
-            const parts = enchant.split('-')
+        for (let index = 0; index < item.length; index++) {
+            const parts = item[index].split('-')
             if (parts[0].trim().replace('§r§5', '') != 'On Kill') continue
             const amount = parseInt(parts[2])
 
@@ -87,8 +87,8 @@ world.afterEvents.entityDie.subscribe((evd) => {
         const item = i.getLore()
         if (item === undefined) return
 
-        for (const enchant of item) {
-            const parts = enchant.split('-')
+        for (let index = 0; index < item.length; index++) {
+            const parts = item[index].split('-')
             if (parts[0].trim().replace('§r§5', '') != 'On Kill') continue
             const amount = parseInt(parts[2])
 
@@ -121,8 +121,8 @@ world.afterEvents.itemUse.subscribe((evd) => {
     const item = i.getLore()
     if (item === undefined) return
 
-    for (const enchant of item) {
-        const parts = enchant.split('-')
+    for (let index = 0; index < item.length; index++) {
+        const parts = item[index].split('-')
         if (parts[0].trim().replace('§r§5', '') != 'On Use') continue
         const amount = parseInt(parts[2])
 
@@ -156,8 +156,8 @@ system.runInterval(() => {
         const item = i.getLore()
         if (item === undefined) return
 
-        for (const enchant of item) {
-            const parts = enchant.split('-')
+        for (let index = 0; index < item.length; index++) {
+            const parts = item[index].split('-')
             if (parts[0].trim().replace('§r§5', '') != 'On Jump') continue
             const amount = parseInt(parts[2])
 
@@ -194,8 +194,8 @@ world.afterEvents.entityHurt.subscribe((evd) => {
     const item = i.getLore()
     if (item === undefined) return
 
-    for (const enchant of item) {
-        const parts = enchant.split('-')
+    for (let index = 0; index < item.length; index++) {
+        const parts = item[index].split('-')
         if (parts[0].trim().replace('§r§5', '') != 'On Damaged') continue
         const amount = parseInt(parts[2])
 

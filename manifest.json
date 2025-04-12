@@ -6,7 +6,7 @@
     ]
   },
   "header": {
-    "name": "Darkoak Essentials V2.1.0",
+    "name": "Darkoak Essentials V2.1.3",
     "description": "Made by Darkoakboat2121",
     "min_engine_version": [
       1,
@@ -14,7 +14,7 @@
       70
     ],
     "uuid": "9506c0be-216b-49fe-b0c7-f1c5536882f2",
-    "version": [2,1,0]
+    "version": [2,1,3]
   },
   "modules": [
     {

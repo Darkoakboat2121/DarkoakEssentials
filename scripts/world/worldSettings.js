@@ -1,7 +1,7 @@
 import { world, system, EntityDamageCause, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import * as arrays from "./data/arrays"
-import { mcl } from "./logic"
+import * as arrays from "../data/arrays"
+import { mcl } from "../logic"
 
 // This file holds world settings and player tracking
 
@@ -19,8 +19,9 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
                 break
         }
     } else if (evd.player.getGameMode() != "creative") {
-        for (const block of mcl.listGetValues('darkoak:cws:unbreakableBlocks')) {
-            if (evd.block.typeId === block) {
+        let blocks = mcl.listGetValues('darkoak:cws:unbreakableBlocks')
+        for (let index = 0; index < blocks.length; index++) {
+            if (evd.block.typeId === blocks[index]) {
                 evd.cancel
                 return
             }
@@ -77,21 +78,16 @@ world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
     }
 })
 
+
 world.afterEvents.playerSpawn.subscribe((evd) => {
 
     system.runTimeout(() => {
         if (!evd.initialSpawn) return
-        const replacements = arrays.actionbarReplacements(evd.player)
         /**@type {string} */
         let text = mcl.wGet('darkoak:welcome')
 
-        for (const hashtag in replacements) {
-            if (text.includes(hashtag)) {
-                text = text.replaceAll(hashtag, replacements[hashtag])
-            }
-        }
         if (!text || text.trim().length < 1) return
-        evd.player.sendMessage(text)
+        evd.player.sendMessage(arrays.replacer(evd.player, text))
     }, 100)
 })
 
@@ -100,18 +96,19 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
 
 system.runInterval(() => {
     const worldBorder = mcl.wGet('darkoak:cws:border')
-    for (const player of world.getAllPlayers()) {
+
+    let players = world.getAllPlayers()
+    for (let index = 0; index < players.length; index++) {
+        const player = players[index]
         const x = player.location.x
         const y = player.location.y
         const z = player.location.z
 
-        const d = mcl.jsonWGet('darkoak:tracking')
-
-        tracking(player, d)
+        tracking(player, mcl.jsonWGet('darkoak:tracking'))
 
         
         // World border
-        if (worldBorder) {
+        if (worldBorder != 0) {
 
             if (Math.abs(x) > worldBorder) {
                 player.applyDamage(1, { cause: EntityDamageCause.magic })
