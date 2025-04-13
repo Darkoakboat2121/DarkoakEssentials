@@ -31,8 +31,10 @@ world.afterEvents.itemUse.subscribe((evd) => {
     if (evd.itemStack.typeId === 'darkoak:main') {
         if (player.hasTag('darkoak:admin')) {
             interfaces.mainUI(player)
+            return
         } else {
             player.sendMessage('§cYou Aren\'t An Admin! Tag Yourself With darkoak:admin§r')
+            return
         }
     }
 
@@ -44,30 +46,43 @@ world.afterEvents.itemUse.subscribe((evd) => {
                 return
             }
             interfaces.viewProfile(player, playerToView.entity)
+            return
         } else {
             interfaces.communityMain(player)
+            return
         }
     }
 
     if (evd.itemStack.typeId === 'darkoak:generators' && player.hasTag('darkoak:admin')) {
         interfacesTwo.genMainUI(player)
+        return
     }
 
     if (evd.itemStack.typeId === 'darkoak:anticheat') {
         interfacesTwo.anticheatMain(player)
+        return
     }
 
     if (evd.itemStack.typeId === 'darkoak:world_protection') {
         if (player.hasTag('darkoak:admin')) {
             interfacesTwo.protectedAreasMain(player)
+            return
         } else {
             player.sendMessage('§cYou Aren\'t An Admin! Tag Yourself With darkoak:admin§r')
+            return
         }
     }
 
     if (evd.itemStack.typeId === 'darkoak:hop_feather' && (player.isOnGround || player.isClimbing)) {
         const direction = player.getViewDirection()
         player.applyKnockback({ x: direction.x * 2, z: direction.z * 2 }, 1)
+        return
+    }
+
+    if (evd.itemStack.typeId === 'darkoak:dash_feather' && (player.isOnGround || player.isClimbing)) {
+        const direction = player.getViewDirection()
+        player.applyKnockback({ x: direction.x * 2, z: direction.z * 2 }, direction.y * 1.5)
+        return
     }
 
 
@@ -75,9 +90,11 @@ world.afterEvents.itemUse.subscribe((evd) => {
         for (let index = 0; index <= arrays.dummySize; index++) {
             if (evd.itemStack.typeId === `darkoak:dummy${index}`) {
                 const c = mcl.jsonWGet(`darkoak:bind:${index}`)
-                if (c.command1) evd.source.runCommand(c.command1)
-                if (c.command2) evd.source.runCommand(c.command2)
-                if (c.command3) evd.source.runCommand(c.command3)
+                if (!c) return
+                if (c.command1) evd.source.runCommand(arrays.replacer(player, c.command1))
+                if (c.command2) evd.source.runCommand(arrays.replacer(player, c.command2))
+                if (c.command3) evd.source.runCommand(arrays.replacer(player, c.command3))
+                return
             }
         }
     }
@@ -125,7 +142,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
                 break
             }
         }
-    } 
+    }
     //else if (evd.itemStack != undefined && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin')) {
     //     let ticker = false
     //     system.runTimeout(() => {
@@ -152,13 +169,13 @@ world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
     }
 })
 
-// system for handling message cui (see interfaces) based on the tag
+// system for handling message cui (custom ui) based on the tag
 system.runInterval(() => {
     let uis = mcl.listGetValues('darkoak:ui:message:')
     for (let index = 0; index < uis.length; index++) {
         /** @type {{ title: string, body: string, button1: string, button2: string, tag: string, command1: string, command2: string }} */
         const parts = JSON.parse(uis[index])
-        for (const player of world.getPlayers({tags: [parts.tag]})) {
+        for (const player of world.getPlayers({ tags: [parts.tag] })) {
             // index: 0 = title, 1 = body, 2 = button1, 3 = button2, 4 = tag, 5 = button1 command, 6 = button2 command
             messageUIBuilder(player, parts.title, parts.body, parts.button1, parts.button2, parts.command1, parts.command2)
             player.removeTag(parts.tag)
@@ -168,7 +185,7 @@ system.runInterval(() => {
     let uis2 = mcl.listGetValues('darkoak:ui:action:')
     for (let index = 0; index < uis2.length; index++) {
         const parts = JSON.parse(uis2[index])
-        for (const player of world.getPlayers({tags: [parts.tag]})) {
+        for (const player of world.getPlayers({ tags: [parts.tag] })) {
             actionUIBuilder(player, parts.title, parts.body, parts.buttons)
             player.removeTag(parts.tag)
         }
@@ -190,20 +207,45 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
     if (evd.id === 'darkoak:enchant') {
         if (!evd.sourceEntity) return
         interfacesTwo.customEnchantsMain(evd.sourceEntity)
+        return
     }
-    if (evd.id === 'darkoak:bind') {
-        if (!evd.sourceEntity) return
-        interfacesTwo.itemBindingUI(evd.sourceEntity)
-    }
+    // if (evd.id === 'darkoak:bind') {
+    //     if (!evd.sourceEntity) return
+    //     interfacesTwo.itemBindingUI(evd.sourceEntity)
+    //     return
+    // }
     if (evd.id === 'darkoak:spawn') {
         const b = evd.sourceBlock
-        const parts = evd.message.split(' ')
-        const item = new ItemStack(`minecraft:${parts[0]}`, parseInt(parts[1]) || 1)
-        world.getDimension(b.dimension.id).spawnItem(item, {
-            x: parseInt(parts[2]) || b.location.x,
-            y: parseInt(parts[3]) || b.location.y, 
-            z: parseInt(parts[4]) || b.location.z
-        })
+        if (!b) {
+            mcl.adminMessage(`The darkoak:spawn Scriptevent Needs To Execute From A Block`)
+            return
+        }
+        try {
+            const parts = evd.message.split(' ')
+            const item = new ItemStack(`minecraft:${parts[0]}`, parseInt(parts[1]) || 1)
+            world.getDimension(b.dimension.id).spawnItem(item, {
+                x: parseInt(parts[2]) || b.location.x,
+                y: parseInt(parts[3]) || b.location.y,
+                z: parseInt(parts[4]) || b.location.z
+            })
+            return
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:spawn From Block ${b.location.x} ${b.location.y} ${b.location.z} Has An Error`)
+            return
+        }
+    }
+    if (evd.id == 'darkoak:command') {
+        if (!evd.sourceEntity) {
+            mcl.adminMessage(`The darkoak:command Scriptevent Needs To Execute From An Entity`)
+            return
+        }
+        try {
+            player.runCommand(arrays.replacer(player, evd.message))
+            return
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:command From Entity ${player.nameTag} At ${player.location.x.toFixed(0)} ${player.location.y.toFixed(0)} ${player.location.z.toFixed(0)} Has An Error`)
+            return
+        }
     }
 })
 
@@ -211,37 +253,40 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
 function actionUIBuilder(playerToShow, title, body, buttons) {
     let f = new ActionFormData()
 
-    f.title(title)
-    f.body(body)
+    f.title(arrays.replacer(playerToShow, title))
+    f.body(arrays.replacer(playerToShow, body))
 
     for (const button of buttons) {
-        f.button(button.title)
+        f.button(arrays.replacer(playerToShow, button.title))
     }
 
     f.show(playerToShow).then((evd) => {
         if (evd.canceled) return
         const selected = buttons[evd.selection]
         if (selected.command) {
-            playerToShow.runCommand(selected.command)
+            try {
+                if (selected.command) playerToShow.runCommand(arrays.replacer(playerToShow, selected.command))
+            } catch {
+                mcl.adminMessage(`Custom UI ${title} At ${selected.command} Has An Error`)
+            }
         }
     })
-
 }
 
 // system for displaying message cui
 function messageUIBuilder(playerToShow, title, body, button1, button2, command1, command2) {
     let f = new MessageFormData()
-    f.title(title)
-    f.body(body)
-    f.button1(button1)
-    f.button2(button2)
+    f.title(arrays.replacer(playerToShow, title))
+    f.body(arrays.replacer(playerToShow, body))
+    f.button1(arrays.replacer(playerToShow, button1))
+    f.button2(arrays.replacer(playerToShow, button2))
 
     f.show(playerToShow).then((evd) => {
         if (evd.canceled) return
         if (evd.selection == 0 && command1) {
-            playerToShow.runCommand(command1)
+            playerToShow.runCommand(arrays.replacer(playerToShow, command1))
         } else if (evd.selection == 1 && command2) {
-            playerToShow.runCommand(command2)
+            playerToShow.runCommand(arrays.replacer(playerToShow, command2))
         }
     })
 }
@@ -258,12 +303,8 @@ system.runInterval(() => {
         if (mcl.wGet('darkoak:sidebar')) {
             /**@type {{lines: ["a", "b", "c"]}} */
             let text = mcl.jsonWGet('darkoak:sidebar')
-            let newText = []
-            for (let index = 0; index < text.lines.length; index++) {
-                newText.push(arrays.replacer(player, text.lines[index]))
-            }
 
-            player.runCommand(`titleraw @s title {"rawtext":[{"text":"${newText.join('\n')}"}]}`)
+            player.runCommand(`titleraw @s title {"rawtext":[{"text":"${arrays.replacer(player, text.lines.join('\n'))}"}]}`)
         }
     }
 }, 5)

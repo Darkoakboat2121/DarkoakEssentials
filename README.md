@@ -57,14 +57,24 @@ Plots are similar but build structures in a co-ord space. This will get a tutori
 landclaim add
 landclaim remove
 
-
+* means todo
 
 changelog:
     added:
-        new anticheat options (check the anticheat in-game)
-        new replacer hashtags, look in the sidebar editor
-        more slots in the sidebar editor
-        item spawner scriptevent (check the docs)
+        more replacer hashtags
+        giftcodes
+        item binds can now use replacer hashtags
+        darkoak:command scriptevent -> Example: tp @s 100 0 [id]
+        custom ui's can now use replacer hashtags (in every text field)
+        chat commands can now use replacer hashtags
+        chat ranks can now use replacer hashtags
+        the docs now show emojis
+        custom ui editor 
 
     fixed:
-        small bug fixes
+        sidebar is now slightly less laggy
+        better error handling
+        #location# is slightly more accurate
+
+    changes:
+        replacer hashtag for scores has been changed to use #[]# instead of []

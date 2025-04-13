@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addRankUI, auctionMain, createWarpUI, deleteWarpUI, messageLogUI, removeRankUI, tpaSettings, tpaUI } from "./interfacesTwo"
+import { addGiftcode, addRankUI, auctionMain, createWarpUI, CUIEditPicker, deleteWarpUI, messageLogUI, redeemGiftcodeUI, removeRankUI, tpaSettings, tpaUI } from "./interfacesTwo"
 
 // This file holds all the functions containing UI
 
@@ -129,6 +129,8 @@ export function itemBindsUI(player) {
     let f = new ModalFormData()
     f.title('Bind Custom Item')
 
+    f.label(arrays.hashtags)
+
     f.slider('\nItem Number', 1, arrays.dummySize, 1)
     f.textField('Command:', 'Example: tp @s 0 1 0')
 
@@ -208,6 +210,7 @@ export function playerSettingsUI(player) {
     f.button('Player Data\n§7View A Player\'s Data', 'textures/ui/glyph_inventory')
     f.button('Punishments\n§7Punish A Player', 'textures/ui/cancel')
     f.button('Player Tracking\n§7Modify Tracking Settings')
+    f.button('Giftcodes\n§7Add A Redeemable Giftcode')
     f.button('Add Rank To A Player')
     f.button('Remove Rank From A Player')
 
@@ -227,9 +230,12 @@ export function playerSettingsUI(player) {
                 playerTrackingUI(player)
                 break
             case 3:
-                addRankUI(player)
+                addGiftcode(player)
                 break
             case 4:
+                addRankUI(player)
+                break
+            case 5:
                 removeRankUI(player)
                 break
             default:
@@ -399,14 +405,30 @@ export function playerTrackingUI(player) {
     f.title('Player Tracking')
     const d = mcl.jsonWGet('darkoak:tracking')
 
-    f.toggle('Flying', d.flying)
-    f.toggle('Gliding', d.gliding)
-    f.toggle('Climbing', d.climbing)
-    f.toggle('Emoting', d.emoting)
-    f.toggle('Falling', d.falling)
-    f.toggle('In Water', d.inwater)
-    f.toggle('Jumping', d.jumping)
-    f.toggle('On Ground', d.onground)
+    f.toggle('Flying', d.flying || false)
+    f.textField('Command On Above Action:', 'Example: kill @s', d.flyingC)
+    f.divider()
+    f.toggle('Gliding', d.gliding || false)
+    f.textField('Command On Above Action:', 'Example: kill @s', d.glidingC)
+    f.divider()
+    f.toggle('Climbing', d.climbing || false)
+    f.textField('Command On Above Action:', 'Example: kill @s', d.climbingC)
+    f.divider()
+    f.toggle('Emoting', d.emoting || false)
+    f.textField('Command On Above Action:', 'Example: kill @s', d.emotingC)
+    f.divider()
+    f.toggle('Falling', d.falling || false)
+    f.textField('Command On Above Action:', 'Example: kill @s', d.fallingC)
+    f.divider()
+    f.toggle('In Water', d.inwater || false)
+    f.textField('Command On Above Action:', 'Example: kill @s', d.inwaterC)
+    f.divider()
+    f.toggle('Jumping', d.jumping || false)
+    f.textField('Command On Above Action:', 'Example: kill @s', d.jumpingC)
+    f.divider()
+    f.toggle('On Ground', d.onground || false)
+    f.textField('Command On Above Action:', 'Example: kill @s', d.ongroundC)
+    f.divider()
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -416,13 +438,21 @@ export function playerTrackingUI(player) {
         const e = evd.formValues
         mcl.jsonWSet('darkoak:tracking', {
             flying: e[0],
-            gliding: e[1],
-            climbing: e[2],
-            emoting: e[3],
-            falling: e[4],
-            inwater: e[5],
-            jumping: e[6],
-            onground: e[7]
+            flyingC: e[1],
+            gliding: e[2],
+            glidingC: e[3],
+            climbing: e[4],
+            climbingC: e[5],
+            emoting: e[6],
+            emotingC: e[7],
+            falling: e[8],
+            fallingC: e[9],
+            inwater: e[10],
+            inwaterC: e[11],
+            jumping: e[12],
+            jumpingC: e[13],
+            onground: e[14],
+            ongroundC: e[15],
         })
 
     })
@@ -542,6 +572,8 @@ export function chatCommandsMainUI(player) {
 export function chatCommandsAddUI(player) {
     let f = new ModalFormData()
     f.title('Add New Chat Command')
+
+    f.label(arrays.hashtags)
 
     f.textField('Message:', 'Example: !spawn')
     f.textField(`Add A Command Or Hashtag Key. Hashtag Keys Include:\n${arrays.hashtagKeys}\nCommand:`, 'Example: tp @s 0 0 0')
@@ -958,9 +990,11 @@ export function docsUI(player) {
     f.header('Scriptevents')
     f.label('darkoak:enchant -> Opens Custom Enchant Menu')
     f.label('darkoak:spawn [itemtype] [amount] [x] [y] [z] -> Spawns An Item')
-    f.divider()
-    f.header('Tags')
+    f.label('darkoak:command [Minecraft Command] -> Runs A Command With Replacer Hashtags')
 
+    f.divider()
+
+    f.header('Tags')
     f.label('darkoak:admin -> Admin Tag For Almost Everything')
     f.label('darkoak:mod -> Allows The Tagged Player To Open the Punishment UI')
 
@@ -985,6 +1019,16 @@ export function docsUI(player) {
     f.label('darkoak:inwater -> Tracking Tag')
     f.label('darkoak:jumping -> Tracking Tag')
     f.label('darkoak:onground -> Tracking Tag')
+
+    f.divider()
+
+    f.header('Emojis')
+    const emojis = arrays.emojis
+    for (let index = 0; index < emojis.length; index++) {
+        const em = emojis[index]
+        f.label(`${em.m} -> ${em.e}`)
+    }
+
     f.divider()
 
     f.button('Dismiss')
@@ -1002,6 +1046,7 @@ export function UIMakerUI(player) {
     f.button('Make A Message UI\n§7Two Buttons (With Commands) With Title And Text')
     f.button('Make An Action UI\n§7Ten Different Buttons (With Commands) With Title And Text')
     f.button('Delete A UI\n§7Delete Action Or Message UI\'s')
+    f.button('Edit A UI\n§7Modify Existing Custom UI\'s')
     f.button('Set The Actionbar\n§7Modify The Actionbar')
     f.button('Set the Sidebar\n§7Modify The Sidebar')
 
@@ -1022,9 +1067,12 @@ export function UIMakerUI(player) {
                 UIDeleterUI(player)
                 break
             case 3:
-                actionBarUI(player)
+                CUIEditPicker(player)
                 break
             case 4:
+                actionBarUI(player)
+                break
+            case 5:
                 sidebarUI(player)
                 break
             default:
@@ -1057,6 +1105,8 @@ export function actionUIPickerUI(player) {
  */
 export function actionUIMakerUI(player, amount) {
     let f = new ModalFormData()
+
+    f.label(arrays.hashtags)
 
     f.textField('Title:', 'Example: Warps')
     f.textField('Body:', 'Example: Click A Button To TP')
@@ -1116,6 +1166,8 @@ export function UIDeleterUI(player) {
 export function messageUIMakerUI(player) {
     let f = new ModalFormData()
     f.title('Message UI Maker')
+
+    f.label(arrays.hashtags)
 
     f.textField('UI Title:', 'Example: Welcome!')
     f.textField('UI Body Text:', 'Example: Hello there!')
@@ -1394,15 +1446,16 @@ export function showHideOptionsSettingsUI(player) {
 
     const en = mcl.jsonWGet('darkoak:communityshowhide')
 
-    f.toggle('Show Pay / Shop?', en.payshop0)
-    f.toggle('Show Pay / Shop -> Pay?', en.payshop1)
-    f.toggle('Show Pay / Shop -> Shop?', en.payshop2)
-    f.toggle('Show Pay / Shop -> Auction House?', en.payshop3)
-    f.toggle('Show Warps?', en.warps)
-    f.toggle('Show Report?', en.report)
-    f.toggle('Show My Profile?', en.myprofile)
-    f.toggle('Show Personal Log?', en.personallog)
-    f.toggle('Show Credits?\nPlease Don\'t Disable This', en.credits)
+    f.toggle('Show Pay / Shop?', en.payshop0 || false)
+    f.toggle('Show Pay / Shop -> Pay?', en.payshop1 || false)
+    f.toggle('Show Pay / Shop -> Shop?', en.payshop2 || false)
+    f.toggle('Show Pay / Shop -> Auction House?', en.payshop3 || false)
+    f.toggle('Show Warps?', en.warps || false)
+    f.toggle('Show Report?', en.report || false)
+    f.toggle('Show My Profile?', en.myprofile || false)
+    f.toggle('Show Personal Log?', en.personallog || false)
+    f.toggle('Show Giftcodes?', en.giftcodes || false)
+    f.toggle('Show Credits?\nPlease Don\'t Disable This', en.credits || false)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1419,7 +1472,8 @@ export function showHideOptionsSettingsUI(player) {
             report: e[5],
             myprofile: e[6],
             personallog: e[7],
-            credits: e[8],
+            giftcodes: e[8],
+            credits: e[9],
         })
     })
 }
@@ -1472,6 +1526,7 @@ export function creditsUI(player) {
 
     f.header('Links')
     f.label('Discord: cE8cYYeFFx')
+    f.label('Website: https://darkoakaddons.rf.gd/')
 
     f.button('Dismiss', 'textures/items/boat_darkoak')
     f.show(player)
@@ -1493,6 +1548,7 @@ export function communityMain(player) {
     if (en.report) f.button('Report')
     if (en.myprofile) f.button('My Profile')
     if (en.personallog) f.button('Personal Log')
+    if (en.giftcodes) f.button('Giftcodes')
     if (en.credits) f.button('Credits')
     if (player.hasTag('darkoak:admin')) {
         f.button('Community Settings\n(Admins Only)', 'textures/ui/icon_multiplayer')
@@ -1520,6 +1576,10 @@ export function communityMain(player) {
         }
         if (en.personallog && evd.selection === selectionIndex++) {
             personalLogUI(player)
+            return
+        }
+        if (en.giftcodes && evd.selection === selectionIndex++) {
+            redeemGiftcodeUI(player)
             return
         }
         if (en.credits && evd.selection === selectionIndex++) {

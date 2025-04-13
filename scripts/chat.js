@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
-import { emojis } from "./data/arrays"
+import { emojis, replacer } from "./data/arrays"
 import { landclaimMainUI } from "./uis/interfacesTwo"
 
 
@@ -14,17 +14,21 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     let commands = mcl.listGetValues('darkoak:command:')
     for (let index = 0; index < commands.length; index++) {
         const p = JSON.parse(commands[index])
-        if (evd.message === p.message) {
-            if (!p.tag | evd.sender.hasTag(p.tag)) {
+        if (evd.message.trimEnd() === p.message.trimEnd()) {
+            if (!p.tag || evd.sender.hasTag(p.tag)) {
                 if (p.command.startsWith('#')) {
                     hashtag(p.command, evd.sender)
                     evd.cancel = true
                     return
                 } else {
                     system.runTimeout(() => {
-                        if (p.command) evd.sender.runCommand(p.command)
-                        if (p.command2) evd.sender.runCommand(p.command2)
-                        if (p.command3) evd.sender.runCommand(p.command3)
+                        try {
+                            if (p.command) evd.sender.runCommand(replacer(evd.sender, p.command))
+                            if (p.command2) evd.sender.runCommand(replacer(evd.sender, p.command2))
+                            if (p.command3) evd.sender.runCommand(replacer(evd.sender, p.command3))
+                        } catch {
+                            mcl.adminMessage(`${p.message} Command Has An Error§r`)
+                        }
                     })
                     evd.cancel = true
                     return
@@ -131,7 +135,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     nameColors = nameColors.length ? nameColors : [``]
     chatColors = chatColors.length ? chatColors : [``]
 
-    const text = `${cr.start}${ranks.join(cr.middle)}${cr.end}§r§f${nameColors.join('')}${evd.sender.name}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage}`
+    const text = `${cr.start}${replacer(evd.sender, ranks.join(cr.middle))}${cr.end}§r§f${nameColors.join('')}${evd.sender.name}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage}`
 
     if (ocs.proximity) {
         system.runTimeout(() => {

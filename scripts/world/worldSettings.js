@@ -135,48 +135,56 @@ system.runInterval(() => {
 function tracking(player, d) {
     if (d.flying && player.isFlying) {
         player.addTag('darkoak:flying')
+        if (d.flyingC) player.runCommand(d.flyingC)
     } else {
         player.removeTag('darkoak:flying')
     }
 
     if (d.gliding && player.isGliding) {
         player.addTag('darkoak:gliding')
+        if (d.glidingC) player.runCommand(d.glidingC)
     } else {
         player.removeTag('darkoak:gliding')
     }
 
     if (d.climbing && player.isClimbing) {
         player.addTag('darkoak:climbing')
+        if (d.climbingC) player.runCommand(d.climbingC)
     } else {
         player.removeTag('darkoak:climbing')
     }
 
     if (d.emoting && player.isEmoting) {
         player.addTag('darkoak:emoting')
+        if (d.emotingC) player.runCommand(d.emotingC)
     } else {
         player.removeTag('darkoak:emoting')
     }
 
     if (d.falling && player.isFalling) {
         player.addTag('darkoak:falling')
+        if (d.fallingC) player.runCommand(d.fallingC)
     } else {
         player.removeTag('darkoak:falling')
     }
 
     if (d.inwater && player.isInWater) {
         player.addTag('darkoak:inwater')
+        if (d.inwaterC) player.runCommand(d.inwaterC)
     } else {
         player.removeTag('darkoak:inwater')
     }
 
     if (d.jumping && player.isJumping) {
         player.addTag('darkoak:jumping')
+        if (d.jumpingC) player.runCommand(d.jumpingC)
     } else {
         player.removeTag('darkoak:jumping')
     }
 
     if (d.onground && player.isOnGround) {
         player.addTag('darkoak:onground')
+        if (d.ongroundC) player.runCommand(d.ongroundC)
     } else {
         player.removeTag('darkoak:onground')
     }

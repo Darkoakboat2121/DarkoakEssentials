@@ -2,7 +2,7 @@
 // This file holds data
 
 import { mcl } from "../logic"
-import { Player } from "@minecraft/server"
+import { Player, world } from "@minecraft/server"
 
 /**List of usernames to ban automatically if prebans is set to true*/
 export const preBannedList = [
@@ -122,20 +122,24 @@ export function replacer(player, string) {
     let formattedString = string
     .replaceAll('#name#', player.name)
     .replaceAll('#health#', health)
-    .replaceAll('#location#',  `${parseInt(player.location.x)}, ${parseInt(player.location.y)}, ${parseInt(player.location.z)}`)
+    .replaceAll('#location#',  `${player.location.x.toFixed(0)} ${player.location.y.toFixed(0)} ${player.location.z.toFixed(0)}`)
     .replaceAll('#slot#', player.selectedSlotIndex.toString())
     // .replaceAll('#block.type#', block.typeId)
     .replaceAll('#velocity#', `${(player.getVelocity().x).toFixed(1)}, ${(player.getVelocity().y).toFixed(1)}, ${(player.getVelocity().z).toFixed(1)}`)
     .replaceAll('#cps#', `${player.getDynamicProperty('darkoak:ac:cps').toString()}`)
     .replaceAll('#effects#', mcl.playerEffectsArray(player))
     .replaceAll('#tags#', mcl.playerTagsArray(player))
+    .replaceAll('#players#', world.getAllPlayers().length.toString())
+    .replaceAll('#dimension#', player.dimension.id)
+    .replaceAll('#random#', (mcl.randomNumber(9) + 1).toString())
+    .replaceAll('#device#', player.clientSystemInfo.platformType.toString())
 
-    if (formattedString.includes('[') && formattedString.includes(']')) {
-        let score = mcl.getStringBetweenChars(formattedString, '[', ']')
+    if (formattedString.includes('#[') && formattedString.includes(']#')) {
+        let score = mcl.getStringBetweenChars(formattedString, '#[', ']#')
         formattedString = formattedString
         .replaceAll(score, mcl.getScore(player, score).toString())
-        .replaceAll('[', '')
-        .replaceAll(']', '')
+        .replaceAll('#[', '')
+        .replaceAll(']#', '')
     }
 
     if (formattedString.includes('#hand#')) {
@@ -154,7 +158,7 @@ export function replacer(player, string) {
 
 export const dummySize = 22
 
-export const hashtags = '\nKeys:\n\\n - New Line\n[scorename] - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity\n#cps# - Players CPS\n#effects# - Players Effects\n#tags# - Players Tags'
+export const hashtags = '\nKeys:\n\\n - New Line\n#[scorename]# - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity\n#cps# - Players CPS\n#effects# - Players Effects\n#tags# - Players Tags\n#players# - Amount Of Online Players\n#dimension# - Dimension The Player Is In\n#random# - Random Number Between 1 And 10'
 
 export const hashtagKeys = '#commands - Lists All Commands\n#noob - (Joke) Says Stuff in Chat\n#datadeleter - Opens UI For Deleting Data\n#cc - Clears Chat\n#random - Says A Random Number In Chat (1 To 100)\n#emojis - Lists All Emojis\n#cclocal - Clears The Senders Chat\n#landclaim add - Claims Four Chunks Near The Player\n#landclaim remove - Removes Current Land Claim\n#landclaim players - Opens UI For Adding Players To a Landclaim'
 

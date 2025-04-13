@@ -3,7 +3,7 @@ import { ActionFormData, MessageFormData, ModalFormData, uiManager, UIManager } 
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
 import { customEnchantActions, customEnchantEvents } from "../enchanting"
-import { preBannedList } from "../data/arrays"
+import { hashtags, preBannedList } from "../data/arrays"
 
 
 /**UI for data editor item
@@ -727,5 +727,140 @@ export function removeRankUI(player) {
         if (evd.canceled) return
 
         mcl.getPlayer(pl[evd.formValues[0]]).removeTag(tl[evd.formValues[1]])
+    })
+}
+
+export function addGiftcode(player) {
+    let f = new ModalFormData()
+    f.title('Add Giftcode')
+
+    f.textField('Code:', 'Example: secretcode123')
+    f.textField('Command On Redeem:', 'Example: give @s diamond 1')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        const e = evd.formValues
+        mcl.jsonWSet(`darkoak:giftcode:${mcl.timeUuid()}`, {
+            code: e[0],
+            command: e[1],
+        })
+    })
+}
+
+export function redeemGiftcodeUI(player, priorCode, failMessage) {
+    let f = new ModalFormData()
+    f.title('Redeem Giftcode')
+
+    f.label(failMessage || '')
+    f.textField('Code:', 'Example: secretcode123', priorCode || '')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        let codes = mcl.listGetValues('darkoak:giftcode:')
+        for (let index = 0; index < codes.length; index++) {
+            const code = JSON.parse(codes[index])
+            if (evd.formValues[0] === code.code) {
+                if (code.command) player.runCommand(code.command)
+                return
+            }
+        }
+        redeemGiftcodeUI(player, evd.formValues[0], '§cNot A Code!§r')
+    })
+}
+
+export function CUIEditPicker(player) {
+    let f = new ActionFormData()
+    f.title('CUI Picker') 
+
+    const uis = mcl.listGetBoth('darkoak:ui:')
+    for (let index = 0; index < uis.length; index++) {
+        const ui = uis[index]
+        const v = JSON.parse(ui.value)
+        f.button(`Type: ${ui.id.split(':')[2]}, Title: ${v.title}, Tag: ${v.tag}\nBody: ${v.body}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        if (uis[evd.selection].id.split(':')[2] == 'action') {
+            CUIEditUI(player, true, uis[evd.selection].id)
+        } else {
+            CUIEditUI(player, false, uis[evd.selection].id)
+        }
+    })
+}
+
+/**
+ * @param {Player} player 
+ * @param {boolean} action 
+ * @param {string} id 
+ */
+export function CUIEditUI(player, action, id) {
+    const ui = mcl.jsonWGet(id)
+    if (action) {
+        let f = new ModalFormData()
+        f.title('Action UI Button Picker')
+        f.slider('Amount Of Buttons', 1, 10, 1, ui.buttons.length)
+
+        f.show(player).then((evd) => {
+            if (evd.canceled) return
+            actionUIEditUI(player, evd.formValues[0], id)
+        })
+    } else {
+        let rf = new ModalFormData()
+        const d = mcl.jsonWGet(id)
+        rf.title('Message UI Editor')
+
+        rf.textField('UI Title:', 'Example: Welcome!', d.title)
+        rf.textField('UI Body Text:', 'Example: Hello there!', d.body)
+        rf.textField('Tag To Open:', 'Example: welcomemessage', d.tag)
+        rf.textField('UI Button 1:', 'Example: Hi!', d.button1)
+        rf.textField('UI Button 2:', 'Example: Hello!', d.button2)
+        rf.textField('Button1 Command:', 'Example: tp @s 0 0 0', d.command1)
+        rf.textField('Button2 Command:', 'Example: tp @s 6 2 7', d.command2)
+
+        rf.show(player).then((revd) => {
+            if (revd.canceled) return
+
+            const e = revd.formValues
+            const ui = { title: e[0], body: e[1], tag: e[2], button1: e[3], command1: e[5], button2: e[4], command2: e[6] }
+            mcl.jsonWSet(id, ui)
+        })
+    }
+}
+
+export function actionUIEditUI(player, amount, id) {
+    let f = new ModalFormData()
+    const d = mcl.jsonWGet(id)
+    f.title('Action UI Editor')
+    
+    f.label(hashtags)
+    
+    f.textField('Title:', 'Example: Warps', d.title || '')
+    f.textField('Body:', 'Example: Click A Button To TP', d.body || '')
+    f.textField('Tag To Open:', 'Example: warpmenu', d.tag || '')
+    
+    for (let index = 1; index <= amount; index++) {
+        f.textField(`Button ${index}:`, '', d.buttons[index - 1].title || '')
+        f.textField(`Command ${index}:`, '', d.buttons[index - 1].command || '')
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+
+        const title = e[0]
+        const body = e[1]
+        const tag = e[2]
+
+        let buttons = []
+        for (let index = 3; index < e.length; index += 2) {
+            buttons.push({ title: e[index], command: e[index + 1] })
+        }
+
+        const ui = { title, body, tag, buttons }
+
+        mcl.jsonWSet(id, ui)
     })
 }

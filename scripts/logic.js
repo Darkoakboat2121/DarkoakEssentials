@@ -219,14 +219,14 @@ export class mcl {
         if (key === undefined) {
             let u = []
             let ids = world.getDynamicPropertyIds()
-            for (let index = 0; index < array.length; index++) {
+            for (let index = 0; index < ids.length; index++) {
                 u.push({ id: ids[index], value: mcl.wGet(ids[index]) })
             }
             return u
         } else {
             let u = []
             let ids = world.getDynamicPropertyIds().filter(e => e.startsWith(key))
-            for (let index = 0; index < array.length; index++) {
+            for (let index = 0; index < ids.length; index++) {
                 u.push({ id: ids[index], value: mcl.wGet(ids[index]) })
             }
             return u
@@ -359,7 +359,8 @@ export class mcl {
      * @returns {number}
      */
     static getScore(player, objective) {
-        return world.scoreboard.getObjective(objective).getScore(player)
+        if (!world.scoreboard.getObjective(objective)) return 0
+        return world.scoreboard.getObjective(objective).getScore(player) || 0
     }
 
     /**Returns the held item
