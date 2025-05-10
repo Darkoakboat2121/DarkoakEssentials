@@ -4,6 +4,8 @@ import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
 import { customEnchantActions, customEnchantEvents } from "../enchanting"
 import { hashtags, preBannedList } from "../data/arrays"
+import { bui } from "./baseplateUI"
+import * as modal from "./modalUI"
 
 
 /**UI for data editor item
@@ -14,18 +16,24 @@ export function dataEditorEntityUI(player, entity) {
     let f = new ModalFormData()
     f.title('Data Editor')
 
-    f.textField('\nName:', '', entity.nameTag)
-    f.toggle('Remove Entity?', false)
-    f.textField('Command On Interact:', 'Example: tp @s 0 0 0', entity.getDynamicProperty('darkoak:interactcommand') || '')
+    f.textField('\nName:', '', {
+        defaultValue: entity.nameTag || ''
+    })
+    f.toggle('Remove Entity?', {
+        defaultValue: false
+    })
+    f.textField('Command On Interact:', 'Example: tp @s 0 0 0', {
+        defaultValue: entity.getDynamicProperty('darkoak:interactcommand') || ''
+    })
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
-        entity.nameTag = e[0]
         if (e[1]) {
             entity.remove()
             return
         }
+        entity.nameTag = e[0]
         entity.setDynamicProperty('darkoak:interactcommand', e[2])
     })
 }
@@ -49,7 +57,9 @@ export function dataEditorBlockUI(player, block) {
         }
     }
 
-    f.textField('Command On Interact:', 'Example: tp @s 0 0 0', d)
+    f.textField('Command On Interact:', 'Example: tp @s 0 0 0', {
+        defaultValue: d
+    })
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -96,22 +106,26 @@ export function genAddUI(player) {
     let f = new ModalFormData()
 
     let b = player.getBlockFromViewDirection()
-    let n = undefined
-    if (b != undefined && b.block) {
+    let n
+    if (b) {
         n = b.block.location
     } else {
-        n = { x: '', y: '', z: '' }
+        n = {x: '', y: '', z: ''}
     }
 
     f.textField('Block ID:', 'Example: minecraft:diamond_ore')
-    f.textField('Co-ords:', 'Example: 10 1 97', `${n.x} ${n.y} ${n.z}`.trimStart())
+    f.textField('Co-ords:', 'Example: 10 1 97', {
+        defaultValue: `${n.x || ''} ${n.y || ''} ${n.z || ''}`.trim()
+    })
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
-        const blockId = e[0].trimStart()
-        const coords1 = e[1].trimStart()
-        mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, { block: blockId, coords: coords1 })
+        const blockId = e[0].trim()
+        const coords1 = e[1].trim()
+        mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, { 
+            block: blockId, coords: coords1
+        })
     })
 }
 
@@ -166,8 +180,12 @@ export function genModifyUI(player, gen) {
     const data = mcl.jsonWGet(gen)
     f.title('Modify')
 
-    f.textField('Block ID:', '', data.block)
-    f.textField('Co-ords:', '', data.coords)
+    f.textField('Block ID:', '', {
+        defaultValue: data.block
+    })
+    f.textField('Co-ords:', '', {
+        defaultValue: data.coords
+    })
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -183,8 +201,12 @@ export function tpaSettings(player) {
 
     const d = mcl.jsonWGet('darkoak:tpa')
 
-    f.toggle('Enabled?', d.enabled)
-    f.toggle('Can TP To Admins In Creative?', d.adminTp)
+    f.toggle('Enabled?', {
+        defaultValue: d.enabled
+    })
+    f.toggle('Can TP To Admins In Creative?', {
+        defaultValue: d.adminTp
+    })
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -243,8 +265,7 @@ export function tpaUI(player) {
     let f = new ModalFormData()
     f.title('TPA')
 
-    const names = mcl.playerNameArray()
-    f.dropdown('\nPlayer:', names)
+    const names = bui.namePicker(f, undefined, '\nPlayer:')
 
     const data = mcl.jsonWGet('darkoak:tpa')
     if (!data.enabled) {
@@ -332,57 +353,133 @@ export function anticheatSettings(player) {
 
     const d = mcl.jsonWGet('darkoak:anticheat')
 
-    f.label('')
+    f.label('§cRemember To Always Verify If The Player Is Actually Hacking. Anticheat Always Has A Chance Of False Positives.')
 
-    f.toggle('Pre-bans', d.prebans || false)
+    f.toggle('Pre-bans', {
+        defaultValue: d.prebans || false
+    })
     f.label('Automatically Bans Hackers Darkoakboat2121 Knows About')
     f.label(`Full list:\n${preBannedList.join(' | ')}`)
-
+    
     f.divider()
-
-    f.toggle('Anti-nuker', d.antinuker || false)
+    
+    f.toggle('Anti-nuker', {
+        defaultValue: d.antinuker || false
+    })
     f.label('Checks If A Player Is Breaking Blocks Too Fast')
-
+    
     f.divider()
-
-    f.toggle('Anti-fast-place', d.antifastplace || false)
+    
+    f.toggle('Anti-fast-place', {
+        defaultValue: d.antifastplace || false
+    })
     f.label('Checks If A Player Is Placing Blocks Too Fast')
-
+    
     f.divider()
-
-    f.toggle('Anti-fly 1', d.antifly1 || false)
+    
+    f.toggle('Anti-fly 1', {
+        defaultValue: d.antifly1 || false
+    })
     f.label('Checks If A Player Is Flying Like In Creative Mode But Without Creative')
-
+    
     f.divider()
-
-    f.toggle('Anti-speed 1', d.antispeed1 || false)
+    
+    f.toggle('Anti-speed 1', {
+        defaultValue: d.antispeed1 || false
+    })
     f.label('Checks If Player Is Moving Too Fast')
-
+    
     f.divider()
-
-    f.toggle('Anti-spam', d.antispam || false)
+    
+    f.toggle('Anti-spam', {
+        defaultValue: d.antispam || false
+    })
     f.label('Checks The Players Recent Messages For Repeats, Automatically Formats To Ensure Spaces And Formatting Codes Don\'t Bypass It')
-
+    f.label('This Also Checks If The Message Matches Common Hack Client Messages')
+    
     f.divider()
-
-    f.toggle('Anti-illegal-enchant', d.antiillegalenchant || false)
+    
+    f.toggle('Anti-illegal-enchant', {
+        defaultValue: d.antiillegalenchant || false
+    })
     f.label('Checks If The Held Item Of A Player Has Illegal Enchants')
-
+    
     f.divider()
-
-    f.toggle('Anti-killaura', d.antikillaura || false)
+    
+    f.toggle('Anti-killaura', {
+        defaultValue: d.antikillaura || false
+    })
     f.label('Checks If The Players CPS Is Too High')
-
+    
     f.divider()
-
-    f.toggle('Anti-gamemode-switcher', d.antigamemode || false)
+    
+    f.toggle('Anti-gamemode-switcher', {
+        defaultValue: d.antigamemode || false
+    })
     f.label('Prevents Non-Admins From Changing Gamemodes §c(Buggy)§r')
-
+    
     f.divider()
-
-    f.toggle('Npc detector', d.npcdetect || false)
+    
+    f.toggle('Npc detector', {
+        defaultValue: d.npcdetect || false
+    })
     f.label('Sends Chat Message To Admins When A Npc Is Interacted With, Also Prevents Usage Of Npc\'s §c(Don\'t Enable If You Use Npc\'s)§r')
-
+    
+    f.divider()
+    
+    f.toggle('Anti-fly 2', {
+        defaultValue: d.antifly2 || false
+    })
+    f.label('Checks If The Player Is Flying And Gliding At The Same Time')
+    
+    f.divider()
+    
+    f.toggle('Anti-fly 3', {
+        defaultValue: d.antifly3 || false
+    })
+    f.label('Checks If The Player Is Gliding Weirdly (If Player Is Going Up Without Looking Up)')
+    
+    f.divider()
+    
+    f.toggle('Anti-invalid 1', {
+        defaultValue: d.antiinvalid1 || false
+    })
+    f.label('Checks If The Player Is Sneaking And Sprinting At The Same Time')
+    
+    f.divider()
+    
+    f.toggle('Anti-invalid 2', {
+        defaultValue: d.antiinvalid2 || false
+    })
+    f.label('Checks If The Player Is Sprinting Backwards')
+    
+    f.divider()
+    
+    f.toggle('Anti-invalid 3', {
+        defaultValue: d.antiinvalid3 || false
+    })
+    f.label('Checks If The Player Is Climbing A Ladder Too Quickly')
+    
+    f.divider()
+    
+    f.toggle('Anti-speed 2', {
+        defaultValue: d.antispeed2 || false
+    })
+    f.label('Checks If The Player Is Going At Insane Speeds')
+    
+    f.divider()
+    
+    f.toggle('Anti-block-reach', {
+        defaultValue: d.antiblockreach || false
+    })
+    f.label('Checks If The Player Places A Block Farther Away Than Allowed (Also Cancels Block Placement If Too Far)')
+    
+    f.divider()
+    
+    f.toggle('Notify Admins In Chat', {
+        defaultValue: d.notify || false
+    })
+    f.label('If This Is On It Notifies Admins When An Anticheat Module Goes Off')
     f.divider()
 
     f.show(player).then((evd) => {
@@ -399,6 +496,14 @@ export function anticheatSettings(player) {
             antikillaura: e[7],
             antigamemode: e[8],
             npcdetect: e[9],
+            antifly2: e[10],
+            antifly3: e[11],
+            antiinvalid1: e[12],
+            antiinvalid2: e[13],
+            antiinvalid3: e[14],
+            antispeed2: e[15],
+            antiblockreach: e[16],
+            notify: e[17],
         })
     })
 }
@@ -434,7 +539,7 @@ export function auctionAddUI(player) {
 
     f.textField('\nAdd An Item Into The Auction House? It\'s Permanant! Also This Will Remove Any Enchantments.\nPrice:', 'Example: 100')
 
-    f.slider('Slot', 1, 9, 1)
+    f.slider('Slot', 1, 9)
 
     f.submitButton(`Add Item?`)
 
@@ -445,11 +550,7 @@ export function auctionAddUI(player) {
             return
         }
         const item = mcl.getItemContainer(player).getItem(evd.formValues[1])
-        mcl.jsonWSet(`darkoak:auction:item${mcl.timeUuid()}`, {
-            itemTypeId: item.typeId,
-            itemAmount: item.amount,
-            price: evd.formValues[0]
-        })
+        mcl.jsonWSet(`darkoak:auction:item${mcl.timeUuid()}`, mcl.itemToData(item))
     })
 }
 
@@ -484,7 +585,6 @@ export function auctionHouse(player) {
 }
 
 /**
- * 
  * @param {Player} player 
  */
 export function customEnchantsMain(player) {
@@ -497,7 +597,7 @@ export function customEnchantsMain(player) {
     f.dropdown('\n(While Holding Item)\nEvent:', events)
     f.dropdown('\nAction:', actions)
 
-    f.slider('\nExplode: Explosion Radius\nExtra Damage: Damage Amount\nDash: Dash Distance\nPower', 1, 20, 1)
+    f.slider('\nExplode: Explosion Radius\nExtra Damage: Damage Amount\nDash: Dash Distance\nPower', 1, 20)
 
     f.submitButton('Enchant Held Item?')
 
@@ -551,9 +651,15 @@ export function worldProtection(player) {
 
     const data = mcl.jsonWGet('darkoak:worldprotection')
 
-    f.toggle('Ban Boats?', data.boats)
-    f.toggle('Ban Ender Pearls?', data.pearls)
-    f.toggle('Ban Water Buckets?', data.water)
+    f.toggle('Ban Boats?', {
+        defaultValue: data.boats
+    })
+    f.toggle('Ban Ender Pearls?', {
+        defaultValue: data.pearls
+    })
+    f.toggle('Ban Water Buckets?', {
+        defaultValue: data.water
+    })
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -575,7 +681,9 @@ export function protectedAreasAddUI(player) {
     const loc = player.location
 
     f.textField('\n(x z)\nCoordinates 1:', 'Example: 0 0')
-    f.textField('\n(x z)\nCoordinates 2:', 'Example: 10 20', `${loc.x.toFixed(0)} ${loc.z.toFixed(0)}`)
+    f.textField('\n(x z)\nCoordinates 2:', 'Example: 10 20', {
+        defaultValue: `${loc.x.toFixed(0)} ${loc.z.toFixed(0)}`
+    })
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -614,21 +722,55 @@ export function protectedAreasRemoveUI(player) {
     })
 }
 
-
+/**
+ * @param {Player} player 
+ */
 export function personalLogUI(player) {
     let f = new ModalFormData()
     f.title('Personal Log')
 
-    f.textField('Log:', '')
+    f.textField('\nAdd Entry:', '')
+
+    let personalLogs = mcl.pListGetBoth(player, 'darkoak:personallog:')
+    personalLogs.sort((a, b) => {
+        const logA = JSON.parse(a.value)
+        const logB = JSON.parse(b.value)
+        return logB.time - logA.time
+    })
+    if (personalLogs.length > 100) {
+        while (personalLogs.length > 100) {
+            personalLogs.pop()
+        }
+    }
+    if (personalLogs.length != 0) {
+        for (let index = 0; index < personalLogs.length; index++) {
+            const log = JSON.parse(personalLogs[index].value)
+            f.label(log.message)
+            f.divider()
+        }
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.communityMain(player)
+            return
+        }
+        const uuid = mcl.timeUuid()
+        mcl.jsonPSet(player, `darkoak:personallog:${uuid}`, {
+            message: evd.formValues[0],
+            time: uuid.split('T')[1]
+        })
+        personalLogUI(player)
+    })
 }
 
 export function messageLogUI(player) {
     let f = new ActionFormData()
     f.title('Message Log')
 
-    for (const message of mcl.jsonWGet('darkoak:messagelogs').log) {
-        // add divider and label here!!!
-        f.label(message)
+    let logs = mcl.jsonWGet('darkoak:messagelogs').log
+    for (let index = 0; index < logs.length; index++) {
+        f.label(logs[index])
         f.divider()
     }
 
@@ -662,8 +804,7 @@ export function landclaimAddPlayerUI(player) {
 
     f.title('Add Player')
 
-    let pl = mcl.playerNameArray()
-    f.dropdown('Player:', pl)
+    const pl = bui.namePicker(f, undefined, '\nPlayer:')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -692,7 +833,7 @@ export function landclaimRemovePlayerUI(player) {
             owner: d.owner,
             players: d.players.slice(evd.formValues[0], evd.formValues[0])
         })
-        // remove the player that was picked, not sure if working, check after poop
+        // remove the player that was picked, not sure if working, check please
     })
 }
 
@@ -701,9 +842,7 @@ export function addRankUI(player) {
     let f = new ModalFormData()
     f.title('Add Rank')
 
-    const pl = mcl.playerNameArray()
-
-    f.dropdown('\nPlayer:', pl)
+    const pl = bui.namePicker(f, undefined, '\nPlayer:')
     f.textField('Rank To Add:', 'Example: §1Admin§r')
 
     f.show(player).then((evd) => {
@@ -717,10 +856,9 @@ export function removeRankUI(player) {
     let f = new ModalFormData()
     f.title('Remove Rank')
 
-    const pl = mcl.playerNameArray()
     const tl = mcl.playerTagsArray().filter(e => e.startsWith('rank:'))
 
-    f.dropdown('\nPlayer:', pl)
+    const pl = bui.namePicker(f, undefined, '\nPlayer:')
     f.dropdown('Rank To Remove:', tl.map(e => e.replace('rank:', '')))
 
     f.show(player).then((evd) => {
@@ -753,16 +891,19 @@ export function redeemGiftcodeUI(player, priorCode, failMessage) {
     f.title('Redeem Giftcode')
 
     f.label(failMessage || '')
-    f.textField('Code:', 'Example: secretcode123', priorCode || '')
+    f.textField('Code:', 'Example: secretcode123', {
+        defaultValue: priorCode || ''
+    })
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
 
-        let codes = mcl.listGetValues('darkoak:giftcode:')
+        let codes = mcl.listGetBoth('darkoak:giftcode:')
         for (let index = 0; index < codes.length; index++) {
-            const code = JSON.parse(codes[index])
+            const code = JSON.parse(codes[index].value)
             if (evd.formValues[0] === code.code) {
                 if (code.command) player.runCommand(code.command)
+                mcl.wRemove(codes[index].id)
                 return
             }
         }
@@ -772,7 +913,7 @@ export function redeemGiftcodeUI(player, priorCode, failMessage) {
 
 export function CUIEditPicker(player) {
     let f = new ActionFormData()
-    f.title('CUI Picker') 
+    f.title('CUI Picker')
 
     const uis = mcl.listGetBoth('darkoak:ui:')
     for (let index = 0; index < uis.length; index++) {
@@ -801,7 +942,9 @@ export function CUIEditUI(player, action, id) {
     if (action) {
         let f = new ModalFormData()
         f.title('Action UI Button Picker')
-        f.slider('Amount Of Buttons', 1, 10, 1, ui.buttons.length)
+        f.slider('Amount Of Buttons', 1, 10, {
+            defaultValue: ui.buttons.length
+        })
 
         f.show(player).then((evd) => {
             if (evd.canceled) return
@@ -812,13 +955,27 @@ export function CUIEditUI(player, action, id) {
         const d = mcl.jsonWGet(id)
         rf.title('Message UI Editor')
 
-        rf.textField('UI Title:', 'Example: Welcome!', d.title)
-        rf.textField('UI Body Text:', 'Example: Hello there!', d.body)
-        rf.textField('Tag To Open:', 'Example: welcomemessage', d.tag)
-        rf.textField('UI Button 1:', 'Example: Hi!', d.button1)
-        rf.textField('UI Button 2:', 'Example: Hello!', d.button2)
-        rf.textField('Button1 Command:', 'Example: tp @s 0 0 0', d.command1)
-        rf.textField('Button2 Command:', 'Example: tp @s 6 2 7', d.command2)
+        rf.textField('UI Title:', 'Example: Welcome!', {
+            defaultValue: d.title
+        })
+        rf.textField('UI Body Text:', 'Example: Hello there!', {
+            defaultValue: d.body
+        })
+        rf.textField('Tag To Open:', 'Example: welcomemessage', {
+            defaultValue: d.tag
+        })
+        rf.textField('UI Button 1:', 'Example: Hi!', {
+            defaultValue: d.button1
+        })
+        rf.textField('UI Button 2:', 'Example: Hello!', {
+            defaultValue: d.button2
+        })
+        rf.textField('Button1 Command:', 'Example: tp @s 0 0 0', {
+            defaultValue: d.command1
+        })
+        rf.textField('Button2 Command:', 'Example: tp @s 6 2 7', {
+            defaultValue: d.command2
+        })
 
         rf.show(player).then((revd) => {
             if (revd.canceled) return
@@ -834,16 +991,26 @@ export function actionUIEditUI(player, amount, id) {
     let f = new ModalFormData()
     const d = mcl.jsonWGet(id)
     f.title('Action UI Editor')
-    
+
     f.label(hashtags)
-    
-    f.textField('Title:', 'Example: Warps', d.title || '')
-    f.textField('Body:', 'Example: Click A Button To TP', d.body || '')
-    f.textField('Tag To Open:', 'Example: warpmenu', d.tag || '')
-    
+
+    f.textField('Title:', 'Example: Warps', {
+        defaultValue: d.title || ''
+    })
+    f.textField('Body:', 'Example: Click A Button To TP', {
+        defaultValue: d.body || ''
+    })
+    f.textField('Tag To Open:', 'Example: warpmenu', {
+        defaultValue: d.tag || ''
+    })
+
     for (let index = 1; index <= amount; index++) {
-        f.textField(`Button ${index}:`, '', d.buttons[index - 1].title || '')
-        f.textField(`Command ${index}:`, '', d.buttons[index - 1].command || '')
+        f.textField(`Button ${index}:`, '', {
+            defaultValue: d.buttons[index - 1].title || ''
+        })
+        f.textField(`Command ${index}:`, '', {
+            defaultValue: d.buttons[index - 1].command || ''
+        })
     }
 
     f.show(player).then((evd) => {
@@ -862,5 +1029,195 @@ export function actionUIEditUI(player, amount, id) {
         const ui = { title, body, tag, buttons }
 
         mcl.jsonWSet(id, ui)
+    })
+}
+
+export function chatGamesSettings(player) {
+    let f = new ModalFormData()
+    f.title('Chat Games')
+
+    const d = mcl.jsonWGet('darkoak:chatgames')
+
+    f.toggle('Unscrambler Enabled?', {
+        tooltip: 'Toggles Whether The Game Runs',
+        defaultValue: d.unscrambleEnabled || false
+    })
+    f.textField('List Of Words', 'Example: word1, word2, word3', {
+        tooltip: 'Seperate Words With , ',
+        defaultValue: d.unscrambleWords || ''
+    })
+    f.slider('Interval', 1, 10, {
+        tooltip: 'Interval In Minutes Between Games',
+        defaultValue: d.unscrambleInterval || 1,
+        valueStep: 1
+    })
+    f.textField('Reward Command:', 'Example: give @s diamond 1', {
+        tooltip: 'Command To Run On Successful Guess, Runs From The Guesser',
+        defaultValue: d.unscrambleCommand || ''
+    })
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+        if (!e[0]) {
+            mcl.wRemove('darkoak:chatgame1:word')
+        }
+        mcl.jsonWSet('darkoak:chatgames', {
+            unscrambleEnabled: e[0],
+            unscrambleWords: e[1],
+            unscrambleInterval: e[2],
+            unscrambleCommand: e[3],
+        })
+    })
+}
+
+export function scriptSettings(player) {
+    let f = new ModalFormData()
+    f.title('Script Settings')
+    f.label('§cIt\'s Not Recommended To Change These Settings§r')
+
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+
+    f.toggle('Cancel Watchdog Terminating', {
+        tooltip: 'If Enabled, Attempts To Cancel A Scripting Crash',
+        defaultValue: d.cancelWatchdog || false
+    })
+    f.toggle('Log Data To Console', {
+        tooltip: 'Logs Data Changes To The Console' ,
+        defaultValue: d.datalog || false
+    })
+    f.toggle('Disable All Chat Systems', {
+        tooltip: 'Toggles The Chat System, Useful For Compatibility',
+        defaultValue: d.chatmaster || false
+    })
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+        mcl.jsonWSet('darkoak:scriptsettings', {
+            cancelWatchdog: e[0],
+            datalog: e[1],
+            chatmaster: e[2],
+        })
+    })
+}
+
+export function modalUIMakerUI(player, uiData = { title: "New UI", elements: [] }) {
+    let f = new ActionFormData()
+    f.title("Modal UI Maker")
+
+    f.button("Add Element")
+    f.button("Edit Elements")
+    f.button("Save UI")
+    f.button("Preview UI")
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        switch (evd.selection) {
+            case 0:
+                modal.modalUIAddElement(player, uiData)
+                break
+            case 1:
+                modal.modalUIEditElements(player, uiData)
+                break
+            case 2:
+                modal.saveModalUI(uiData)
+                break
+            case 3:
+                modal.previewModalUI(player, uiData)
+                break
+        }
+    })
+}
+
+export function autoResponseMainUI(player) {
+    let f = new ActionFormData()
+    f.title('Auto-Response')
+
+    f.button('Add')
+    f.button('Remove')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch (evd.selection) {
+            case 0:
+                autoResponseAddUI(player)
+                break
+            case 1:
+                autoResponseRemoveUI(player)
+                break
+        }
+    })
+}
+
+export function autoResponseAddUI(player) {
+    let f = new ModalFormData()
+    f.title('Auto-Response Adding')
+
+    f.label(hashtags)
+
+    f.textField('Word / Phrase:', 'Example: plot')
+
+    f.textField('Response:', 'Example: Plots are $30000')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = evd.formValues
+        mcl.jsonWSet(`darkoak:autoresponse:${mcl.timeUuid()}`, {
+            word: e[0],
+            response: e[1],
+        })
+    })
+}
+
+export function autoResponseRemoveUI(player) {
+    let f = new ActionFormData()
+    f.title('Auto-Response Removing')
+
+    const res = mcl.listGetBoth('darkoak:autoresponse:')
+
+    for (let index = 0; index < res.length; index++) {
+        const p = JSON.parse(res[index].value)
+        f.label(`Word / Phrase: ${p.word}\nResponse: ${p.response}`)
+        f.button('Delete?')
+        f.divider()
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.wRemove(res[evd.selection].id)
+    })
+}
+
+/**UI for custom item settings
+ * @param {Player} player 
+ */
+export function itemSettingsUI(player) {
+    let f = new ModalFormData()
+    f.title('Item Settings')
+
+    const d = mcl.jsonWGet('darkoak:itemsettings')
+
+    f.divider()
+    f.slider('Hop Feather Cooldown', 0, 10, {
+        defaultValue: d.hopfeather || 0
+    })
+    f.toggle('Show Cooldown Message?', {
+        defaultValue: d.hopfeatherM || false
+    })
+    f.divider()
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.worldSettingsUI(player)
+            return
+        }
+        const e = evd.formValues
+
+        mcl.jsonWSet('darkoak:itemsettings', {
+            hopfeather: e[0],
+            hopfeatherM: e[1],
+        })
     })
 }

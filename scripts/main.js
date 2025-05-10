@@ -25,10 +25,14 @@ import * as landclaims from "./world/landclaims"
 // seventh set up external uis / commands
 import * as external from "./external/external"
 
+const cooldown = new Map()
+
 // main ui opener, see interfaces, also manages bindable/dummy items
 world.afterEvents.itemUse.subscribe((evd) => {
     const player = evd.source
-    if (evd.itemStack.typeId === 'darkoak:main') {
+    const item = evd.itemStack
+    const direction = player.getViewDirection()
+    if (item.typeId === 'darkoak:main') {
         if (player.hasTag('darkoak:admin')) {
             interfaces.mainUI(player)
             return
@@ -38,7 +42,7 @@ world.afterEvents.itemUse.subscribe((evd) => {
         }
     }
 
-    if (evd.itemStack.typeId === 'darkoak:community') {
+    if (item.typeId === 'darkoak:community') {
         if (player.isSneaking) {
             const playerToView = evd.source.getEntitiesFromViewDirection({ type: 'minecraft:player', maxDistance: 3 })[0]
             if (playerToView === undefined) {
@@ -53,17 +57,17 @@ world.afterEvents.itemUse.subscribe((evd) => {
         }
     }
 
-    if (evd.itemStack.typeId === 'darkoak:generators' && player.hasTag('darkoak:admin')) {
+    if (item.typeId === 'darkoak:generators' && player.hasTag('darkoak:admin')) {
         interfacesTwo.genMainUI(player)
         return
     }
 
-    if (evd.itemStack.typeId === 'darkoak:anticheat') {
+    if (item.typeId === 'darkoak:anticheat') {
         interfacesTwo.anticheatMain(player)
         return
     }
 
-    if (evd.itemStack.typeId === 'darkoak:world_protection') {
+    if (item.typeId === 'darkoak:world_protection') {
         if (player.hasTag('darkoak:admin')) {
             interfacesTwo.protectedAreasMain(player)
             return
@@ -73,22 +77,33 @@ world.afterEvents.itemUse.subscribe((evd) => {
         }
     }
 
-    if (evd.itemStack.typeId === 'darkoak:hop_feather' && (player.isOnGround || player.isClimbing)) {
-        const direction = player.getViewDirection()
+
+    if (item.typeId === 'darkoak:hop_feather' && (player.isOnGround || player.isClimbing)) {
+        const now = Date.now()
+        const lastUsed = cooldown.get(player.name) || 0
+        const time = mcl.jsonWGet('darkoak:itemsettings')
+
+        // checks if the cooldown has expired
+        if (now - lastUsed < (time.hopfeather * 1000)) {
+            const remainingTime = Math.ceil(((time.hopfeather * 1000) - (now - lastUsed)) / 1000)
+            if (time.hopfeatherM) player.sendMessage(`§cYou Must Wait ${remainingTime} More Seconds To Use This Item Again!`)
+            return
+        }
+
         player.applyKnockback({ x: direction.x * 2, z: direction.z * 2 }, 1)
+        cooldown.set(player.name, now)
         return
     }
 
-    if (evd.itemStack.typeId === 'darkoak:dash_feather' && (player.isOnGround || player.isClimbing)) {
-        const direction = player.getViewDirection()
+    if (item.typeId === 'darkoak:dash_feather' && (player.isOnGround || player.isClimbing)) {
         player.applyKnockback({ x: direction.x * 2, z: direction.z * 2 }, direction.y * 1.5)
         return
     }
 
 
-    if (evd.itemStack.typeId.startsWith('darkoak:dummy')) {
+    if (item.typeId.startsWith('darkoak:dummy')) {
         for (let index = 0; index <= arrays.dummySize; index++) {
-            if (evd.itemStack.typeId === `darkoak:dummy${index}`) {
+            if (item.typeId === `darkoak:dummy${index}`) {
                 const c = mcl.jsonWGet(`darkoak:bind:${index}`)
                 if (!c) return
                 if (c.command1) evd.source.runCommand(arrays.replacer(player, c.command1))
@@ -103,43 +118,28 @@ world.afterEvents.itemUse.subscribe((evd) => {
 
 // preban, ban system, on spawn community giver
 world.afterEvents.playerSpawn.subscribe((evd) => {
-    const p = world.getAllPlayers()[0]
-    const d = mcl.jsonWGet('darkoak:anticheat')
     const s = mcl.jsonWGet('darkoak:community:general')
 
-    if (d.prebans) {
-        let prebans = arrays.preBannedList
-        for (let index = 0; index < prebans.length; index++) {
-            p.runCommand(`kick "${prebans[index]}"`)
-        }
-    }
-
-    let bans = mcl.listGetValues('darkoak:bans:')
-    for (let index = 0; index < bans.length; index++) {
-        const data = JSON.parse(bans[index])
-        p.runCommand(`kick "${data.player}" ${data.message}`)
-    }
-
-    if (evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount === 0 && s.giveOnJoin) {
+    if (evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0 && s.giveOnJoin) {
         evd.player.runCommand('give @s darkoak:community')
     }
 })
 
 // chest lock system, wip
 world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
-    if (evd.player.hasTag('darkoak:admin') && evd.itemStack != undefined && evd.itemStack.typeId === 'darkoak:chest_lock' && evd.block.matches('minecraft:chest')) {
+    if (evd.player.hasTag('darkoak:admin') && evd.itemStack && evd.itemStack.typeId == 'darkoak:chest_lock' && evd.block.matches('minecraft:chest')) {
         system.runTimeout(() => {
             interfaces.chestLockUI(evd.player, evd.block.location)
-        }, 1)
+        })
         evd.cancel = true
     } else if (evd.block.matches('minecraft:chest')) {
         let locks = mcl.listGetValues('darkoak:chestlock:')
         for (let index = 0; index < locks.length; index++) {
-            const parts = locks[index].split('|')
+            const parts = JSON.parse(locks)
             const loc = evd.block.location
-            if (loc.x.toString() === parts[1] && loc.y.toString() === parts[2] && loc.z.toString() === parts[3] && evd.player.name != parts[0]) {
+            if (loc.x.toString() === parts.x && loc.y.toString() === parts.y && loc.z.toString() === parts.z && evd.player.name != parts.player) {
                 evd.cancel = true
-                break
+                continue
             }
         }
     }
@@ -201,6 +201,41 @@ system.runInterval(() => {
     }
 })
 
+let ticker = 0
+system.runInterval(() => {
+    ticker++
+    if (ticker < 10) return
+
+    const p = world.getAllPlayers()[0]
+    const d = mcl.jsonWGet('darkoak:anticheat')
+
+    if (d.prebans) {
+        let prebans = arrays.preBannedList
+        for (let index = 0; index < prebans.length; index++) {
+            if (!mcl.getPlayer(prebans[index])) continue
+            p.runCommand(`kick "${prebans[index]}"`)
+        }
+    }
+
+    let bans = mcl.listGetBoth('darkoak:bans:')
+    if (!bans) return
+    for (let index = 0; index < bans.length; index++) {
+        const data = JSON.parse(bans[index].value)
+        if (data.time == 0) {
+            mcl.adminMessage(`${data.player} Has Been Unbanned`)
+            mcl.wRemove(bans[index].id)
+            continue
+        }
+        mcl.jsonWSet(bans[index].id, {
+            player: data.player,
+            message: data.message,
+            time: data.time - 1
+        })
+        if (!mcl.getPlayer(data.player)) continue
+        p.runCommand(`kick "${data.player}" ${data.message || ''}`)
+    }
+}, 20)
+
 
 system.afterEvents.scriptEventReceive.subscribe((evd) => {
     const player = evd.sourceEntity
@@ -247,6 +282,45 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
             return
         }
     }
+    if (evd.id == 'darkoak:knockback') {
+        if (!player) {
+            mcl.adminMessage(`The darkoak:knockback Scriptevent Needs To Execute From An Entity`)
+            return
+        }
+        try {
+            const p = arrays.replacer(player, evd.message).split(' ')
+            player.applyKnockback({x: parseFloat(p[0]), z: parseFloat(p[1]), }, parseFloat(p[2]))
+            return
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:knockback From Entity ${player.nameTag} Has An Error`)
+            return
+        }
+    }
+    if (evd.id == 'darkoak:if') {
+        if (!player) {
+            mcl.adminMessage(`The darkoak:if Scriptevent Needs To Execute From An Entity`)
+            return
+        }
+        try {
+            let p = arrays.replacer(player, evd.message).split(' ')
+            if (p[0] == p[1]) {
+                p.splice(0, 2)
+                player.runCommand(p.join(' '))
+            } 
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:if From Entity ${player.nameTag} Has An Error`)
+            return
+        }
+    }
+})
+
+system.beforeEvents.watchdogTerminate.subscribe((evd) => {
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    if (!d) return
+    if (d.cancelWatchdog) {
+        mcl.adminMessage(`Script Shutdown, Reason: ${evd.terminateReason}`)
+        evd.cancel = true
+    }
 })
 
 
@@ -291,6 +365,19 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
     })
 }
 
+function modalUIBuilder(playerToShow, ui) {
+    let f = new ModalFormData()
+    const data = JSON.parse(ui)
+
+    for (let index = 0; index < data.elements.length; index++) {
+        const el = data.elements[index]
+        el()
+    }
+
+    f.show(playerToShow).then((evd) => {
+        if (evd.canceled) return
+    })
+}
 
 // System for displaying the actionbar
 system.runInterval(() => {
@@ -308,3 +395,14 @@ system.runInterval(() => {
         }
     }
 }, 5)
+
+
+// actually works, modal editor time!
+// function hi() {
+//     // code here
+// }
+
+// function run(ggg) {
+//     ggg()
+// }
+// run(hi)

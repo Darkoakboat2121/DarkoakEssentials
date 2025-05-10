@@ -220,20 +220,30 @@
                                         ]
                                     },
                                     {
-                                        "all_of": [
+                                        "any_of": [
                                             {
                                                 "test": "has_tag",
                                                 "subject": "self",
                                                 "value": "darkoak:immune"
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        "all_of": [
+                                            },
                                             {
                                                 "test": "has_tag",
                                                 "subject": "self",
                                                 "value": "darkoak:immune2"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "any_of": [
+                                            {
+                                                "test": "has_tag",
+                                                "subject": "self",
+                                                "value": "darkoak:pacifist"
+                                            },
+                                            {
+                                                "test": "has_tag",
+                                                "subject": "damager",
+                                                "value": "darkoak:pacifist"
                                             }
                                         ]
                                     }

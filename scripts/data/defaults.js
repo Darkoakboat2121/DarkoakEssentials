@@ -5,7 +5,6 @@ import { mcl } from "../logic"
 // This file sets all dynamic propertys to their default state if they havent been setup yet and it manages data size / limits
 
 
-
 export function logcheck() {
     const log = mcl.wGet('darkoak:log')
     let data = JSON.parse(log)
@@ -24,6 +23,26 @@ system.runInterval(() => {
         mcl.adminMessage(`Possibly Dangerous Property Count: ${byte.toString()}, Please Print The World Data`)
     }
 }, 6000)
+
+
+let lastTime = Date.now()
+let sessionSeconds = 0
+system.runInterval(() => {
+    sessionSeconds++ 
+    mcl.wSet('darkoak:sseconds', sessionSeconds)
+    mcl.wSet('darkoak:sminutes', (sessionSeconds / 60))
+
+    const currentTime = Date.now()
+    const elapsedTime = (currentTime - lastTime) / 1000
+    let tps = 20 / elapsedTime
+    while (tps > 20) {
+        tps--
+    }
+
+    mcl.wSet('darkoak:tps', tps.toFixed(0))
+
+    lastTime = currentTime
+}, 20)
 
 system.runInterval(() => {
     for (const player of world.getAllPlayers()) {
@@ -101,6 +120,19 @@ system.runInterval(() => {
         })
     }
 
+    if (mcl.wGet('darkoak:chatgames') === undefined) {
+        mcl.jsonWSet('darkoak:chatgames', {
+            unscrambleEnabled: false
+        })
+    }
+
+    if (mcl.wGet('darkoak:scriptsettings') === undefined) {
+        mcl.jsonWSet('darkoak:scriptsettings', {
+            cancelWatchdog: false,
+            datalog: false
+        })
+    }
+
     if (mcl.wGet('darkoak:welcome') === undefined) {
         mcl.wSet('darkoak:welcome', 'Welcome! Use The Main UI Item To Start.')
     }
@@ -121,6 +153,13 @@ system.runInterval(() => {
         mcl.jsonWSet('darkoak:tpa', {
             enabled: false,
             adminTp: false,
+        })
+    }
+
+    if (mcl.wGet('darkoak:itemsettings') === undefined) {
+        mcl.jsonWSet('darkoak:itemsettings', {
+            hopfeather: 0,
+            hopfeatherM: false
         })
     }
 
@@ -169,6 +208,11 @@ system.runInterval(() => {
         mcl.jsonWSet(`darkoak:command:${mcl.timeUuid()}`, {
             message: '!emojis',
             command: '#emojis',
+            tag: ''
+        })
+        mcl.jsonWSet(`darkoak:command:${mcl.timeUuid()}`, {
+            message: '!version',
+            command: '#version',
             tag: ''
         })
         

@@ -9,34 +9,40 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
     if (!d.antinuker) return
     const player = evd.player
 
-    player.setDynamicProperty('darkoak:ac:blocksbroken', player.getDynamicProperty('darkoak:ac:blocksbroken') + 1)
+    player.setDynamicProperty('darkoak:ac:blocksbroken', (player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) + 1)
 
-    system.runTimeout(() => {
-        if (player.getDynamicProperty('darkoak:ac:blocksbroken') > 5) {
-            log(`${player.name} -> anti-nuker`)
-            evd.cancel = true
-        }
-
-        player.setDynamicProperty('darkoak:ac:blocksbroken', 0)
-    }, 5)
+    if ((player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) > 45) {
+        evd.cancel = true
+    }
 })
 
 // Anti fast place, works by checking the number of blocks placed in a small timeframe
-world.afterEvents.playerPlaceBlock.subscribe((evd) => {
+world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
     const d = mcl.jsonWGet('darkoak:anticheat')
-    if (!d.antifastplace) return
     const player = evd.player
+    const block = evd.block
 
-    player.setDynamicProperty('darkoak:ac:blocksplaced', player.getDynamicProperty('darkoak:ac:blocksplaced') + 1)
-
-    system.runTimeout(() => {
-        if (player.getDynamicProperty('darkoak:ac:blocksplaced') > 5) {
-            log(`${player.name} -> anti-fast-place`)
+    if (d.antifastplace) {
+        player.setDynamicProperty('darkoak:ac:blocksplaced', (player.getDynamicProperty('darkoak:ac:blocksplaced') || 0) + 1)
+        if ((player.getDynamicProperty('darkoak:ac:blocksplaced') || 0) > 20) {
+            evd.cancel = true
         }
-
-        player.setDynamicProperty('darkoak:ac:blocksplaced', 0)
-    }, 5)
+    }
+    if (d.antiblockreach) {
+        const bl = block.location
+        const pl = player.location
+        const distance = Math.sqrt(
+            Math.pow(bl.x - pl.x, 2) +
+            Math.pow(bl.y - pl.y, 2) +
+            Math.pow(bl.z - pl.z, 2)
+        )
+        if (distance > 8) {
+            log(`${player.name} -> anti-block-reach`)
+            evd.cancel = true
+        }
+    }
 })
+
 
 world.afterEvents.entityHitEntity.subscribe((evd) => {
     const player = evd.damagingEntity
@@ -55,7 +61,18 @@ world.afterEvents.entityHitEntity.subscribe((evd) => {
 system.runInterval(() => {
     let players = world.getAllPlayers()
     for (let index = 0; index < players.length; index++) {
-        players[index].setDynamicProperty('darkoak:ac:cps', 0)
+        let player = players[index]
+        player.setDynamicProperty('darkoak:ac:cps', 0)
+
+        if ((player.getDynamicProperty('darkoak:ac:blocksplaced') || 0) > 20) {
+            log(`${player.name} -> anti-fast-place`)
+        }
+        player.setDynamicProperty('darkoak:ac:blocksplaced', 0)
+
+        if ((player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) > 45) {
+            log(`${player.name} -> anti-nuker`)
+        }
+        player.setDynamicProperty('darkoak:ac:blocksbroken', 0)
     }
 }, 20)
 
@@ -81,27 +98,68 @@ system.runInterval(() => {
     let players = world.getAllPlayers()
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
+        const v = player.getVelocity()
+        const vd = player.getViewDirection()
+        const dot = v.x * vd.x + v.z * vd.z
 
         // Anti fly 1
         if (player.getGameMode() != "creative" && player.getGameMode() != "spectator" && player.isFlying && d.antifly1) {
             log(`${player.name} -> anti-fly 1`)
+            continue
+        }
+
+        // anti fly 2
+        if (player.getGameMode() != "creative" && player.getGameMode() != "spectator" && player.isFlying && d.antifly2 && player.isGliding) {
+            log(`${player.name} -> anti-fly 2`)
+            continue
+        }
+
+        // anti fly 3
+        if (player.getGameMode() != "creative" && player.getGameMode() != "spectator" && d.antifly3 && player.isGliding && v.y > 0.8 && v.x < 0.2 && v.z < 0.2 && vd.y < 1) {
+            log(`${player.name} -> anti-fly 3`)
+            continue
+        }
+
+        // anti invalid movements 1
+        if (player.isSneaking && player.isSprinting && d.antiinvalid1) {
+            log(`${player.name} -> anti-invalid 1`)
+            continue
+        }
+
+        // anti invalid movements 2
+        if (d.antiinvalid2 && player.isSprinting && player.isOnGround && dot < -0.1) {
+            log(`${player.name} -> anti-invalid 2`)
+            continue
+        }
+
+        // anti invalid movements 3
+        if (d.antiinvalid3 && player.isClimbing && v.y > 1) {
+            log(`${player.name} -> anti-invalid 3`)
+            continue
         }
 
         // anti speed 1
-        if ((Math.abs(player.getVelocity().x) >= 3 || Math.abs(player.getVelocity().z) >= 3) && d.antispeed1) {
+        if ((Math.abs(v.x) >= 3 || Math.abs(v.z) >= 3) && d.antispeed1) {
             log(`${player.name} -> speed 1`)
+            continue
+        }
+
+        // anti speed 2
+        if ((Math.abs(v.x) >= 10 || Math.abs(v.z) >= 10) && d.antispeed1) {
+            log(`${player.name} -> speed 2`)
+            continue
         }
 
         // anti illegal enchant
         const held = mcl.getHeldItem(player)
-        if (!held || !d.antiillegalenchant) return
+        if (!held || !d.antiillegalenchant) continue
 
         /**@type {ItemEnchantableComponent} */
         const en = held.getComponent("minecraft:enchantable")
-        if (!en) return
+        if (!en) continue
         const t = en.getEnchantments()
         for (let index = 0; index < t.length; index++) {
-            if (t[index].level <= 5) return
+            if (t[index].level <= 5) continue
 
             log(`${player.nameTag} -> anti-illegal-enchant: ${t[index].type.id} ${t[index].level}`)
             let item = new ItemStack(held.type, held.amount)
@@ -111,11 +169,17 @@ system.runInterval(() => {
     }
 })
 
-
-function log(mess) {
+/**
+ * @param {string} mess 
+ */
+export function log(mess) {
     let d = new Date()
     let data2 = mcl.jsonWGet(`darkoak:log`) || { logs: [{ message: 'placeholder' }] }
     data2.logs.push({ message: `${mess}\n[${d.getTime()}]` })
+    const da = mcl.jsonWGet('darkoak:anticheat')
+    if (da.notify) {
+        system.runTimeout(() => mcl.adminMessage(`Anticheat: ${mess}`))
+    }
     mcl.wSet(`darkoak:log`, JSON.stringify(data2))
     logcheck()
 }

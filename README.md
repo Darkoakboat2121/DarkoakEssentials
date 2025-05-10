@@ -57,24 +57,56 @@ Plots are similar but build structures in a co-ord space. This will get a tutori
 landclaim add
 landclaim remove
 
-* means todo
-
+* means todo 
+*? means todo optional, probably planned
+?? means idk if working
+<b>f<b>
 changelog:
     added:
-        more replacer hashtags
-        giftcodes
-        item binds can now use replacer hashtags
-        darkoak:command scriptevent -> Example: tp @s 100 0 [id]
-        custom ui's can now use replacer hashtags (in every text field)
-        chat commands can now use replacer hashtags
-        chat ranks can now use replacer hashtags
-        the docs now show emojis
-        custom ui editor 
+         better shop system *?
+         modal ui creator *?
+         inventory saving / loading *?
+         darkoak:if scriptevent
 
     fixed:
-        sidebar is now slightly less laggy
-        better error handling
-        #location# is slightly more accurate
+        chest locking
+        minor UI performance issues
+        chat commands edit ui not showing command 2 and 3
 
     changes:
-        replacer hashtag for scores has been changed to use #[]# instead of []
+        player viewer now shows the players items
+
+
+hacks to detect:
+AirJump
+Anti-Void
+Auto-Sneak
+Auto-Sprint: 1
+Bhop
+Elytra fly: 1
+Fast Ladder: climbing and y velocity is too high
+Fast Stop
+Fly: 1, 2, 3
+Glide
+High Jump: y velocity is too high when jumping and not gliding and no height-effects
+Inventory Move
+Jesus: not falling and not in water and not on ground and block below is water
+Jetpack
+NoClip
+NoFall
+NoSlowDown
+Phase
+Speed: 1
+Spider
+Step
+Velocity
+Reach
+Spammer: 1
+NoPacket
+Block Reach
+Tower
+Entity Fly
+Entity Jesus
+Entity Speed
+HitBox
+Kill Aura: 1

@@ -6,9 +6,7 @@ export class mcl {
     /**Generates a unique number starting with a random number and ending with the current exact time, format: R[random]T[time]*/
     static timeUuid() {
         const t = new Date()
-        const r = Math.floor(Math.random() * 100)
-
-        return `R${r.toString()}T${t.getTime()}`
+        return `R${Math.floor(Math.random() * 100)}T${t.getTime()}`
     }
 
     /**Returns a random number between 0 and the inputted number
@@ -18,15 +16,22 @@ export class mcl {
         return Math.floor(Math.random() * high)
     }
 
+    /**Returns a random number between the low and high
+     * @param {number} low 
+     * @param {number} high 
+     * @returns {number}
+     */
+    static randomNumberInRange(low, high) {
+        return mcl.randomNumber(high) + low
+    }
+
     /**Returns a random string based on the inputted length and whether to include numbers
      * @param {boolean} num
      * @param {number} length 
     */
     static randomString(length, num) {
-        let characters = ''
-        if (num === false || num === undefined) {
-            characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-        } else {
+        let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+        if (num === true) {
             characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
         }
         let result = ''
@@ -35,6 +40,48 @@ export class mcl {
             result += characters.charAt(mcl.randomNumber(charactersLength))
         }
         return result
+    }
+
+    /**Scrambles a string
+     * @param {string} string 
+     * @returns {string}
+     */
+    static stringScrambler(string) {
+        let characters = string.split('')
+        let j = 0
+
+        for (let index = 0; index < characters.length; index++) {
+            j = mcl.randomNumber((index + 1))
+            const temp = characters[index]
+            characters[index] = characters[j]
+            characters[j] = temp
+        }
+
+        return characters.join('')
+    }
+
+    /**Deletes '§' from strings and the following letter, and converts common replacements
+     * @param {string} string 
+     */
+    static deleteFormatting(string) {
+        let newMessage = ''
+
+        for (let index = 0; index < string.length; index++) {
+            if (string.charAt(index - 1) == '§' && index > 0) {
+                continue
+            }
+            newMessage += message.charAt(index)
+        }
+
+        newMessage = newMessage
+        .replaceAll('0', 'o')
+        .replaceAll('1', 'i')
+        .replaceAll('4', 'a')
+        .replaceAll('6', 'k')
+        .replaceAll('8', 'b')
+        .replaceAll('9', 'q')
+        .replaceAll('§', '')
+        return newMessage
     }
 
     static numberProperties(num) {
@@ -159,7 +206,10 @@ export class mcl {
      * @param {string} name
      */
     static getPlayer(name) {
-        return world.getPlayers({ name: name })[0]
+        const player = world.getPlayers({ name: name })
+        if (player.length > 0) {
+            return player[0]
+        } else return undefined
     }
 
     /**
@@ -228,6 +278,28 @@ export class mcl {
             let ids = world.getDynamicPropertyIds().filter(e => e.startsWith(key))
             for (let index = 0; index < ids.length; index++) {
                 u.push({ id: ids[index], value: mcl.wGet(ids[index]) })
+            }
+            return u
+        }
+    }
+
+    /**Returns a list of key value pairs of dynamic propertys
+     * @param {Player} player 
+     * @param {string | undefined} key 
+     */
+    static pListGetBoth(player, key) {
+        if (key === undefined) {
+            let u = []
+            let ids = player.getDynamicPropertyIds()
+            for (let index = 0; index < ids.length; index++) {
+                u.push({ id: ids[index], value: mcl.pGet(player, ids[index]) })
+            }
+            return u
+        } else {
+            let u = []
+            let ids = player.getDynamicPropertyIds().filter(e => e.startsWith(key))
+            for (let index = 0; index < ids.length; index++) {
+                u.push({ id: ids[index], value: mcl.pGet(player, ids[index]) })
             }
             return u
         }
@@ -310,7 +382,7 @@ export class mcl {
         return player.isOp()
     }
 
-    /**
+    /**Returns true if the player 
      * @param {Player} player 
      */
     static isDOBAdmin(player) {
@@ -389,6 +461,56 @@ export class mcl {
         /**@type {Container} */
         const container = player.getComponent("minecraft:inventory").container
         return container.getSlot(location)
+    }
+
+    /**Converts an item to an object
+     * @param {ItemStack} item 
+     */
+    static itemToData(item) {
+        let propertys = []
+        let ids = item.getDynamicPropertyIds()
+        for (let index = 0; index < ids.length; index++) {
+            propertys.push(item.getDynamicProperty(ids[index]))
+        }
+        return {
+            amount: item.amount,
+            canDestroy: item.getCanDestroy(),
+            canPlaceOn: item.getCanPlaceOn(),
+            components: item.getComponents(),
+            dynamicPropertyIds: ids,
+            dynamicPropertyTotalByteCount: item.getDynamicPropertyTotalByteCount(),
+            dynamicPropertys: propertys,
+            lore: item.getLore(),
+            tags: item.getTags(),
+            isStackable: item.isStackable,
+            keepOnDeath: item.keepOnDeath,
+            localizationKey: item.localizationKey,
+            lockMode: item.lockMode,
+            maxAmount: item.maxAmount,
+            nameTag: item.nameTag,
+            type: item.type,
+            typeId: item.typeId,
+        }
+    }
+
+    /**Converts an object into an item
+     * @param {object} d
+     * @returns {ItemStack}
+     */
+    static dataToItem(d) {
+        let item = new ItemStack(d.type, d.amount)
+        item.setCanDestroy(d.canDestroy)
+        item.setCanPlaceOn(d.canPlaceOn)
+        let ids = d.dynamicPropertyIds
+        for (let index = 0; index < ids.length; index++) {
+            item.setDynamicProperty(ids[index], d.dynamicPropertys[index])
+        }
+        item.setLore(d.lore)
+        item.lockMode = d.lockMode
+        item.nameTag = d.nameTag
+        item.keepOnDeath = d.keepOnDeath
+
+        return item
     }
 
     /**Converts inputted seconds to tick value

@@ -6,15 +6,15 @@
     ]
   },
   "header": {
-    "name": "Darkoak Essentials V2.1.4",
-    "description": "Made by Darkoakboat2121",
+    "name": "§aDarkoak §9Essentials §aV2.1.9§r§f",
+    "description": "§uAn essentials addon made to be §asimple§u. Made by Darkoakboat2121§r§f",
     "min_engine_version": [
       1,
       21,
-      70
+      80
     ],
     "uuid": "9506c0be-216b-49fe-b0c7-f1c5536882f2",
-    "version": [2,1,4]
+    "version": [2,1,9]
   },
   "modules": [
     {

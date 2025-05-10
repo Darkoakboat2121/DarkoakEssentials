@@ -2,7 +2,7 @@
 // This file holds data
 
 import { mcl } from "../logic"
-import { Player, world } from "@minecraft/server"
+import { Player, system, world } from "@minecraft/server"
 
 /**List of usernames to ban automatically if prebans is set to true*/
 export const preBannedList = [
@@ -113,6 +113,9 @@ export const worldProtectionWater = [
  */
 export function replacer(player, string) {
     const health = mcl.healthValue(player)
+    const view = player.getViewDirection()
+    const loc = player.location
+    const velo = player.getVelocity()
     // let block = undefined
     // if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block) {
     //     block = player.getBlockFromViewDirection().block
@@ -122,10 +125,16 @@ export function replacer(player, string) {
     let formattedString = string
     .replaceAll('#name#', player.name)
     .replaceAll('#health#', health)
-    .replaceAll('#location#',  `${player.location.x.toFixed(0)} ${player.location.y.toFixed(0)} ${player.location.z.toFixed(0)}`)
+    .replaceAll('#location#', `${loc.x.toFixed(0)} ${loc.y.toFixed(0)} ${loc.z.toFixed(0)}`)
+    .replaceAll('#locationx#', `${loc.x.toFixed(0)}`)
+    .replaceAll('#locationy#', `${loc.y.toFixed(0)}`)
+    .replaceAll('#locationz#', `${loc.z.toFixed(0)}`)
     .replaceAll('#slot#', player.selectedSlotIndex.toString())
     // .replaceAll('#block.type#', block.typeId)
-    .replaceAll('#velocity#', `${(player.getVelocity().x).toFixed(1)}, ${(player.getVelocity().y).toFixed(1)}, ${(player.getVelocity().z).toFixed(1)}`)
+    .replaceAll('#velocity#', `${(velo.x).toFixed(1)} ${(velo.y).toFixed(1)} ${(velo.z).toFixed(1)}`)
+    .replaceAll('#velocityx#', `${(velo.x).toFixed(1)}`)
+    .replaceAll('#velocityy#', `${(velo.y).toFixed(1)}`)
+    .replaceAll('#velocityz#', `${(velo.z).toFixed(1)}`)
     .replaceAll('#cps#', `${player.getDynamicProperty('darkoak:ac:cps').toString()}`)
     .replaceAll('#effects#', mcl.playerEffectsArray(player))
     .replaceAll('#tags#', mcl.playerTagsArray(player))
@@ -133,7 +142,34 @@ export function replacer(player, string) {
     .replaceAll('#dimension#', player.dimension.id)
     .replaceAll('#random#', (mcl.randomNumber(9) + 1).toString())
     .replaceAll('#device#', player.clientSystemInfo.platformType.toString())
+    .replaceAll('#tps#', mcl.wGet('darkoak:tps').toString())
+    .replaceAll('#t-seconds#', (system.currentTick / 20).toFixed(0))
+    .replaceAll('#s-seconds#', mcl.wGet('darkoak:sseconds').toString())
+    .replaceAll('#s-minutes#', mcl.wGet('darkoak:sminutes').toString().split('.')[0])
+    .replaceAll('#viewx#', view.x.toFixed(0))
+    .replaceAll('#viewy#', view.y.toFixed(0))
+    .replaceAll('#viewz#', view.z.toFixed(0))
+    .replaceAll('#graphics#', player.graphicsMode.toString())
+    .replaceAll('#input#', player.inputInfo.lastInputModeUsed.toString())
 
+    
+    for (let index = 0; index < emojis.length; index++) {
+        const e = emojis[index]
+        formattedString = formattedString.replaceAll(e.m, e.e)
+    }
+
+    // held item
+    if (formattedString.includes('#hand#')) {
+        if (mcl.getHeldItem(player)) {
+            formattedString = formattedString
+            .replaceAll('#hand#', mcl.getHeldItem(player).typeId)
+        } else {
+            formattedString = formattedString
+            .replaceAll('#hand#', 'hand')
+        }
+    }
+
+    // scores
     if (formattedString.includes('#[') && formattedString.includes(']#')) {
         let score = mcl.getStringBetweenChars(formattedString, '#[', ']#')
         formattedString = formattedString
@@ -142,13 +178,17 @@ export function replacer(player, string) {
         .replaceAll(']#', '')
     }
 
-    if (formattedString.includes('#hand#')) {
-        if (mcl.getHeldItem(player)) {
+    // math
+    if (formattedString.includes('#(') && formattedString.includes(')#')) {
+        try {
+            let eq = mcl.getStringBetweenChars(formattedString, '#(', ')#')
+
             formattedString = formattedString
-            .replaceAll('#hand#', mcl.getHeldItem(player).typeId)
-        } else {
-            formattedString = formattedString
-            .replaceAll('#hand#', 'Hand')
+            .replaceAll(eq, Function(`return ${eq}`)())
+            .replaceAll('#(', '')
+            .replaceAll(')#', '')
+        } catch {
+            mcl.adminMessage(`Replacer Hashtag Error At Math Replacer: ${player.name} -> ${string}`)
         }
     }
 
@@ -157,16 +197,64 @@ export function replacer(player, string) {
 
 
 export const dummySize = 22
+export const version = '2.1.8'
 
-export const hashtags = '\nKeys:\n\\n - New Line\n#[scorename]# - Player Score (Replace scorename With An Actual Score Name)\n#name# - Player Name\n#health# - Player Health\n#location# - Player Co-ordinates\n#slot# - Slot Index\n#velocity# - Players Current Velocity\n#cps# - Players CPS\n#effects# - Players Effects\n#tags# - Players Tags\n#players# - Amount Of Online Players\n#dimension# - Dimension The Player Is In\n#random# - Random Number Between 1 And 10'
+export const hashtags =[
+    '\nKeys:',
+    '\\n -> New Line',
+    '#[scorename]# -> Player Score (Replace scorename With An Actual Score Name)',
+    '#(math)# -> Math Equation (Replace math With A Math Equation, Allowed Values: numbers, *(multiplication), +(addition), /(division), -(subtraction), replacer hashtags (This Does Not Support Math Nesting))',
+    '#name# -> Player Name',
+    '#health# -> Player Health',
+    '#location# -> Player Co-ordinates',
+    '#locationx# -> Player Co-ordinate X',
+    '#locationy# -> Player Co-ordinate Y',
+    '#locationz# -> Player Co-ordinate Z',
+    '#slot# -> Slot Index',
+    '#velocity# -> Players Current Velocity',
+    '#velocityx# -> Players Current X Velocity',
+    '#velocityy# -> Players Current Y Velocity',
+    '#velocityz# -> Players Current Z Velocity',
+    '#cps# -> Players CPS',
+    '#effects# -> Players Effects',
+    '#tags# -> Players Tags',
+    '#players# -> Amount Of Online Players',
+    '#dimension# -> Dimension The Player Is In',
+    '#random# -> Random Number Between 1 And 10',
+    '#tps# -> Ticks Per Second',
+    '#t-seconds# -> Total Seconds',
+    '#s-seconds# -> Session Seconds',
+    '#viewx# -> View Direction X',
+    '#viewy# -> View Direction Y',
+    '#viewz# -> View Direction Z',
+    '#s-minutes# -> Session Minutes',
+    '#graphics# -> The Players Graphics Mode',
+    '#input# -> The Players Input Mode',
+].join('\n')
 
-export const hashtagKeys = '#commands - Lists All Commands\n#noob - (Joke) Says Stuff in Chat\n#datadeleter - Opens UI For Deleting Data\n#cc - Clears Chat\n#random - Says A Random Number In Chat (1 To 100)\n#emojis - Lists All Emojis\n#cclocal - Clears The Senders Chat\n#landclaim add - Claims Four Chunks Near The Player\n#landclaim remove - Removes Current Land Claim\n#landclaim players - Opens UI For Adding Players To a Landclaim'
+export const hashtagKeys = [
+    '#commands -> Lists All Commands',
+    '#noob -> (Joke) Says Stuff in Chat',
+    '#datadeleter -> Opens UI For Deleting Data',
+    '#cc -> Clears Chat\n#random -> Says A Random Number In Chat (1 To 100)',
+    '#emojis -> Lists All Emojis',
+    '#cclocal -> Clears The Senders Chat',
+    '#landclaim add -> Claims Four Chunks Near The Player',
+    '#landclaim remove -> Removes Current Land Claim',
+    '#landclaim players -> Opens UI For Adding Players To a Landclaim',
+    '#version -> Says The Version Number In Chat'
+].join('\n')
 
 /**Array of strings for textures*/
 export class icons {
     static thinPlus = 'textures/ui/ThinPlus'
     static trash = 'textures/ui/icon_trash'
     static minecoin = 'textures/ui/icon_minecoin_9x9'
+    static dialogBackground = 'textures/ui/dialog_background_opaque'
+
+    static item(type) {
+        return `textures/items/${type}`
+    }
 }
 
 export const emojis = [
