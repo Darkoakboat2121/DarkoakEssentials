@@ -1,5 +1,5 @@
 // first is minecraft resources
-import { world, system, Player, GameMode, ItemStack } from "@minecraft/server"
+import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 
 // second is setting defaults
@@ -20,15 +20,109 @@ import * as chat from "./chat"
 import * as anticheat from "./world/anticheat"
 import * as worldSettings from "./world/worldSettings"
 import * as worldProtection from "./world/worldProtection"
-import * as landclaims from "./world/landclaims"
 
 // seventh set up external uis / commands
 import * as external from "./external/external"
+import { enchantOnDamaged, enchantOnDeathKill, enchantOnHit, enchantOnJump, enchantOnUse } from "./enchanting"
 
 const cooldown = new Map()
 
 // main ui opener, see interfaces, also manages bindable/dummy items
 world.afterEvents.itemUse.subscribe((evd) => {
+    itemOpeners(evd)
+    enchantOnUse(evd)
+})
+
+// anticps and onhitenchants
+world.afterEvents.entityHitEntity.subscribe((evd) => {
+    anticheat.antiCps(evd)
+    enchantOnHit(evd)
+})
+
+// on spawn community giver and welcome message
+world.afterEvents.playerSpawn.subscribe((evd) => {
+    communityGiver(evd)
+    worldSettings.welcomeMessage(evd)
+})
+
+// chest lock and world interact settings
+world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
+    chestLock(evd)
+    worldSettings.worldSettingsInteract(evd)
+    worldProtection.placeBreakLandclaim(evd)
+})
+
+// antinpc, dataeditorentity, and on interact commands
+world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
+    anticheat.antiNpc(evd)
+    dataEditor(evd)
+    worldSettings.interactCommand(evd)
+})
+
+world.afterEvents.entityHurt.subscribe((evd) => {
+    enchantOnDamaged(evd)
+})
+
+world.afterEvents.entityDie.subscribe((evd) => {
+    enchantOnDeathKill(evd)
+})
+
+world.beforeEvents.chatSend.subscribe((evd) => {
+    chat.chatSystem(evd)
+})
+
+world.afterEvents.playerBreakBlock.subscribe((evd) => {
+    worldSettings.signFixer(evd)
+})
+
+world.beforeEvents.playerBreakBlock.subscribe((evd) => {
+    worldSettings.worldSettingsBreak(evd)
+    worldProtection.placeBreakProtection(evd)
+    worldProtection.placeBreakLandclaim(evd)
+    anticheat.antiNuker(evd)
+    worldProtection.lockedChestProtection(evd)
+})
+
+world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
+    worldProtection.placeBreakProtection(evd)
+    worldProtection.placeBreakLandclaim(evd)
+    anticheat.antiFastPlace(evd)
+})
+
+world.beforeEvents.explosion.subscribe((evd) => {
+    worldProtection.explosionProtectionLandclaim(evd)
+})
+
+world.beforeEvents.playerGameModeChange.subscribe((evd) => {
+    anticheat.antiGameMode(evd)
+})
+
+
+// system for handling most system intervals
+system.runInterval(() => {
+    defaults.defaultData()
+
+    uis()
+    gens()
+    bans()
+    chat.chatGames()
+
+    const players = world.getAllPlayers()
+    for (let index = 0; index < players.length; index++) {
+        const player = players[index]
+        worldProtection.worldProtectionOther(player)
+        worldSettings.borderAndTracking(player)
+        enchantOnJump(player)
+        actionBar(player)
+        anticheat.anticheatMain(player)
+        anticheat.cpsTester(player)
+    }
+})
+
+/**
+ * @param {ItemUseAfterEvent} evd 
+ */
+function itemOpeners(evd) {
     const player = evd.source
     const item = evd.itemStack
     const direction = player.getViewDirection()
@@ -78,7 +172,7 @@ world.afterEvents.itemUse.subscribe((evd) => {
     }
 
 
-    if (item.typeId === 'darkoak:hop_feather' && (player.isOnGround || player.isClimbing)) {
+    if (item.typeId === 'darkoak:hop_feather' && (player.isOnGround || player.isClimbing || player.isInWater)) {
         const now = Date.now()
         const lastUsed = cooldown.get(player.name) || 0
         const time = mcl.jsonWGet('darkoak:itemsettings')
@@ -90,16 +184,17 @@ world.afterEvents.itemUse.subscribe((evd) => {
             return
         }
 
+        // applies knockback to the player in the direction they are looking
         player.applyKnockback({ x: direction.x * 2, z: direction.z * 2 }, 1)
         cooldown.set(player.name, now)
         return
     }
 
+    // checks if the player is using the dash feather item
     if (item.typeId === 'darkoak:dash_feather' && (player.isOnGround || player.isClimbing)) {
         player.applyKnockback({ x: direction.x * 2, z: direction.z * 2 }, direction.y * 1.5)
         return
     }
-
 
     if (item.typeId.startsWith('darkoak:dummy')) {
         for (let index = 0; index <= arrays.dummySize; index++) {
@@ -113,69 +208,55 @@ world.afterEvents.itemUse.subscribe((evd) => {
             }
         }
     }
-})
+}
 
+function communityGiver(evd) {
+    const s = mcl.jsonWGet('darkoak:community:general').giveOnJoin
 
-// preban, ban system, on spawn community giver
-world.afterEvents.playerSpawn.subscribe((evd) => {
-    const s = mcl.jsonWGet('darkoak:community:general')
-
-    if (evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0 && s.giveOnJoin) {
+    if (s && evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0) {
         evd.player.runCommand('give @s darkoak:community')
     }
-})
+}
 
-// chest lock system, wip
-world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
+/**
+ * @param {PlayerInteractWithBlockBeforeEvent} evd 
+ */
+function chestLock(evd) {
     if (evd.player.hasTag('darkoak:admin') && evd.itemStack && evd.itemStack.typeId == 'darkoak:chest_lock' && evd.block.matches('minecraft:chest')) {
         system.runTimeout(() => {
             interfaces.chestLockUI(evd.player, evd.block.location)
         })
         evd.cancel = true
     } else if (evd.block.matches('minecraft:chest')) {
-        let locks = mcl.listGetValues('darkoak:chestlock:')
+        const locks = mcl.listGetValues('darkoak:chestlock:')
         for (let index = 0; index < locks.length; index++) {
-            const parts = JSON.parse(locks)
+            const parts = JSON.parse(locks[index])
             const loc = evd.block.location
             if (loc.x.toString() === parts.x && loc.y.toString() === parts.y && loc.z.toString() === parts.z && evd.player.name != parts.player) {
                 evd.cancel = true
-                continue
+                return
             }
         }
     }
-    //else if (evd.itemStack != undefined && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin')) {
-    //     let ticker = false
-    //     system.runTimeout(() => {
-    //         if (!ticker) {
-    //             interfacesTwo.dataEditorBlockUI(evd.player, evd.block)
-    //         }
-    //         ticker = true
-    //         system.runTimeout(() => {
-    //             ticker = false
-    //         }, 20)
-    //     }, 1)
-    //     evd.cancel = true
-    // }
+}
 
-})
-
-
-world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
+function dataEditor(evd) {
     if (evd.itemStack && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin')) {
         evd.cancel = true
         system.runTimeout(() => {
             interfacesTwo.dataEditorEntityUI(evd.player, evd.target)
-        }, 0)
+        })
     }
-})
+}
 
-// system for handling message cui (custom ui) based on the tag
-system.runInterval(() => {
+function uis() {
     let uis = mcl.listGetValues('darkoak:ui:message:')
     for (let index = 0; index < uis.length; index++) {
         /** @type {{ title: string, body: string, button1: string, button2: string, tag: string, command1: string, command2: string }} */
         const parts = JSON.parse(uis[index])
-        for (const player of world.getPlayers({ tags: [parts.tag] })) {
+        const players = world.getPlayers({ tags: [parts.tag] })
+        for (let index = 0; index < players.length; index++) {
+            const player = players[index]
             // index: 0 = title, 1 = body, 2 = button1, 3 = button2, 4 = tag, 5 = button1 command, 6 = button2 command
             messageUIBuilder(player, parts.title, parts.body, parts.button1, parts.button2, parts.command1, parts.command2)
             player.removeTag(parts.tag)
@@ -185,48 +266,78 @@ system.runInterval(() => {
     let uis2 = mcl.listGetValues('darkoak:ui:action:')
     for (let index = 0; index < uis2.length; index++) {
         const parts = JSON.parse(uis2[index])
-        for (const player of world.getPlayers({ tags: [parts.tag] })) {
+        const players = world.getPlayers({ tags: [parts.tag] })
+        for (let index = 0; index < players.length; index++) {
+            const player = players[index]
             actionUIBuilder(player, parts.title, parts.body, parts.buttons)
             player.removeTag(parts.tag)
         }
     }
-}, 20)
 
-system.runInterval(() => {
-    let blocks = mcl.listGetValues('darkoak:gen:')
+    let uis3 = mcl.listGetValues('darkoak:ui:modal:')
+    for (let index = 0; index < uis3.length; index++) {
+        const parts = JSON.parse(uis3[index])
+        const players = world.getPlayers({ tags: [parts.tag] })
+        for (let index = 0; index < players.length; index++) {
+            const player = players[index]
+            modalUIBuilder(player, parts)
+            player.removeTag(parts.tag)
+        }
+    }
+}
+
+// gen system
+function gens() {
+    const blocks = mcl.listGetValues('darkoak:gen:')
     for (let index = 0; index < blocks.length; index++) {
         const b = JSON.parse(blocks[index])
         const parts = b.coords.split(' ')
-        world.getDimension('overworld').runCommand(`setblock ${parts[0]} ${parts[1]} ${parts[2]} ${b.block}`)
+        try {
+            const block = world.getDimension(b.dimension || 'overworld')
+            if (!block.getBlock({
+                x: parseInt(parts[0]),
+                y: parseInt(parts[1]),
+                z: parseInt(parts[2])
+            })) return
+            block.setBlockType({
+                x: parseInt(parts[0]),
+                y: parseInt(parts[1]),
+                z: parseInt(parts[2])
+            }, b.block)
+        } catch {
+            mcl.adminMessage(`Failed To Set Block ${b.block} At ${parts[0]} ${parts[1]} ${parts[2]}`)
+        }
     }
-})
+}
 
 let ticker = 0
-system.runInterval(() => {
+function bans() {
     ticker++
-    if (ticker < 10) return
+    if (ticker < 200) return
 
     const p = world.getAllPlayers()[0]
     const d = mcl.jsonWGet('darkoak:anticheat')
 
     if (d.prebans) {
-        let prebans = arrays.preBannedList
+        const prebans = arrays.preBannedList
         for (let index = 0; index < prebans.length; index++) {
-            if (!mcl.getPlayer(prebans[index])) continue
-            p.runCommand(`kick "${prebans[index]}"`)
+            const preban = prebans[index]
+            if (!mcl.getPlayer(preban)) continue
+            p.runCommand(`kick "${preban}"`)
         }
     }
 
-    let bans = mcl.listGetBoth('darkoak:bans:')
+    const bans = mcl.listGetBoth('darkoak:bans:')
     if (!bans) return
     for (let index = 0; index < bans.length; index++) {
-        const data = JSON.parse(bans[index].value)
+        const ban = bans[index]
+        const data = JSON.parse(ban.value)
         if (data.time == 0) {
             mcl.adminMessage(`${data.player} Has Been Unbanned`)
-            mcl.wRemove(bans[index].id)
+            mcl.wRemove(ban.id)
             continue
         }
-        mcl.jsonWSet(bans[index].id, {
+        mcl.jsonWSet(ban.id, {
             player: data.player,
             message: data.message,
             time: data.time - 1
@@ -234,7 +345,7 @@ system.runInterval(() => {
         if (!mcl.getPlayer(data.player)) continue
         p.runCommand(`kick "${data.player}" ${data.message || ''}`)
     }
-}, 20)
+}
 
 
 system.afterEvents.scriptEventReceive.subscribe((evd) => {
@@ -250,9 +361,9 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
     //     return
     // }
     if (evd.id === 'darkoak:spawn') {
-        const b = evd.sourceBlock
+        const b = evd.sourceBlock || player
         if (!b) {
-            mcl.adminMessage(`The darkoak:spawn Scriptevent Needs To Execute From A Block`)
+            mcl.adminMessage(`The darkoak:spawn Scriptevent Needs To Execute From A Block Or Entity`)
             return
         }
         try {
@@ -265,12 +376,12 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
             })
             return
         } catch {
-            mcl.adminMessage(`Scriptevent darkoak:spawn From Block ${b.location.x} ${b.location.y} ${b.location.z} Has An Error`)
+            mcl.adminMessage(`Scriptevent darkoak:spawn From Block / Entity ${b.location.x} ${b.location.y} ${b.location.z} Has An Error`)
             return
         }
     }
     if (evd.id == 'darkoak:command') {
-        if (!evd.sourceEntity) {
+        if (!player) {
             mcl.adminMessage(`The darkoak:command Scriptevent Needs To Execute From An Entity`)
             return
         }
@@ -289,7 +400,7 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
         }
         try {
             const p = arrays.replacer(player, evd.message).split(' ')
-            player.applyKnockback({x: parseFloat(p[0]), z: parseFloat(p[1]), }, parseFloat(p[2]))
+            player.applyKnockback({ x: parseFloat(p[0]), z: parseFloat(p[1]), }, parseFloat(p[2]))
             return
         } catch {
             mcl.adminMessage(`Scriptevent darkoak:knockback From Entity ${player.nameTag} Has An Error`)
@@ -306,9 +417,22 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
             if (p[0] == p[1]) {
                 p.splice(0, 2)
                 player.runCommand(p.join(' '))
-            } 
+            }
         } catch {
             mcl.adminMessage(`Scriptevent darkoak:if From Entity ${player.nameTag} Has An Error`)
+            return
+        }
+    }
+    if (evd.id == 'darkoak:variable') {
+        if (!player) {
+            mcl.adminMessage(`The darkoak:variable Scriptevent Needs To Execute From An Entity`)
+            return
+        }
+        try {
+            const p = arrays.replacer(player, evd.message).split(' ')
+            mcl.wSet(`darkoak:vars:${p[0]}`, p[1])
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:variable From ${player.nameTag} Has An Error`)
             return
         }
     }
@@ -318,11 +442,10 @@ system.beforeEvents.watchdogTerminate.subscribe((evd) => {
     const d = mcl.jsonWGet('darkoak:scriptsettings')
     if (!d) return
     if (d.cancelWatchdog) {
-        mcl.adminMessage(`Script Shutdown, Reason: ${evd.terminateReason}`)
+        mcl.adminMessage(`Script Shutdown, Reason: ${evd.terminateReason.toString()}`)
         evd.cancel = true
     }
 })
-
 
 function actionUIBuilder(playerToShow, title, body, buttons) {
     let f = new ActionFormData()
@@ -347,7 +470,15 @@ function actionUIBuilder(playerToShow, title, body, buttons) {
     })
 }
 
-// system for displaying message cui
+/**system for displaying message cui
+ * @param {Player} playerToShow 
+ * @param {string} title 
+ * @param {string} body 
+ * @param {string} button1 
+ * @param {string} button2 
+ * @param {string} command1 
+ * @param {string} command2 
+ */
 function messageUIBuilder(playerToShow, title, body, button1, button2, command1, command2) {
     let f = new MessageFormData()
     f.title(arrays.replacer(playerToShow, title))
@@ -367,11 +498,16 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
 
 function modalUIBuilder(playerToShow, ui) {
     let f = new ModalFormData()
-    const data = JSON.parse(ui)
+    f.title(ui.title)
 
-    for (let index = 0; index < data.elements.length; index++) {
-        const el = data.elements[index]
-        el()
+    for (const el of uiData.elements) {
+        if (el.type === 'textField') {
+            f.textField(el.label, el.placeholder, { defaultValue: el.defaultValue })
+        } else if (el.type === 'toggle') {
+            f.toggle(el.label, { defaultValue: el.defaultValue })
+        } else if (el.type === 'dropdown') {
+            f.dropdown(el.label, el.options, { defaultValue: el.defaultValue })
+        }
     }
 
     f.show(playerToShow).then((evd) => {
@@ -380,29 +516,11 @@ function modalUIBuilder(playerToShow, ui) {
 }
 
 // System for displaying the actionbar
-system.runInterval(() => {
-    for (const player of world.getAllPlayers()) {
-        if (mcl.wGet('darkoak:actionbar')) {
-            /**@type {string} */
-            let text = mcl.wGet('darkoak:actionbar')
-            player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, text)}"}]}`)
-        }
-        if (mcl.wGet('darkoak:sidebar')) {
-            /**@type {{lines: ["a", "b", "c"]}} */
-            let text = mcl.jsonWGet('darkoak:sidebar')
+function actionBar(player) {
+    const text = mcl.wGet('darkoak:actionbar')
+    if (text) player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, text)}"}]}`)
 
-            player.runCommand(`titleraw @s title {"rawtext":[{"text":"${arrays.replacer(player, text.lines.join('\n'))}"}]}`)
-        }
-    }
-}, 5)
-
-
-// actually works, modal editor time!
-// function hi() {
-//     // code here
-// }
-
-// function run(ggg) {
-//     ggg()
-// }
-// run(hi)
+    /**@type {{lines: ["a", "b", "c"]}} */
+    const text2 = mcl.jsonWGet('darkoak:sidebar')
+    if (text2) player.runCommand(`titleraw @s title {"rawtext":[{"text":"${arrays.replacer(player, text2.lines.join('\n'))}"}]}`)
+}

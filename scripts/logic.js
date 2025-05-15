@@ -1,6 +1,6 @@
 import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity } from "@minecraft/server";
 
-/**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting api*/
+/**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting API*/
 export class mcl {
 
     /**Generates a unique number starting with a random number and ending with the current exact time, format: R[random]T[time]*/
@@ -74,13 +74,13 @@ export class mcl {
         }
 
         newMessage = newMessage
-        .replaceAll('0', 'o')
-        .replaceAll('1', 'i')
-        .replaceAll('4', 'a')
-        .replaceAll('6', 'k')
-        .replaceAll('8', 'b')
-        .replaceAll('9', 'q')
-        .replaceAll('§', '')
+            .replaceAll('0', 'o')
+            .replaceAll('1', 'i')
+            .replaceAll('4', 'a')
+            .replaceAll('6', 'k')
+            .replaceAll('8', 'b')
+            .replaceAll('9', 'q')
+            .replaceAll('§', '')
         return newMessage
     }
 
@@ -129,7 +129,12 @@ export class mcl {
      * @param {string} id 
      */
     static wRemove(id) {
-        world.setDynamicProperty(id)
+        try {
+            world.setDynamicProperty(id)
+            return true
+        } catch {
+            return false
+        }
     }
 
     /**Gets a global data object
@@ -281,6 +286,21 @@ export class mcl {
             }
             return u
         }
+    }
+
+    /**Returns a list of key value pairs of dynamic propertys in json format
+     * @param {string} key 
+     */
+    static jsonListGetBoth(key) {
+        let u = []
+        let ids = world.getDynamicPropertyIds().filter(e => e.startsWith(key))
+        for (let index = 0; index < ids.length; index++) {
+            u.push({
+                id: ids[index],
+                value: mcl.jsonWGet(ids[index])
+            })
+        }
+        return u
     }
 
     /**Returns a list of key value pairs of dynamic propertys
@@ -513,6 +533,13 @@ export class mcl {
         return item
     }
 
+    /**Gets the items enchantments
+     * @param {ItemStack} item 
+     */
+    static getItemEnchants(item) {
+        return item.getComponent(ItemComponentTypes.Enchantable)
+    }
+
     /**Converts inputted seconds to tick value
      * @param {number} seconds 
      * @returns {number}
@@ -563,5 +590,34 @@ export class mcl {
      */
     static getEntityByTypeId(typeId, dimension) {
         return world.getDimension(dimension.id).getEntities({ type: typeId })
+    }
+
+    /**Returns the host of the world
+     * @returns {Player | undefined}
+     */
+    static getHost() {
+        const players = world.getAllPlayers()
+        for (let index = 0; index < players.length; index++) {
+            const p = players[index]
+            if (mcl.isHost(p)) {
+                return p
+            }
+        }
+        return undefined
+    }
+
+    /**
+     * @param {{name: string, tag: string, dimension: string}} param0 
+     * @returns {Player | undefined}
+     */
+    static getPlayerFiltered({ name, tag, dimension }) {
+        const players = world.getAllPlayers()
+        for (let index = 0; index < players.length; index++) {
+            const p = players[index]
+            if ((name === undefined || p.name === name) && (tag === undefined || p.hasTag(tag)) && (dimension === undefined || p.dimension.id === dimension)) {
+                return p
+            }
+        }
+        return undefined
     }
 }

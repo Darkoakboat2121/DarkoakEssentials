@@ -1,4 +1,4 @@
-import { world, system, Player } from "@minecraft/server"
+import { world, system, Player, ChatSendBeforeEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
@@ -10,8 +10,10 @@ import { log } from "./world/anticheat"
 // This file handles all chat interactions such as:
 // Custom commands, ranks, censoring, antispam
 
-world.beforeEvents.chatSend.subscribe((evd) => {
-
+/**
+ * @param {ChatSendBeforeEvent} evd
+ */
+export function chatSystem(evd) {
     const chat = mcl.jsonWGet('darkoak:scriptsettings')
     if (chat.chatmaster === true) return
 
@@ -22,7 +24,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     let commands = mcl.listGetValues('darkoak:command:')
     for (let index = 0; index < commands.length; index++) {
         const p = JSON.parse(commands[index])
-        if (message.trimEnd() != p.message.trimEnd()) continue
+        if (message.trimEnd() != p.message.trim()) continue
         if (!p.tag || player.hasTag(p.tag)) {
             if (p.command.startsWith('#')) {
                 hashtag(p.command, player)
@@ -152,8 +154,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
     } else {
         world.sendMessage({ rawtext: [{ text: text }] })
     }
-
-})
+}
 
 /**
  * @param {string} hashtagKey 
@@ -202,23 +203,31 @@ function hashtag(hashtagKey, sender) {
             case 'landclaim add':
                 const loc = sender.location
                 let places = mcl.listGetValues('darkoak:landclaim:')
+
+                const newClaim = {
+                    p1: { x: loc.x + 16, z: loc.z + 16 },
+                    p2: { x: loc.x - 16, z: loc.z - 16 }
+                }
+
                 for (let index = 0; index < places.length; index++) {
-                    // WORK ON THIS PLEASE------------------------------------------------
-                    let place = places[index]
-                    if (place.p1.x === loc.x) {
+                    const place = JSON.parse(places[index])
+
+                    if (place.p1 && place.p2 && landclaimCheck(newClaim, place)) {
                         sender.sendMessage('§cLand Has Already Been Claimed!§r')
                         return
                     }
                 }
                 mcl.jsonWSet(`darkoak:landclaim:${sender.name}`, {
-                    p1: { x: sender.location.x + 16, z: sender.location.z + 16 },
-                    p2: { x: sender.location.x - 16, z: sender.location.z - 16 },
+                    ...newClaim,
                     owner: sender.name,
                     players: [""]
                 })
+                sender.sendMessage('§aLand Claimed!§r')
                 break
             case 'landclaim remove':
-                mcl.wRemove(`darkoak:landclaim:${sender.name}`)
+                if (!mcl.wRemove(`darkoak:landclaim:${sender.name}`)) {
+                    sender.sendMessage('§cYou Don\'t Own A Landclaim!§r')
+                }
                 break
             case 'landclaim players':
                 sender.sendMessage('Close Chat!')
@@ -243,9 +252,7 @@ function hashtag(hashtagKey, sender) {
 
 let loops = 0
 let time1 = 0
-
-system.runInterval(() => {
-
+export function chatGames() {
     const chat = mcl.jsonWGet('darkoak:scriptsettings')
     if (chat.chatmaster === true) return
 
@@ -255,7 +262,7 @@ system.runInterval(() => {
     if (d.unscrambleEnabled) {
         time1++
 
-        if (time1 >= d.unscrambleInterval * 60) {
+        if (time1 >= (d.unscrambleInterval * 60) * 20) {
             time1 = 0
             loops++
 
@@ -267,7 +274,7 @@ system.runInterval(() => {
             mcl.wSet('darkoak:chatgame1:word', word)
         }
     }
-}, 20)
+}
 
 function nametag(p, ocs) {
     if (ocs.nametag && !ocs.healthDisplay) {
@@ -294,4 +301,20 @@ function nametag(p, ocs) {
             p.nameTag = p.name
         })
     }
+}
+
+function landclaimCheck(a, b) {
+    // a and b are objects with p1 and p2, each having x and z
+    const aMinX = Math.min(a.p1.x, a.p2.x)
+    const aMaxX = Math.max(a.p1.x, a.p2.x)
+    const aMinZ = Math.min(a.p1.z, a.p2.z)
+    const aMaxZ = Math.max(a.p1.z, a.p2.z)
+
+    const bMinX = Math.min(b.p1.x, b.p2.x)
+    const bMaxX = Math.max(b.p1.x, b.p2.x)
+    const bMinZ = Math.min(b.p1.z, b.p2.z)
+    const bMaxZ = Math.max(b.p1.z, b.p2.z)
+
+    // check for overlap
+    return !(aMaxX < bMinX || aMinX > bMaxX || aMaxZ < bMinZ || aMinZ > bMaxZ)
 }

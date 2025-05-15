@@ -28,7 +28,7 @@ system.runInterval(() => {
 let lastTime = Date.now()
 let sessionSeconds = 0
 system.runInterval(() => {
-    sessionSeconds++ 
+    sessionSeconds++
     mcl.wSet('darkoak:sseconds', sessionSeconds)
     mcl.wSet('darkoak:sminutes', (sessionSeconds / 60))
 
@@ -44,8 +44,10 @@ system.runInterval(() => {
     lastTime = currentTime
 }, 20)
 
-system.runInterval(() => {
-    for (const player of world.getAllPlayers()) {
+export function defaultData() {
+    const players = world.getAllPlayers()
+    for (let index = 0; index < players.length; index++) {
+        const player = players[index]
         if (mcl.pGet(player, 'darkoak:ac:blocksbroken') == undefined) {
             mcl.pSet(player, 'darkoak:ac:blocksbroken', 0)
         }
@@ -55,9 +57,9 @@ system.runInterval(() => {
         }
 
         if (mcl.pGet(player, 'darkoak:antispam') == undefined) {
-            mcl.pSet(player, 'darkoak:antispam', JSON.stringify({
+            mcl.jsonPSet(player, 'darkoak:antispam', {
                 message: 'placeholder'
-            }))
+            })
         }
     }
 
@@ -215,8 +217,8 @@ system.runInterval(() => {
             command: '#version',
             tag: ''
         })
-        
+
 
         mcl.wSet('darkoak:setup', true)
     }
-})
+}

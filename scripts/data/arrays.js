@@ -2,7 +2,7 @@
 // This file holds data
 
 import { mcl } from "../logic"
-import { Player, system, world } from "@minecraft/server"
+import { EntityComponentTypes, Player, system, world } from "@minecraft/server"
 
 /**List of usernames to ban automatically if prebans is set to true*/
 export const preBannedList = [
@@ -112,7 +112,6 @@ export const worldProtectionWater = [
  * @returns 
  */
 export function replacer(player, string) {
-    const health = mcl.healthValue(player)
     const view = player.getViewDirection()
     const loc = player.location
     const velo = player.getVelocity()
@@ -123,49 +122,51 @@ export function replacer(player, string) {
     //     block = 'Undefined'
     // }
     let formattedString = string
-    .replaceAll('#name#', player.name)
-    .replaceAll('#health#', health)
-    .replaceAll('#location#', `${loc.x.toFixed(0)} ${loc.y.toFixed(0)} ${loc.z.toFixed(0)}`)
-    .replaceAll('#locationx#', `${loc.x.toFixed(0)}`)
-    .replaceAll('#locationy#', `${loc.y.toFixed(0)}`)
-    .replaceAll('#locationz#', `${loc.z.toFixed(0)}`)
-    .replaceAll('#slot#', player.selectedSlotIndex.toString())
-    // .replaceAll('#block.type#', block.typeId)
-    .replaceAll('#velocity#', `${(velo.x).toFixed(1)} ${(velo.y).toFixed(1)} ${(velo.z).toFixed(1)}`)
-    .replaceAll('#velocityx#', `${(velo.x).toFixed(1)}`)
-    .replaceAll('#velocityy#', `${(velo.y).toFixed(1)}`)
-    .replaceAll('#velocityz#', `${(velo.z).toFixed(1)}`)
-    .replaceAll('#cps#', `${player.getDynamicProperty('darkoak:ac:cps').toString()}`)
-    .replaceAll('#effects#', mcl.playerEffectsArray(player))
-    .replaceAll('#tags#', mcl.playerTagsArray(player))
-    .replaceAll('#players#', world.getAllPlayers().length.toString())
-    .replaceAll('#dimension#', player.dimension.id)
-    .replaceAll('#random#', (mcl.randomNumber(9) + 1).toString())
-    .replaceAll('#device#', player.clientSystemInfo.platformType.toString())
-    .replaceAll('#tps#', mcl.wGet('darkoak:tps').toString())
-    .replaceAll('#t-seconds#', (system.currentTick / 20).toFixed(0))
-    .replaceAll('#s-seconds#', mcl.wGet('darkoak:sseconds').toString())
-    .replaceAll('#s-minutes#', mcl.wGet('darkoak:sminutes').toString().split('.')[0])
-    .replaceAll('#viewx#', view.x.toFixed(0))
-    .replaceAll('#viewy#', view.y.toFixed(0))
-    .replaceAll('#viewz#', view.z.toFixed(0))
-    .replaceAll('#graphics#', player.graphicsMode.toString())
-    .replaceAll('#input#', player.inputInfo.lastInputModeUsed.toString())
+        .replaceAll('#name#', player.name)
+        .replaceAll('#health#', mcl.healthValue(player).toString())
+        .replaceAll('#location#', `${loc.x.toFixed(0)} ${loc.y.toFixed(0)} ${loc.z.toFixed(0)}`)
+        .replaceAll('#locationx#', `${loc.x.toFixed(0)}`)
+        .replaceAll('#locationy#', `${loc.y.toFixed(0)}`)
+        .replaceAll('#locationz#', `${loc.z.toFixed(0)}`)
+        .replaceAll('#slot#', player.selectedSlotIndex.toString())
+        .replaceAll('#velocity#', `${(velo.x).toFixed(1)} ${(velo.y).toFixed(1)} ${(velo.z).toFixed(1)}`)
+        .replaceAll('#velocityx#', `${(velo.x).toFixed(1)}`)
+        .replaceAll('#velocityy#', `${(velo.y).toFixed(1)}`)
+        .replaceAll('#velocityz#', `${(velo.z).toFixed(1)}`)
+        .replaceAll('#cps#', `${player.getDynamicProperty('darkoak:ac:cps').toString()}`)
+        .replaceAll('#effects#', mcl.playerEffectsArray(player))
+        .replaceAll('#tags#', mcl.playerTagsArray(player))
+        .replaceAll('#players#', world.getAllPlayers().length.toString())
+        .replaceAll('#dimension#', player.dimension.id)
+        .replaceAll('#device#', player.clientSystemInfo.platformType.toString())
+        .replaceAll('#tps#', mcl.wGet('darkoak:tps').toString())
+        .replaceAll('#t-seconds#', (system.currentTick / 20).toFixed(0))
+        .replaceAll('#s-seconds#', mcl.wGet('darkoak:sseconds').toString())
+        .replaceAll('#s-minutes#', mcl.wGet('darkoak:sminutes').toString().split('.')[0])
+        .replaceAll('#viewx#', view.x.toFixed(0))
+        .replaceAll('#viewy#', view.y.toFixed(0))
+        .replaceAll('#viewz#', view.z.toFixed(0))
+        .replaceAll('#graphics#', player.graphicsMode.toString())
+        .replaceAll('#input#', player.inputInfo.lastInputModeUsed.toString())
 
-    
-    for (let index = 0; index < emojis.length; index++) {
-        const e = emojis[index]
-        formattedString = formattedString.replaceAll(e.m, e.e)
+
+    // emojis
+    if (formattedString.includes(':')) {
+        for (let index = 0; index < emojis.length; index++) {
+            const e = emojis[index]
+            formattedString = formattedString.replaceAll(e.m, e.e)
+        }
     }
 
     // held item
     if (formattedString.includes('#hand#')) {
-        if (mcl.getHeldItem(player)) {
+        const item = mcl.getHeldItem(player)
+        if (item) {
             formattedString = formattedString
-            .replaceAll('#hand#', mcl.getHeldItem(player).typeId)
+                .replaceAll('#hand#', item.typeId)
         } else {
             formattedString = formattedString
-            .replaceAll('#hand#', 'hand')
+                .replaceAll('#hand#', 'hand')
         }
     }
 
@@ -173,9 +174,39 @@ export function replacer(player, string) {
     if (formattedString.includes('#[') && formattedString.includes(']#')) {
         let score = mcl.getStringBetweenChars(formattedString, '#[', ']#')
         formattedString = formattedString
-        .replaceAll(score, mcl.getScore(player, score).toString())
-        .replaceAll('#[', '')
-        .replaceAll(']#', '')
+            .replaceAll(score, mcl.getScore(player, score).toString())
+            .replaceAll('#[', '')
+            .replaceAll(']#', '')
+    }
+
+    // random number
+    if (formattedString.includes('#=') && formattedString.includes('=#')) {
+        let random = mcl.getStringBetweenChars(formattedString, '#=', '=#')
+        const split = random.split('-')
+        const min = parseInt(split[0])
+        const max = parseInt(split[1])
+        if (min != undefined && max != undefined) {
+            if (min > max) {
+                formattedString = formattedString
+                    .replaceAll(random, 'Error: Min Is Greater Than Max')
+                    .replaceAll('#=', '')
+                    .replaceAll('=#', '')
+            } else {
+                formattedString = formattedString
+                    .replaceAll(random, mcl.randomNumberInRange(min, max).toString())
+                    .replaceAll('#=', '')
+                    .replaceAll('=#', '')
+            }
+        }
+    }
+
+    if (formattedString.includes('#{') && formattedString.includes('}#')) {
+        const variable = mcl.getStringBetweenChars(formattedString, '#{', '}#')
+        formattedString = formattedString
+            .replaceAll(variable, mcl.wGet(`darkoak:vars:${variable}`) || '')
+            .replaceAll('#{', '')
+            .replaceAll('}#', '')
+
     }
 
     // math
@@ -184,9 +215,9 @@ export function replacer(player, string) {
             let eq = mcl.getStringBetweenChars(formattedString, '#(', ')#')
 
             formattedString = formattedString
-            .replaceAll(eq, Function(`return ${eq}`)())
-            .replaceAll('#(', '')
-            .replaceAll(')#', '')
+                .replaceAll(eq, Function(`return ${eq}`)())
+                .replaceAll('#(', '')
+                .replaceAll(')#', '')
         } catch {
             mcl.adminMessage(`Replacer Hashtag Error At Math Replacer: ${player.name} -> ${string}`)
         }
@@ -197,9 +228,9 @@ export function replacer(player, string) {
 
 
 export const dummySize = 22
-export const version = '2.1.8'
+export const version = '2.2.0, This Is Probably Wrong'
 
-export const hashtags =[
+export const hashtags = [
     '\nKeys:',
     '\\n -> New Line',
     '#[scorename]# -> Player Score (Replace scorename With An Actual Score Name)',
@@ -220,7 +251,7 @@ export const hashtags =[
     '#tags# -> Players Tags',
     '#players# -> Amount Of Online Players',
     '#dimension# -> Dimension The Player Is In',
-    '#random# -> Random Number Between 1 And 10',
+    '#=min-max=# -> Random Number Between "min" And "max", Format: #=1-10=#',
     '#tps# -> Ticks Per Second',
     '#t-seconds# -> Total Seconds',
     '#s-seconds# -> Session Seconds',
@@ -230,6 +261,7 @@ export const hashtags =[
     '#s-minutes# -> Session Minutes',
     '#graphics# -> The Players Graphics Mode',
     '#input# -> The Players Input Mode',
+    '#{variable}# -> Custom Variable, Replace variable With The Variable Name',
 ].join('\n')
 
 export const hashtagKeys = [
@@ -258,18 +290,18 @@ export class icons {
 }
 
 export const emojis = [
-    {m: ':dark_oak_boat:', e: ''},
-    {m: ':elytra:', e: ''},
-    {m: ':golden_horse_armor:', e: ''},
-    {m: ':amethyst_shard:', e: ''},
-    {m: ':spawn_egg_1:', e: ''},
-    {m: ':empty_chestplate_1:', e: ''},
-    {m: ':sherd_1:', e: ''},
-    {m: ':flint:', e: ''},
-    {m: ':empty_chestplate_2:', e: ''},
-    {m: ':lever:', e: ''},
-    {m: ':banner_pattern_1:', e: ''},
-    {m: ':empty_boots_1:', e: ''},
+    { m: ':dark_oak_boat:', e: '' },
+    { m: ':elytra:', e: '' },
+    { m: ':golden_horse_armor:', e: '' },
+    { m: ':amethyst_shard:', e: '' },
+    { m: ':spawn_egg_1:', e: '' },
+    { m: ':empty_chestplate_1:', e: '' },
+    { m: ':sherd_1:', e: '' },
+    { m: ':flint:', e: '' },
+    { m: ':empty_chestplate_2:', e: '' },
+    { m: ':lever:', e: '' },
+    { m: ':banner_pattern_1:', e: '' },
+    { m: ':empty_boots_1:', e: '' },
 ]
 
 

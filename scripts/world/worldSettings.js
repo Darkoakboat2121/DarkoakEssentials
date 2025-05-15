@@ -1,11 +1,14 @@
-import { world, system, EntityDamageCause, Player } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
 
 // This file holds world settings and player tracking
 
-world.beforeEvents.playerBreakBlock.subscribe((evd) => {
+/**
+ * @param {PlayerBreakBlockBeforeEvent} evd 
+ */
+export function worldSettingsBreak(evd) {
     if (!mcl.isCreating(evd.player)) {
         switch (mcl.wGet('darkoak:cws:breakblocks')) {
             case 2:
@@ -15,6 +18,7 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
                 break
 
             case 3:
+                if (evd.block.typeId == 'minecraft:sign') mcl.jsonWSet('darkoak:signrestore', mcl.getSign(evd.block))
                 evd.cancel = true
                 break
         }
@@ -27,9 +31,23 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
             }
         }
     }
-})
+}
 
-world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
+/**
+ * @param {PlayerBreakBlockAfterEvent} evd 
+ */
+export function signFixer(evd) {
+    const block = evd.block
+    if (mcl.wGet('darkoak:cws:breakblocks') == 3) {
+        if (block.typeId == 'minecraft:sign') {
+            const sign = mcl.jsonWGet('darkoak:signrestore')
+            mcl.rewriteSign(block, sign.waxed, sign.text, sign.color)
+        }
+    }
+}
+
+
+export function worldSettingsInteract(evd) {
     if (!mcl.isCreating(evd.player)) {
         switch (mcl.wGet('darkoak:cws:interactwithblocks')) {
             case 2:
@@ -52,81 +70,65 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
                 break
             case 5:
                 evd.cancel = true
-                return
                 break
         }
     }
-    // const loc = evd.block.location
-    // for (const command of mcl.listGetValues('darkoak:blockinteractcommand:')) {
-    //     const p = JSON.parse(command)
-    //     if (p.coords.x == loc.x && p.coords.y == loc.y && p.coords.z == loc.z) {
-    //         if (p.command) {
-    //             system.runTimeout(() => {
-    //                 evd.player.runCommand(p.command)
-    //             }, 0)
-    //         }
-    //     }
-    // }
-})
+}
 
-world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
+export function interactCommand(evd) {
     const command = evd.target.getDynamicProperty('darkoak:interactcommand')
     if (command) {
         system.runTimeout(() => {
             evd.player.runCommand(command)
-        }, 0)
+        })
     }
-})
+}
 
+/**
+ * @param {PlayerSpawnAfterEvent} evd 
+ */
+export function welcomeMessage(evd) {
+    if (!evd.initialSpawn) return
 
-world.afterEvents.playerSpawn.subscribe((evd) => {
+    /**@type {string} */
+    let text = mcl.wGet('darkoak:welcome')
+    if (!text || text.trim().length < 1) return
 
     system.runTimeout(() => {
-        if (!evd.initialSpawn) return
-        /**@type {string} */
-        let text = mcl.wGet('darkoak:welcome')
-
-        if (!text || text.trim().length < 1) return
         evd.player.sendMessage(arrays.replacer(evd.player, text))
     }, 100)
-})
+}
 
-
-// Player tracking and world border
-
-system.runInterval(() => {
+/**Player tracking and world border
+ * @param {Player} player 
+ */
+export function borderAndTracking(player) {
     const worldBorder = mcl.wGet('darkoak:cws:border')
 
-    let players = world.getAllPlayers()
-    for (let index = 0; index < players.length; index++) {
-        const player = players[index]
-        const x = player.location.x
-        const y = player.location.y
-        const z = player.location.z
+    const x = player.location.x
+    const z = player.location.z
 
-        tracking(player, mcl.jsonWGet('darkoak:tracking'))
+    tracking(player, mcl.jsonWGet('darkoak:tracking'))
 
-        
-        // World border
-        if (worldBorder != 0) {
+    // World border
+    if (worldBorder != 0) {
 
-            if (Math.abs(x) > worldBorder) {
-                player.applyDamage(1, { cause: EntityDamageCause.magic })
-                const k = (x / worldBorder - 1) * -1
-                // player.applyKnockback(k, 0, Math.abs(k) * 2, 0)
-                player.applyKnockback({x: k * Math.abs(k * 2), z: 0}, 0)
-            }
-
-            if (Math.abs(z) > worldBorder) {
-                player.applyDamage(1, { cause: EntityDamageCause.magic })
-                const k = (z / worldBorder - 1) * -1
-                // player.applyKnockback(0, k, Math.abs(k) * 2, 0)
-                player.applyKnockback({x: 0, z: k * Math.abs(k * 2)}, 0)
-            }
-
+        if (Math.abs(x) > worldBorder) {
+            player.applyDamage(1, { cause: EntityDamageCause.magic })
+            const k = (x / worldBorder - 1) * -1
+            // player.applyKnockback(k, 0, Math.abs(k) * 2, 0)
+            player.applyKnockback({ x: k * Math.abs(k / 2.5), z: 0 }, 0)
         }
+
+        if (Math.abs(z) > worldBorder) {
+            player.applyDamage(1, { cause: EntityDamageCause.magic })
+            const k = (z / worldBorder - 1) * -1
+            // player.applyKnockback(0, k, Math.abs(k) * 2, 0)
+            player.applyKnockback({ x: 0, z: k * Math.abs(k / 2.5) }, 0)
+        }
+
     }
-}, 10)
+}
 
 /**
  * @param {Player} player 
@@ -188,7 +190,7 @@ function tracking(player, d) {
     } else {
         player.removeTag('darkoak:onground')
     }
-    
-    
+
+
 
 }

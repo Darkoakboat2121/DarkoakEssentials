@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, auctionMain, autoResponseMainUI, chatGamesSettings, createWarpUI, CUIEditPicker, deleteWarpUI, itemSettingsUI, messageLogUI, modalUIMakerUI, personalLogUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI } from "./interfacesTwo"
+import { addGiftcode, addRankUI, auctionMain, autoResponseMainUI, chatGamesSettings, createWarpUI, CUIEditPicker, deleteWarpUI, floatingTextMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, personalLogUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 
 // This file holds all the functions containing UI
@@ -76,6 +76,7 @@ export function worldSettingsUI(player) {
     f.button('World Border\n§7Set The World Border Size', 'textures/blocks/barrier')
     f.button('Money ID\n§7Set The Scoreboard ID For Money', arrays.icons.minecoin)
     f.button('Item Settings\n§7Settings For Custom Items')
+    f.button('Floating Text')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -100,6 +101,9 @@ export function worldSettingsUI(player) {
                 break
             case 5:
                 itemSettingsUI(player)
+                break
+            case 6:
+                floatingTextMainUI(player)
                 break
             default:
                 player.sendMessage('§cError§r')
@@ -1119,6 +1123,7 @@ export function docsUI(player) {
     f.label('darkoak:command [Minecraft Command] -> Runs A Command With Replacer Hashtags')
     f.label('darkoak:knockback [x] [z] [vertical strength] -> Applys Knockback To A Player')
     f.label('darkoak:if [value] [value] [Minecraft Command] -> If The Two Values Match It Runs The Command')
+    f.label('darkoak:variable [name] [value] -> Sets A Custom Variable Which Can Be Used In Replacer Hashtags')
 
     f.divider()
 

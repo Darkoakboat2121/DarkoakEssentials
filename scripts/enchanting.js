@@ -1,10 +1,10 @@
-import { world, system, Player } from "@minecraft/server"
+import { world, system, Player, ItemUseAfterEvent, EntityHurtAfterEvent, EntityDieAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "./logic"
 
 const nerf = 4
 
-world.afterEvents.entityHitEntity.subscribe((evd) => {
+export function enchantOnHit(evd) {
     if (evd.damagingEntity.typeId != 'minecraft:player') return
 
     const player = evd.damagingEntity
@@ -38,9 +38,12 @@ world.afterEvents.entityHitEntity.subscribe((evd) => {
 
         }
     }
-})
+}
 
-world.afterEvents.entityDie.subscribe((evd) => {
+/**
+ * @param {EntityDieAfterEvent} evd
+ */
+export function enchantOnDeathKill(evd) {
     if (!evd.damageSource.damagingEntity) return
 
     // on death
@@ -110,9 +113,12 @@ world.afterEvents.entityDie.subscribe((evd) => {
             }
         }
     }
-})
+}
 
-world.afterEvents.itemUse.subscribe((evd) => {
+/**
+ * @param {ItemUseAfterEvent} evd 
+ */
+export function enchantOnUse(evd) {
     const player = evd.source
 
     const i = mcl.getHeldItem(player)
@@ -143,46 +149,49 @@ world.afterEvents.itemUse.subscribe((evd) => {
 
         }
     }
-})
+}
 
-system.runInterval(() => {
-    for (const player of world.getPlayers()) {
-        if (player.isOnGround) mcl.pSet(player, 'darkoak:enchant:jumping', false)
-        if (!player.isJumping || mcl.pGet(player, 'darkoak:enchant:jumping') === true) return
-        mcl.pSet(player, 'darkoak:enchant:jumping', true)
+/**
+ * @param {Player} player 
+ */
+export function enchantOnJump(player) {
+    if (player.isOnGround) mcl.pSet(player, 'darkoak:enchant:jumping', false)
+    if (!player.isJumping || mcl.pGet(player, 'darkoak:enchant:jumping') === true) return
+    mcl.pSet(player, 'darkoak:enchant:jumping', true)
 
-        const i = mcl.getHeldItem(player)
-        if (i === undefined) return
-        const item = i.getLore()
-        if (item === undefined) return
+    const i = mcl.getHeldItem(player)
+    if (i === undefined) return
+    const item = i.getLore()
+    if (item === undefined) return
 
-        for (let index = 0; index < item.length; index++) {
-            const parts = item[index].split('-')
-            if (parts[0].trim().replace('§r§5', '') != 'On Jump') continue
-            const amount = parseInt(parts[2])
+    for (let index = 0; index < item.length; index++) {
+        const parts = item[index].split('-')
+        if (parts[0].trim().replace('§r§5', '') != 'On Jump') continue
+        const amount = parseInt(parts[2])
 
-            switch (parts[1]) {
-                case 'Explode':
-                    world.getDimension(player.dimension.id).createExplosion(player.location, amount / nerf, { breaksBlocks: false, causesFire: false })
-                    break
-                case 'Extra Damage':
-                    player.applyDamage(amount)
-                    break
-                case 'Dash':
-                    const lk = player.getViewDirection()
-                    player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
-                    break
-                case 'Extinguish':
-                    player.extinguishFire(false)
-                    break
+        switch (parts[1]) {
+            case 'Explode':
+                world.getDimension(player.dimension.id).createExplosion(player.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                break
+            case 'Extra Damage':
+                player.applyDamage(amount)
+                break
+            case 'Dash':
+                const lk = player.getViewDirection()
+                player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
+                break
+            case 'Extinguish':
+                player.extinguishFire(false)
+                break
 
-            }
         }
-
     }
-})
+}
 
-world.afterEvents.entityHurt.subscribe((evd) => {
+/**
+ * @param {EntityHurtAfterEvent} evd 
+ */
+export function enchantOnDamaged(evd) {
     if (evd.hurtEntity.typeId != 'minecraft:player') return
     if (!evd.damageSource.damagingEntity) return
 
@@ -216,7 +225,7 @@ world.afterEvents.entityHurt.subscribe((evd) => {
 
         }
     }
-})
+}
 
 
 export const customEnchantEvents = [

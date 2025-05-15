@@ -15,7 +15,9 @@ export class bui {
     static namePicker(f, tag, text, hasEmpty, tooltip) {
         let p = mcl.playerNameArray(tag)
         if (hasEmpty) p.unshift('')
-        f.dropdown(text, p, {tooltip: tooltip || ''})
+        f.dropdown(text, p, {
+            tooltip: tooltip || ''
+        })
         return p
     }
 }

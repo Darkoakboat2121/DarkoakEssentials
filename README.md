@@ -63,18 +63,15 @@ landclaim remove
 <b>f<b>
 changelog:
     added:
-         better shop system *?
-         modal ui creator *?
-         inventory saving / loading *?
-         darkoak:if scriptevent
+        dimension selector to gens
+        landclaims
 
     fixed:
-        chest locking
-        minor UI performance issues
-        chat commands edit ui not showing command 2 and 3
+        locked chests are now unbreakable
 
     changes:
-        player viewer now shows the players items
+        
+
 
 
 hacks to detect:

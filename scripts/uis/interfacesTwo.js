@@ -118,13 +118,30 @@ export function genAddUI(player) {
         defaultValue: `${n.x || ''} ${n.y || ''} ${n.z || ''}`.trim()
     })
 
+    const dimensions = ['overworld', 'nether', 'the_end']
+    let def = 0
+    switch (player.dimension.id) {
+        case 'overworld':
+            def = 0
+            break
+        case 'nether':
+            def = 1
+            break
+        case 'the_end':
+            def = 2
+            break
+    }
+    f.dropdown('Dimension:', dimensions, {
+        defaultValueIndex: def
+    })
+
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
         const blockId = e[0].trim()
         const coords1 = e[1].trim()
         mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, { 
-            block: blockId, coords: coords1
+            block: blockId, coords: coords1, dimension: dimensions[e[2]]
         })
     })
 }
@@ -143,7 +160,7 @@ export function genRemoveUI(player) {
 
     for (let index = 0; index < gens.length; index++) {
         const g = JSON.parse(gens[index])
-        f.button(`Delete: ${g.block}, ${g.coords}`)
+        f.button(`Delete: ${g.block}\n${g.coords}, ${g.dimension || 'overworld'}`)
     }
 
     f.show(player).then((evd) => {
@@ -166,7 +183,7 @@ export function genModifyPickerUI(player) {
 
     for (let index = 0; index < gens.length; index++) {
         const g = JSON.parse(gens[index])
-        f.button(`Modify: ${g.block}, ${g.coords}`)
+        f.button(`Modify: ${g.block}\n${g.coords}, ${g.dimension || 'overworld'}`)
     }
 
     f.show(player).then((evd) => {
@@ -187,12 +204,29 @@ export function genModifyUI(player, gen) {
         defaultValue: data.coords
     })
 
+    const dimensions = ['overworld', 'nether', 'the_end']
+    let def = 0
+    switch (player.dimension.id) {
+        case 'overworld':
+            def = 0
+            break
+        case 'nether':
+            def = 1
+            break
+        case 'the_end':
+            def = 2
+            break
+    }
+    f.dropdown('Dimension:', dimensions, {
+        defaultValueIndex: def
+    })
+
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = evd.formValues
         const blockId = e[0].trimStart()
         const coords1 = e[1].trimStart()
-        mcl.jsonWSet(gen, { block: blockId, coords: coords1 })
+        mcl.jsonWSet(gen, { block: blockId, coords: coords1, dimension: dimensions[e[2]] })
     })
 }
 
@@ -783,6 +817,11 @@ export function landclaimMainUI(player) {
     let f = new ActionFormData()
     f.title('Landclaim Manager')
 
+    if (!mcl.jsonWGet(`darkoak:landclaim:${player.name}`)) {
+        player.sendMessage('§cYou Don\'t Own A Landclaim!§r')
+        return
+    }
+
     f.button('Add Player To Landclaim')
     f.button('Remove Player From Landclaim')
 
@@ -1102,14 +1141,15 @@ export function scriptSettings(player) {
     })
 }
 
-export function modalUIMakerUI(player, uiData = { title: "New UI", elements: [] }) {
+export function modalUIMakerUI(player, uiData = { title: 'New UI', tag: 'tag', elements: [] }) {
     let f = new ActionFormData()
-    f.title("Modal UI Maker")
+    f.title('Modal UI Maker')
 
-    f.button("Add Element")
-    f.button("Edit Elements")
-    f.button("Save UI")
-    f.button("Preview UI")
+    f.button('Add Element')
+    f.button('Edit Elements')
+    f.button('Save UI')
+    f.button('Preview UI')
+    f.button('Settings')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -1126,6 +1166,9 @@ export function modalUIMakerUI(player, uiData = { title: "New UI", elements: [] 
                 break
             case 3:
                 modal.previewModalUI(player, uiData)
+                break
+            case 4:
+                modal.modalSettingsUI(player, uiData)
                 break
         }
     })
@@ -1219,5 +1262,59 @@ export function itemSettingsUI(player) {
             hopfeather: e[0],
             hopfeatherM: e[1],
         })
+    })
+}
+
+export function floatingTextMainUI(player) {
+    let f = new ActionFormData()
+    f.title('Floating Text')
+
+    f.button('Add Floating Text')
+    f.button('Remove Floating Text')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch (evd.selection) {
+            case 0:
+                floatingTextAddUI(player)
+                break
+            case 1:
+                floatingTextRemoveUI(player)
+                break
+        }
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function floatingTextAddUI(player) {
+    let f = new ModalFormData()
+    f.title('Add Floating Text')
+
+    f.label('Spawns Floating Text At Your Location')
+
+    f.textField('Text:', 'Example: Hello World!')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const entity = player.dimension.spawnEntity('darkoak:floating_text', player.location)
+        entity.nameTag = evd.formValues[0]
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function floatingTextRemoveUI(player) {
+    let f = new ModalFormData()
+    f.title('Remove Floating Text')
+
+    const texts = player.dimension.getEntities({type: 'darkoak:floating_text'})
+    f.dropdown('Floating Text To Remove:', texts.map(e => e.nameTag))
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        texts.at(evd.formValues[0]).remove()
     })
 }
