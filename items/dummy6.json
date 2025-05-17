@@ -4,7 +4,8 @@
         "description": {
             "identifier": "darkoak:dummy6",
             "menu_category": {
-                "category": "items"
+                "category": "items",
+                "group": "darkoak_bindables"
             }
         },
         "components": {

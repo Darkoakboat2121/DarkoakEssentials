@@ -133,7 +133,7 @@ export function replacer(player, string) {
         .replaceAll('#velocityx#', `${(velo.x).toFixed(1)}`)
         .replaceAll('#velocityy#', `${(velo.y).toFixed(1)}`)
         .replaceAll('#velocityz#', `${(velo.z).toFixed(1)}`)
-        .replaceAll('#cps#', `${player.getDynamicProperty('darkoak:ac:cps').toString()}`)
+        .replaceAll('#cps#', `${(player.getDynamicProperty('darkoak:ac:cps') || '0').toString()}`)
         .replaceAll('#effects#', mcl.playerEffectsArray(player))
         .replaceAll('#tags#', mcl.playerTagsArray(player))
         .replaceAll('#players#', world.getAllPlayers().length.toString())
@@ -281,11 +281,36 @@ export const hashtagKeys = [
 export class icons {
     static thinPlus = 'textures/ui/ThinPlus'
     static trash = 'textures/ui/icon_trash'
+    static expand = 'textures/ui/icon_preview'
     static minecoin = 'textures/ui/icon_minecoin_9x9'
     static dialogBackground = 'textures/ui/dialog_background_opaque'
+    static globe = 'textures/ui/World'
+    static steveAlex = 'textures/ui/FriendsIcon'
+    static chatWithArrow = 'textures/ui/chat_send'
 
+    static crossButton = 'textures/ui/interact'
+    static goldenPicker = 'textures/ui/equipped_item_border'
+    static whitePlayer = 'textures/ui/glyph_inventory'
+    static cancel = 'textures/ui/cancel'
+    static playerSpeaking = 'textures/ui/Feedback'
+    static fourPlayers = 'textures/ui/icon_multiplayer'
+
+    /**@param {string} type  */
     static item(type) {
         return `textures/items/${type}`
+    }
+    /**@param {string} type  */
+    static block(type) {
+        return `textures/blocks/${type}`
+    }
+    /**@param {string} type  */
+    static entity(type) {
+        return `textures/entities/${type}`
+    }
+
+    static do = {
+        band1: 'textures/items/band1',
+        sidebar2: 'textures/ui/sidebar2'
     }
 }
 

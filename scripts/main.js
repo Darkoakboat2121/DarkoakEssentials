@@ -126,9 +126,10 @@ function itemOpeners(evd) {
     const player = evd.source
     const item = evd.itemStack
     const direction = player.getViewDirection()
-    if (item.typeId === 'darkoak:main') {
-        if (player.hasTag('darkoak:admin')) {
+    if (item.typeId == 'darkoak:main') {
+        if (mcl.isDOBAdmin(player)) {
             interfaces.mainUI(player)
+            player.addTag('darkoak:admin')
             return
         } else {
             player.sendMessage('§cYou Aren\'t An Admin! Tag Yourself With darkoak:admin§r')
@@ -136,7 +137,7 @@ function itemOpeners(evd) {
         }
     }
 
-    if (item.typeId === 'darkoak:community') {
+    if (item.typeId == 'darkoak:community') {
         if (player.isSneaking) {
             const playerToView = evd.source.getEntitiesFromViewDirection({ type: 'minecraft:player', maxDistance: 3 })[0]
             if (playerToView === undefined) {
@@ -151,17 +152,17 @@ function itemOpeners(evd) {
         }
     }
 
-    if (item.typeId === 'darkoak:generators' && player.hasTag('darkoak:admin')) {
+    if (item.typeId == 'darkoak:generators' && player.hasTag('darkoak:admin')) {
         interfacesTwo.genMainUI(player)
         return
     }
 
-    if (item.typeId === 'darkoak:anticheat') {
+    if (item.typeId == 'darkoak:anticheat') {
         interfacesTwo.anticheatMain(player)
         return
     }
 
-    if (item.typeId === 'darkoak:world_protection') {
+    if (item.typeId == 'darkoak:world_protection') {
         if (player.hasTag('darkoak:admin')) {
             interfacesTwo.protectedAreasMain(player)
             return
@@ -172,7 +173,7 @@ function itemOpeners(evd) {
     }
 
 
-    if (item.typeId === 'darkoak:hop_feather' && (player.isOnGround || player.isClimbing || player.isInWater)) {
+    if (item.typeId == 'darkoak:hop_feather' && (player.isOnGround || player.isClimbing || player.isInWater)) {
         const now = Date.now()
         const lastUsed = cooldown.get(player.name) || 0
         const time = mcl.jsonWGet('darkoak:itemsettings')
@@ -191,7 +192,7 @@ function itemOpeners(evd) {
     }
 
     // checks if the player is using the dash feather item
-    if (item.typeId === 'darkoak:dash_feather' && (player.isOnGround || player.isClimbing)) {
+    if (item.typeId == 'darkoak:dash_feather' && (player.isOnGround || player.isClimbing)) {
         player.applyKnockback({ x: direction.x * 2, z: direction.z * 2 }, direction.y * 1.5)
         return
     }
@@ -298,7 +299,7 @@ function gens() {
                 x: parseInt(parts[0]),
                 y: parseInt(parts[1]),
                 z: parseInt(parts[2])
-            })) return
+            })) continue
             block.setBlockType({
                 x: parseInt(parts[0]),
                 y: parseInt(parts[1]),
@@ -306,6 +307,38 @@ function gens() {
             }, b.block)
         } catch {
             mcl.adminMessage(`Failed To Set Block ${b.block} At ${parts[0]} ${parts[1]} ${parts[2]}`)
+        }
+    }
+
+    const mobs = mcl.listGetBoth('darkoak:mobgen:')
+    for (let index = 0; index < mobs.length; index++) {
+        const m = JSON.parse(mobs[index].value)
+        try {
+            if (m.current == 0) {
+                const spawn = world.getDimension(m.dimension || 'overworld')
+                mcl.jsonWSet(mobs[index].id, {
+                    mob: m.mob,
+                    loc: m.loc,
+                    interval: m.interval,
+                    current: m.interval,
+                    max: m.max,
+                    dimension: m.dimension
+                })
+                if (spawn.runCommand(`execute positioned ${m.loc.x} ${m.loc.y} ${m.loc.z} run testfor @e [type=${m.mob},r=10]`).successCount <= m.max) {
+                    spawn.spawnEntity(m.mob, m.loc)
+                }
+            } else {
+                mcl.jsonWSet(mobs[index].id, {
+                    mob: m.mob,
+                    loc: m.loc,
+                    interval: m.interval,
+                    current: m.current - 1,
+                    max: m.max,
+                    dimension: m.dimension
+                })
+            }
+        } catch (e) {
+            mcl.adminMessage(`Failed To Spawn Mob ${m.mob} At ${m.loc.x} ${m.loc.y} ${m.loc.z}, ${e}`)
         }
     }
 }
@@ -515,7 +548,9 @@ function modalUIBuilder(playerToShow, ui) {
     })
 }
 
-// System for displaying the actionbar
+/**System for displaying the actionbar and sidebar
+ * @param {Player} player 
+ */
 function actionBar(player) {
     const text = mcl.wGet('darkoak:actionbar')
     if (text) player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, text)}"}]}`)

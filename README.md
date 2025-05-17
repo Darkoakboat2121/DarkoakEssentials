@@ -2,17 +2,10 @@ This Minecraft bedrock addon is an essentials addon. Please credit me if you're 
 
 Plans:
 
-2. Player Management Features
-Player Inventory Management: Allow admins to view and manage player inventories.
-
-
 community:
-    giftcodes
-    land claims
     auction house
     player shop
     plots
-    personal log
     item trading
 
 tracking:
@@ -23,7 +16,6 @@ tracking:
     kills
 
 other:
-    clan system
     sitting
     secret items giver
     trails
@@ -49,9 +41,6 @@ anticheat:
 
 currently working on is below here
 
-Land claims and plots:
-Land claim button in community item that allows a player to claim up to 4 chunks (probably customizable). Claimed areas will only be breakable and buildable by players allowed by the owner.
-
 Plots are similar but build structures in a co-ord space. This will get a tutorial on youtube to explain how to use it.
 
 landclaim add
@@ -60,17 +49,23 @@ landclaim remove
 * means todo 
 *? means todo optional, probably planned
 ?? means idk if working
-<b>f<b>
+<b>f</b>
 changelog:
     added:
         dimension selector to gens
         landclaims
+        mob gens*
+        search button to data deleter
 
     fixed:
         locked chests are now unbreakable
+        item binding commands issue
 
     changes:
-        
+        pack icon changed
+        bindable items have been added to an item group
+        updated the sidebar to look better
+        hosts can now use the main item without the admin tag (it will auto give the tag)
 
 
 

@@ -1,10 +1,11 @@
 {
-    "format_version": "1.21.50",
+    "format_version": "1.21.60",
     "minecraft:item": {
         "description": {
             "identifier": "darkoak:dummy1",
             "menu_category": {
-                "category": "items"
+                "category": "items",
+                "group": "darkoak:bindables"
             }
         },
         "components": {

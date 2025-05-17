@@ -103,9 +103,9 @@ export class mcl {
     * @returns {string}
     */
     static getStringBetweenChars(str, startChar, endChar) {
-        const escapedStartChar = startChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special characters
-        const escapedEndChar = endChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');     // Escape special characters
-        const regex = new RegExp(`${escapedStartChar}(.*?)${escapedEndChar}`);
+        const escapedStartChar = startChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape special characters
+        const escapedEndChar = endChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // Escape special characters
+        const regex = new RegExp(`${escapedStartChar}(.*?)${escapedEndChar}`)
         const match = str.match(regex)
         return match ? match[1] : undefined
     }
@@ -125,8 +125,21 @@ export class mcl {
         return world.getDynamicProperty(id)
     }
 
-    /**Removes / Resets a global dynamic property
+    /**Sets and returns the value OR gets the value. If theres nothing to retrieve it sets the value
      * @param {string} id 
+     * @param {any} value 
+     */
+    static wSog(id, value) {
+        const def = mcl.wGet(id)
+        if (!def) {
+            mcl.wSet(id, value)
+            return value
+        } else return def
+    }
+
+    /**Removes / Resets a global dynamic property
+     * @param {string} id ID to reset
+     * @returns {boolean} Whether it successfully removed the property
      */
     static wRemove(id) {
         try {
@@ -212,7 +225,7 @@ export class mcl {
      */
     static getPlayer(name) {
         const player = world.getPlayers({ name: name })
-        if (player.length > 0) {
+        if (player.length != 0) {
             return player[0]
         } else return undefined
     }
@@ -402,7 +415,7 @@ export class mcl {
         return player.isOp()
     }
 
-    /**Returns true if the player 
+    /**Returns true if the player has the admin tag or if the player is the host
      * @param {Player} player 
      */
     static isDOBAdmin(player) {
