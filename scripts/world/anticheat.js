@@ -106,6 +106,23 @@ export function antiNpc(evd) {
     }
 }
 
+// antidupe, every tick applys a unique id to an item, and checks if 2 items have same id, doesnt id items held by admins in c-mode (for allowed duping)
+export function antiDupeID(player) {
+    const d = mcl.jsonWGet('darkoak:anticheat')
+
+    const item = mcl.getHeldItem(player)
+
+    const lore = item.getLore()
+    for (let index = 0; index < lore.length; index++) {
+        const id = mcl.getStringBetweenChars(lore[index], '[', ']')
+        if (!id) {
+            const ids = mcl.wGet('darkoak:dupeids')
+            item.setLore(lore.push(ids + 1))
+            mcl.wSet('darkoak:dupeids', ids + 1)
+        }
+    }
+}
+
 /**system interval function, player type
  * @param {Player} player 
  */
@@ -186,5 +203,15 @@ export function log(mess) {
         system.runTimeout(() => mcl.adminMessage(`Anticheat: ${mess}`))
     }
     mcl.wSet(`darkoak:log`, JSON.stringify(data2))
+
+    const player = mcl.getPlayer(mess.split('->').at(0).trim())
+    if (player && da.strike) {
+        const current = mcl.pGet(player, 'darkoak:strikes') || 0
+        mcl.pSet(player, 'darkoak:strikes', current + 1)
+        if (current >= 3) {
+            mcl.pSet(player, 'darkoak:strikes', 0)
+            player.kill()
+        }
+    }
     logcheck()
 }

@@ -1,4 +1,5 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity } from "@minecraft/server";
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide } from "@minecraft/server";
+import { getMoney } from "./data/arrays";
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting API*/
 export class mcl {
@@ -108,6 +109,15 @@ export class mcl {
         const regex = new RegExp(`${escapedStartChar}(.*?)${escapedEndChar}`)
         const match = str.match(regex)
         return match ? match[1] : undefined
+    }
+
+    /**
+     * @param {string} text 
+     * @returns {string}
+     */
+    static uppercaseFirstLetter(text) {
+        if (text.length == 0) return text
+        return text.charAt(0).toUpperCase() + text.slice(1)
     }
 
     /**Sets a global dynamic property
@@ -230,21 +240,28 @@ export class mcl {
         } else return undefined
     }
 
-    /**
-     * 
+    /**This function checks if the player can buy something
      * @param {Player} player 
      * @param {number} amount 
      */
     static buy(player, amount) {
-        if (isNaN(amount) || world.scoreboard.getObjective(mcl.wGet('darkoak:moneyscore')).getScore(player) == undefined) {
+        const moneyScore = getMoney()
+        if (isNaN(amount) || world.scoreboard.getObjective(moneyScore).getScore(player) == undefined) {
             return false
         }
-        if (world.scoreboard.getObjective(mcl.wGet('darkoak:moneyscore')).getScore(player) >= amount) {
-            player.runCommand(`scoreboard players remove "${player.name}" ${mcl.wGet('darkoak:moneyscore')} ${amount}`)
+        if (world.scoreboard.getObjective(moneyScore).getScore(player) >= amount) {
+            player.runCommand(`scoreboard players remove "${player.name}" ${moneyScore} ${amount}`)
             return true
         } else {
             return false
         }
+    }
+
+    /**Gets scoreboard by objective
+     * @param {string} objective 
+     */
+    static scoreboard(objective) {
+        return world.scoreboard.getObjective(objective)
     }
 
     /**Returns an array of dynamic property ids that starts with the inputted key
@@ -304,7 +321,7 @@ export class mcl {
     /**Returns a list of key value pairs of dynamic propertys in json format
      * @param {string} key 
      */
-    static jsonListGetBoth(key) {
+    static jsonListGetBoth(key = '') {
         let u = []
         let ids = world.getDynamicPropertyIds().filter(e => e.startsWith(key))
         for (let index = 0; index < ids.length; index++) {
@@ -376,7 +393,7 @@ export class mcl {
     */
     static playerTagsArray(player) {
         if (player != undefined) {
-            let tags = player.getTags()
+            const tags = player.getTags()
             if (tags.length == 0) {
                 return 'No Tags Found'
             } else {
@@ -386,7 +403,7 @@ export class mcl {
             let u = []
             let players = world.getAllPlayers()
             for (let index = 0; index < players.length; index++) {
-                let tags = players[index].getTags()
+                const tags = players[index].getTags()
                 if (tags.length == 0) continue
                 u.push(tags)
             }
@@ -402,7 +419,7 @@ export class mcl {
      * @param {Player} player 
     */
     static isHost(player) {
-        if (player.id == -4294967295) {
+        if (player.id == '-4294967295') {
             return true
         } else return false
     }
@@ -431,7 +448,7 @@ export class mcl {
      */
     static isCreating(player) {
         if (mcl.isOp(player) === true) {
-            if (player.getGameMode() === 'creative') {
+            if (player.getGameMode() == 'creative') {
                 return true
             } else {
                 return false
@@ -445,8 +462,10 @@ export class mcl {
      * @param {string} message 
      */
     static adminMessage(message) {
-        for (const player of world.getPlayers({ tags: ['darkoak:admin'] })) {
-            player.sendMessage(`§cAdmin Message:§r§f ${message}`)
+        const players = world.getPlayers({ tags: ['darkoak:admin'] })
+        if (players.length == 0) return world.sendMessage(`§cAdmin Message:§r§f ${message}`)
+        for (let index = 0; index < players.length; index++) {
+            players[index].sendMessage(`§cAdmin Message:§r§f ${message}`)
         }
     }
 
@@ -484,6 +503,13 @@ export class mcl {
      */
     static getItemContainer(player) {
         return player.getComponent(EntityComponentTypes.Inventory).container
+    }
+
+    /**Returns a players inventory in its entirety
+     * @param {Player} player 
+     */
+    static getInventory(player) {
+        return player.getComponent(EntityComponentTypes.Inventory)
     }
 
     /**WIP
@@ -561,14 +587,13 @@ export class mcl {
         return seconds * 20
     }
 
-    /**
-     * 
-     * @param {Block} block 
-     * @returns {{waxed: boolean, text: string, color: DyeColor}}
+    /**Gets a signs data
+     * @param {Block} block Block that should be a sign
+     * @returns {{waxed: boolean, text: string, color: DyeColor} | undefined}
      */
     static getSign(block) {
-        /**@type {BlockSignComponent} */
         const signed = block.getComponent(BlockComponentTypes.Sign)
+        if (!signed) return undefined
         return { waxed: signed.isWaxed, text: signed.getText(), color: signed.getTextDyeColor() }
     }
 
@@ -577,13 +602,14 @@ export class mcl {
      * @param {boolean} wax 
      * @param {string} text 
      * @param {DyeColor} color 
+     * @param {SignSide} side
      */
-    static rewriteSign(block, wax, text, color) {
-        /**@type {BlockSignComponent} */
+    static rewriteSign(block, wax = false, text = '', color = undefined, side = SignSide.Front) {
         const signed = block.getComponent(BlockComponentTypes.Sign)
-        signed.setWaxed(wax)
-        signed.setText(text)
-        signed.setTextDyeColor(color)
+        if (!signed) return
+        signed.setWaxed(wax || signed.isWaxed)
+        signed.setText(text || signed.getText(side), side)
+        signed.setTextDyeColor(color, side)
     }
 
     /**Gets an items durability info
@@ -627,10 +653,32 @@ export class mcl {
         const players = world.getAllPlayers()
         for (let index = 0; index < players.length; index++) {
             const p = players[index]
-            if ((name === undefined || p.name === name) && (tag === undefined || p.hasTag(tag)) && (dimension === undefined || p.dimension.id === dimension)) {
+            if ((name === undefined || p.name == name) && (tag === undefined || p.hasTag(tag)) && (dimension === undefined || p.dimension.id == dimension)) {
                 return p
             }
         }
         return undefined
+    }
+
+    /**Gets an entity by filters
+     * @param {string} dimension 
+     * @param {{name: string, tag: string}} param1 
+     */
+    static getEntityFiltered(dimension, { name, tag }) {
+        const entities = world.getDimension(dimension).getEntities()
+        for (let index = 0; index < entities.length; index++) {
+            const e = entities[index]
+            if ((name === undefined || e.nameTag == name) && (tag === undefined || e.hasTag(tag))) {
+                return e
+            }
+        } 
+        return undefined
+    }
+
+    /**Returns a list of all players that have joined the world
+     * @returns {string[]}
+     */
+    static getPlayerList() {
+        return mcl.jsonWGet('darkoak:playerlist')
     }
 }

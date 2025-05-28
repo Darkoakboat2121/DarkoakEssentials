@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, auctionMain, autoResponseMainUI, chatGamesSettings, createWarpUI, CUIEditPicker, deleteWarpUI, floatingTextMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, personalLogUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI } from "./interfacesTwo"
+import { addGiftcode, addRankUI, auctionMain, autoResponseMainUI, canineyetiBio, chatGamesSettings, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, floatingTextMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, nokiBio, personalLogUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 
 // This file holds all the functions containing UI
@@ -61,7 +61,7 @@ export function mainUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 // Main ui for world settings
@@ -109,7 +109,7 @@ export function worldSettingsUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 export function worldInteractionSettings(player) {
@@ -133,10 +133,10 @@ export function worldInteractionSettings(player) {
             worldSettingsUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.wSet('darkoak:cws:breakblocks', e[0])
         mcl.wSet('darkoak:cws:interactwithblocks', e[1])
-    })
+    }).catch()
 }
 
 export function itemBindsUI(player) {
@@ -157,13 +157,13 @@ export function itemBindsUI(player) {
             worldSettingsUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.jsonWSet(`darkoak:bind:${e[0]}`, {
             command1: e[1],
             command2: e[2],
             command3: e[3],
         })
-    })
+    }).catch()
 }
 
 /**
@@ -182,7 +182,7 @@ export function welcomeMessageUI(player) {
         }
         mcl.wSet('darkoak:welcome', evd.formValues[0])
         player.sendMessage(evd.formValues[0])
-    })
+    }).catch()
 }
 
 export function worldBorderUI(player) {
@@ -200,7 +200,7 @@ export function worldBorderUI(player) {
             return
         }
         mcl.wSet('darkoak:cws:border', evd.formValues[0])
-    })
+    }).catch()
 }
 
 export function moneyUI(player) {
@@ -215,7 +215,7 @@ export function moneyUI(player) {
             return
         }
         mcl.wSet('darkoak:moneyscore', evd.formValues[0])
-    })
+    }).catch()
 }
 
 // main ui for player settings: player data lookup, punishments
@@ -259,7 +259,7 @@ export function playerSettingsUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 // player picker for player data lookup
@@ -274,7 +274,7 @@ export function playerDataMainUI(player) {
             return
         }
         playerDataViewUI(player, u[evd.formValues[0]])
-    })
+    }).catch()
 }
 
 // player data viewer
@@ -336,7 +336,7 @@ export function playerPunishmentsMainUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 export function banPlayerUI(player) {
@@ -365,7 +365,8 @@ export function banPlayerUI(player) {
             message: e[1],
             time: parseInt(time) * 3600
         })
-    })
+        mcl.adminMessage(`${names[e[0]]} Has Been Banned!`)
+    }).catch()
 }
 
 export function unbanPlayerUI(player) {
@@ -392,7 +393,7 @@ export function unbanPlayerUI(player) {
             return
         }
         mcl.wRemove(bans[evd.selection].id)
-    })
+    }).catch()
 
 }
 
@@ -408,7 +409,7 @@ export function mutePlayerUI(player) {
             return
         }
         player.runCommand(`tag ${names[evd.formValues[0]]} add darkoak:muted`)
-    })
+    }).catch()
 }
 
 export function unmutePlayerUI(player) {
@@ -427,7 +428,7 @@ export function unmutePlayerUI(player) {
             return
         }
         player.runCommand(`tag ${names[evd.formValues[0]]} remove darkoak:muted`)
-    })
+    }).catch()
 }
 
 /**
@@ -494,7 +495,7 @@ export function playerTrackingUI(player) {
             onground: e[14],
             ongroundC: e[15],
         })
-    })
+    }).catch()
 }
 
 /**main ui for chat settings
@@ -541,7 +542,7 @@ export function chatSettingsUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 // rank settings ui, used to manage rank start, middle, end, bridge, and default rank
@@ -551,36 +552,29 @@ export function rankSettingsUI(player) {
     const p = mcl.jsonWGet('darkoak:chatranks')
 
     bui.label(f, '\nRanks:')
-    f.textField('\nRank Start:', 'Example: [', {
-        defaultValue: p.start || ''
-    })
+    bui.textField(f, '\nRank Start:', 'Example: [', p.start)
     bui.divider(f)
-    f.textField('Rank Middle:', 'Example: ][', {
-        defaultValue: p.middle || ''
-    })
+
+    bui.textField(f, 'Rank Middle:', 'Example: ][', p.middle)
     bui.divider(f)
-    f.textField('Rank End:', 'Example: ]', {
-        defaultValue: p.end || ''
-    })
+
+    bui.textField(f, 'Rank End:', 'Example: ]', p.end)
     bui.divider(f)
-    f.textField('Rank Bridge:', 'Example: ->', {
-        defaultValue: p.bridge || ''
-    })
+
+    bui.textField(f, 'Rank Bridge:', 'Example: ->', p.bridge)
     bui.divider(f)
-    f.textField('Default Rank:', 'Example: Member', {
-        defaultValue: p.defaultRank || ''
-    })
+
+    bui.textField(f, 'Default Rank:', 'Example: Member', p.defaultRank)
     bui.divider(f)
+
     bui.label(f, 'Look In The Documentaion For How To Add Ranks And Clans')
     bui.divider(f)
     bui.label(f, 'Clans:')
-    f.textField('Clan Start:', 'Example: (', {
-        defaultValue: p.cStart || ''
-    })
+
+    bui.textField(f, 'Clan Start:', 'Example: (', p.cStart)
     bui.divider(f)
-    f.textField('Clan End:', 'Example: )', {
-        defaultValue: p.cEnd || ''
-    })
+
+    bui.textField(f, 'Clan End:', 'Example: )', p.cEnd)
     bui.divider(f)
 
     f.show(player).then((evd) => {
@@ -588,7 +582,7 @@ export function rankSettingsUI(player) {
             chatSettingsUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
 
         mcl.jsonWSet('darkoak:chatranks', {
             defaultRank: e[4],
@@ -599,7 +593,7 @@ export function rankSettingsUI(player) {
             cStart: e[5],
             cEnd: e[6],
         })
-    })
+    }).catch()
 }
 
 // main ui for chat commands
@@ -635,7 +629,7 @@ export function chatCommandsMainUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 // ui for adding a chat command, chat commands must include the message and command, tag is optional
@@ -646,18 +640,19 @@ export function chatCommandsAddUI(player) {
     bui.label(f, arrays.hashtags)
 
     bui.textField(f, 'Message:', 'Example: !spawn')
-    f.textField(`Add A Command Or Hashtag Key. Hashtag Keys Include:\n${arrays.hashtagKeys}\nCommand:`, 'Example: tp @s 0 0 0')
-    f.textField('Required Tag:', 'Example: Admin')
+    bui.textField(f, `Add A Command Or Hashtag Key. Hashtag Keys Include:\n${arrays.hashtagKeys}\nCommand:`, 'Example: tp @s 0 0 0')
+    bui.textField(f, 'Required Tag:', 'Example: Admin')
+    
     bui.label(f, 'Add More Commands:')
-    f.textField('', '')
-    f.textField('', '')
+    bui.textField(f)
+    bui.textField(f)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             chatCommandsMainUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.jsonWSet(`darkoak:command:${mcl.timeUuid()}`, {
             message: e[0],
             command: e[1],
@@ -665,7 +660,7 @@ export function chatCommandsAddUI(player) {
             command2: e[3],
             command3: e[4]
         })
-    })
+    }).catch()
 }
 
 /**ui for deleting a chat command
@@ -695,7 +690,7 @@ export function chatCommandsDeleteUI(player) {
         }
         mcl.wRemove(commands[evd.selection].id)
         chatCommandsDeleteUI(player)
-    })
+    }).catch()
 }
 
 /**Picker for editing
@@ -725,7 +720,7 @@ export function chatCommandsEditPickerUI(player) {
             return
         }
         chatCommandsEditUI(player, commands[evd.selection].id)
-    })
+    }).catch()
 }
 
 /**Edit chat commands
@@ -736,25 +731,24 @@ export function chatCommandsEditUI(player, chatCommand) {
     let f = new ModalFormData()
     const parts = mcl.jsonWGet(chatCommand)
 
-    f.textField('\nEdit Message:', '', {
-        defaultValue: parts.message
-    })
-    f.textField('Edit Command:', '', {
-        defaultValue: parts.command
-    })
-    f.textField('Edit Tag:', '', {
-        defaultValue: parts.tag
-    })
+    bui.textField(f, '\nEdit Message:', '', parts.message)
+    bui.textField(f, 'Edit Command:', '', parts.command)
+    bui.textField(f, 'Edit Tag:', '', parts.tag)
+    bui.label(f, 'More Commands:')
+    bui.textField(f)
+    bui.textField(f)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.jsonWSet(chatCommand, {
             message: e[0],
             command: e[1],
-            tag: e[2]
+            tag: e[2],
+            command2: e[3],
+            command3: e[4]
         })
-    })
+    }).catch()
 
 }
 
@@ -805,19 +799,19 @@ export function censorSettingsMainUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 export function censorSettingsAddUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Add New Censor')
 
-    f.textField('(Be Careful!)\nWord To Ban:', 'Example: skibidi')
+    bui.textField(f, '(Be Careful!)\nWord To Ban:', 'Example: skibidi')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         mcl.wSet(`darkoak:censor:${mcl.timeUuid()}`, evd.formValues[0])
-    })
+    }).catch()
 }
 
 export function censorSettingsRemoveUI(player) {
@@ -830,12 +824,12 @@ export function censorSettingsRemoveUI(player) {
         player.sendMessage('§cNo Words Found§r')
         return
     }
-    f.dropdown('\nWord:', words)
+    bui.dropdown(f, '\nWord:', words)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         mcl.wSet(wordRaw[evd.formValues[0]])
-    })
+    }).catch()
 }
 
 export function otherChatSettingsUI(player) {
@@ -844,31 +838,23 @@ export function otherChatSettingsUI(player) {
 
     const default1 = mcl.jsonWGet('darkoak:chat:other')
 
-    f.toggle('Proximity Chat (Fifteen Block Radius)', {
-        defaultValue: default1.proximity || false
-    })
-    bui.label(f, 'Proximity Text Chat, Not Voice Chat')
+    bui.toggle(f, 'Proximity Chat (Fifteen Block Radius)', default1.proximity, 'Proximity Text Chat, Not Voice Chat')
 
     bui.divider(f)
 
-    f.toggle('Nametag Chat (Chat Messages Appear In Chat And Under Nametag)', {
-        defaultValue: default1.nametag || false
-    })
-    bui.label(f, 'Downside Is That It Displays When You Whisper')
+    bui.toggle(f, 'Nametag Chat (Chat Messages Appear In Chat And Under Nametag)', default1.nametag, 'Downside Is That It Displays When You Whisper')
 
     bui.divider(f)
 
-    f.toggle('Chat Logs', {
-        defaultValue: default1.chatLogs || false
-    })
-    bui.label(f, 'Logs The Last 100 Chat Messages')
+    bui.toggle(f, 'Chat Logs', default1.chatLogs, 'Logs The Last 100 Chat Messages')
 
     bui.divider(f)
 
-    f.toggle('Health Display', {
-        defaultValue: default1.healthDisplay || false
-    })
-    bui.label(f, 'Displays The Players Health Under Their Nametag')
+    bui.toggle(f, 'Health Display', default1.healthDisplay, 'Displays The Players Health Under Their Nametag')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Professional Filter', default1.professional, 'Applys A Filter To Make Chat More Professional Looking')
 
     bui.divider(f)
 
@@ -882,9 +868,10 @@ export function otherChatSettingsUI(player) {
             proximity: e[0],
             nametag: e[1],
             chatLogs: e[2],
-            healthDisplay: e[3]
+            healthDisplay: e[3],
+            professional: e[4],
         })
-    })
+    }).catch()
 }
 
 /**
@@ -902,7 +889,7 @@ export function chestLockUI(player, loc) {
     for (let index = 0; index < p.length; index++) {
         const parts = JSON.parse(p[index].value)
         if (parts.x === loc.x.toString() && parts.y === loc.y.toString() && parts.z === loc.z.toString()) {
-            f.toggle(`Delete Chest Lock For This Chest?\n(Player: ${parts.player})`)
+            bui.toggle(f, `Delete Chest Lock For This Chest?\n(Player: ${parts.player})`)
             continue
         }
     }
@@ -923,7 +910,7 @@ export function chestLockUI(player, loc) {
                 z: loc.z.toString()
             })
         }
-    })
+    }).catch()
 }
 
 /**
@@ -976,7 +963,7 @@ export function dashboardMainUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 /**ui for deleting dynamic properties
@@ -1007,16 +994,14 @@ export function dataDeleterUI(player, search = '') {
         }
         mcl.wSet(data[evd.selection - 1].id)
         dataDeleterUI(player, search)
-    })
+    }).catch()
 }
 
 export function dataDeleterSearchUI(player, search = '') {
     let f = new ModalFormData()
     bui.title(f, 'Data Deleter Searcher')
 
-    f.textField('ID Contains:', 'Example: mobgen', {
-        defaultValue: search
-    })
+    bui.textField(f, 'ID Contains:', 'Example: mobgen', search)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1024,14 +1009,13 @@ export function dataDeleterSearchUI(player, search = '') {
         } else {
             dataDeleterUI(player, evd.formValues[0])
         }
-    })
+    }).catch()
 }
 
 export function reportsUI(player) {
     let f = new ActionFormData()
     bui.title(f, 'Reports')
 
-    const raw = mcl.listGet('darkoak:report:')
     const values = mcl.listGetValues('darkoak:report:')
 
     for (let index = 0; index < values.length; index++) {
@@ -1046,12 +1030,12 @@ export function reportsUI(player) {
         }
         const data = JSON.parse(values[evd.selection])
         let rf = new ActionFormData()
-        rbui.title(f, data.player)
+        bui.title(rf, data.player)
 
-        rbui.body(f, `\nPlayer: ${data.player}\nSubmitted By: ${data.submitter}\n\nReason: ${data.reason}\n`)
+        bui.body(rf, `\nPlayer: ${data.player}\nSubmitted By: ${data.submitter}\n\nReason: ${data.reason}\n`)
 
-        rbui.button(f, 'Take Action')
-        rbui.button(f, 'Dismiss')
+        bui.button(rf, 'Take Action')
+        bui.button(rf, 'Dismiss')
 
         rf.show(player).then((revd) => {
             if (revd.canceled) {
@@ -1060,8 +1044,8 @@ export function reportsUI(player) {
             if (revd.selection === 0) {
                 playerPunishmentsMainUI(player)
             }
-        })
-    })
+        }).catch()
+    }).catch()
 }
 
 export function logsUI(player) {
@@ -1094,15 +1078,15 @@ export function logsUI(player) {
         if (evd.selection === 0) {
             messageLogUI(player)
         }
-    })
+    }).catch()
 }
 
 export function docsUI(player) {
     let f = new ActionFormData()
     bui.title(f, 'Documentation')
 
-    f.header('Scriptevents')
-    bui.label(f, 'darkoak:enchant -> Opens Custom Enchant Menu')
+    bui.header(f, 'Scriptevents')
+    bui.label(f, 'darkoak:enchant [event?] [action?] [power?] -> Opens Custom Enchant Menu, Or If The Parameters Are Defined It Enchants Using Said Parameters (? means optional)')
     bui.label(f, 'darkoak:spawn [itemtype] [amount] [x] [y] [z] -> Spawns An Item')
     bui.label(f, 'darkoak:command [Minecraft Command] -> Runs A Command With Replacer Hashtags')
     bui.label(f, 'darkoak:knockback [x] [z] [vertical strength] -> Applys Knockback To A Player')
@@ -1111,7 +1095,7 @@ export function docsUI(player) {
 
     bui.divider(f)
 
-    f.header('Tags')
+    bui.header(f, 'Tags')
     bui.label(f, 'darkoak:admin -> Admin Tag For Almost Everything')
     bui.label(f, 'darkoak:mod -> Allows The Tagged Player To Open the Punishment UI')
 
@@ -1140,7 +1124,7 @@ export function docsUI(player) {
 
     bui.divider(f)
 
-    f.header('Emojis')
+    bui.header(f, 'Emojis')
     const emojis = arrays.emojis
     for (let index = 0; index < emojis.length; index++) {
         const em = emojis[index]
@@ -1201,7 +1185,7 @@ export function UIMakerUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 /**
@@ -1210,7 +1194,7 @@ export function UIMakerUI(player) {
 export function actionUIPickerUI(player) {
     let f = new ModalFormData()
 
-    f.slider('Amount Of Buttons', 1, 10, 1)
+    bui.slider(f, 'Amount Of Buttons', 1, 10, 1, 1)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1218,7 +1202,7 @@ export function actionUIPickerUI(player) {
             return
         }
         actionUIMakerUI(player, evd.formValues[0])
-    })
+    }).catch()
 }
 
 /**
@@ -1230,18 +1214,18 @@ export function actionUIMakerUI(player, amount) {
 
     bui.label(f, arrays.hashtags)
 
-    f.textField('Title:', 'Example: Warps')
-    f.textField('Body:', 'Example: Click A Button To TP')
-    f.textField('Tag To Open:', 'Example: warpmenu')
+    bui.textField(f, 'Title:', 'Example: Warps')
+    bui.textField(f, 'Body:', 'Example: Click A Button To TP')
+    bui.textField(f, 'Tag To Open:', 'Example: warpmenu')
 
     for (let index = 1; index <= amount; index++) {
-        f.textField(`Button ${index}:`, '')
-        f.textField(`Command ${index}:`, '')
+        bui.textField(f, `Button ${index}:`, '')
+        bui.textField(f, `Command ${index}:`, '')
     }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        const e = evd.formValues
+        const e = bui.formValues(evd)
 
         const title = e[0]
         const body = e[1]
@@ -1255,7 +1239,7 @@ export function actionUIMakerUI(player, amount) {
         const ui = { title, body, tag, buttons }
 
         mcl.wSet(`darkoak:ui:action:${mcl.timeUuid()}`, JSON.stringify(ui))
-    })
+    }).catch()
 }
 
 // ui for deleting cui
@@ -1266,11 +1250,10 @@ export function UIDeleterUI(player) {
     const u = mcl.listGet('darkoak:ui:')
     for (let index = 0; index < u.length; index++) {
         const n = u[index].split(':')
+        const v = mcl.jsonWGet(u[index])
         if (n[2] === 'message') {
-            const v = JSON.parse(mcl.wGet(ui))
             bui.button(f, `Type: ${n[2]}, Title: ${v.title}, Tag: ${v.tag}\nBody: ${v.body}`)
         } else if (n[2] === 'action') {
-            const v = JSON.parse(mcl.wGet(ui))
             bui.button(f, `Type: ${n[2]}, Title: ${v.title}, Tag: ${v.tag}\nBody: ${v.body}`)
         }
     }
@@ -1281,7 +1264,7 @@ export function UIDeleterUI(player) {
             return
         }
         mcl.wSet(u[evd.selection])
-    })
+    }).catch()
 }
 
 // ui for making a message cui
@@ -1304,10 +1287,10 @@ export function messageUIMakerUI(player) {
             UIMakerUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         const ui = { title: e[0], body: e[1], tag: e[2], button1: e[3], command1: e[5], button2: e[4], command2: e[6] }
         mcl.jsonWSet(`darkoak:ui:message:${mcl.timeUuid()}`, ui)
-    })
+    }).catch()
 }
 
 export function actionBarUI(player) {
@@ -1324,7 +1307,7 @@ export function actionBarUI(player) {
             return
         }
         mcl.wSet('darkoak:actionbar', evd.formValues[0])
-    })
+    }).catch()
 }
 
 export function sidebarUI(player) {
@@ -1367,7 +1350,7 @@ export function sidebarUI(player) {
                 e[11],
             ]
         })
-    })
+    }).catch()
 }
 
 /**
@@ -1409,7 +1392,7 @@ export function communitySettingsUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 /**
@@ -1421,9 +1404,7 @@ export function communityGeneralUI(player) {
 
     const settings = mcl.jsonWGet('darkoak:community:general')
 
-    f.toggle('Give Player Community Item When They Join?', {
-        defaultValue: settings.giveOnJoin
-    })
+    bui.toggle(f, 'Give Player Community Item When They Join?', settings.giveOnJoin)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1435,7 +1416,7 @@ export function communityGeneralUI(player) {
         mcl.jsonWSet('darkoak:community:general', {
             giveOnJoin: e[0]
         })
-    })
+    }).catch()
 }
 
 export function warpSettingsUI(player) {
@@ -1470,7 +1451,7 @@ export function warpSettingsUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 export function rtpUI(player) {
@@ -1496,7 +1477,7 @@ export function rtpUI(player) {
         mcl.wSet('darkoak:cws:rtp:enabled', e[0])
         mcl.wSet('darkoak:cws:rtp:center', e[1])
         mcl.wSet('darkoak:cws:rtp:distance', e[2])
-    })
+    }).catch()
 }
 
 
@@ -1523,7 +1504,7 @@ export function shopSettingsUI(player) {
                 player.sendMessage('§cError§r')
                 break
         }
-    })
+    }).catch()
 }
 
 /**
@@ -1545,7 +1526,7 @@ export function shopRemoveUI(player) {
         if (evd.canceled) return
 
         mcl.wSet(item[evd.selection].id)
-    })
+    }).catch()
 }
 
 /**
@@ -1564,14 +1545,14 @@ export function shopAddUI(player, message) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         const data = { sell: e[0], item: e[1], amount: e[2], price: e[3] }
         if (isNaN(data.price) || data.item == '') {
             shopAddUI(player, '§cPrice Or Item Is Invalid§r')
             return
         }
         mcl.wSet(`darkoak:shopitem:${mcl.timeUuid()}`, JSON.stringify(data))
-    })
+    }).catch()
 }
 
 export function showHideOptionsSettingsUI(player) {
@@ -1629,7 +1610,7 @@ export function showHideOptionsSettingsUI(player) {
             giftcodes: e[8],
             credits: e[9],
         })
-    })
+    }).catch()
 }
 
 export function reportSettingsUI(player) {
@@ -1656,7 +1637,7 @@ export function reportSettingsUI(player) {
             enabled: e[1],
             rules: e[0]
         })
-    })
+    }).catch()
 }
 
 
@@ -1664,30 +1645,53 @@ export function creditsUI(player) {
     let f = new ActionFormData()
     bui.title(f, 'Credits')
 
-    f.header('Developers')
-    bui.label(f, 'Darkoakboat2121')
+    bui.header(f, 'Developers')
+    bui.button(f, 'Darkoakboat2121', 'textures/items/boat_darkoak') // 0
     bui.label(f, 'Hi, I made this addon!')
 
     bui.divider(f)
 
-    f.header('Inspiration / Ideas')
-    bui.label(f, 'Noki5160')
+    bui.header(f, 'Inspiration / Ideas')
+    bui.button(f, 'Noki5160') // 1
     bui.label(f, 'Inspiration for anticheat')
 
     bui.divider(f)
 
-    f.header('Miscellaneous')
-    bui.label(f, 'CanineYeti24175')
+    bui.header(f, 'Miscellaneous')
+    bui.button(f, 'CanineYeti24175') // 2
     bui.label(f, 'Thank you canine for being cool lol')
+    bui.label(f)
+    bui.button(f, 'Tygerklawk', 'textures/blocks/raw_gold_block') // 3
+    bui.label(f, 'Thank you for helping me test stuff')
 
     bui.divider(f)
 
-    f.header('Links')
+    bui.header(f, 'Links')
     bui.label(f, 'Discord: cE8cYYeFFx')
     bui.label(f, 'Website: https://darkoakaddons.rf.gd/')
 
     bui.button(f, 'Dismiss', 'textures/items/boat_darkoak')
-    f.show(player)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch (evd.selection) {
+            case 0:
+                darkoakboatBio(player)
+                break
+            case 1:
+                nokiBio(player)
+                break
+            case 2:
+                canineyetiBio(player)
+                break
+            case 3:
+                tygerBio(player)
+                break
+            default:
+                player.sendMessage('How The Heck Did You Break The Credits?')
+                break
+        }
+    }).catch()
 }
 
 /////////////////////////////////////////////////////////////Community Item//////////////////////////////////////////////////////////////
@@ -1750,7 +1754,7 @@ export function communityMain(player) {
         } else {
             player.sendMessage('§cError§r')
         }
-    })
+    }).catch()
 }
 
 
@@ -1784,7 +1788,7 @@ export function communityMoneyUI(player) {
         } else {
             player.sendMessage('§cError§r')
         }
-    })
+    }).catch()
 }
 
 
@@ -1807,7 +1811,7 @@ export function warpsUI(player) {
             communityMain(player)
             return
         }
-        const e = evd.selection
+        const e = evd.selection.filter(e => e != null)
         if (e === 0) {
             rtp(player)
             return
@@ -1823,7 +1827,7 @@ export function warpsUI(player) {
             player.runCommand(`tp @s ${parts[0]} ${parts[1]} ${parts[2]}`)
         }
 
-    })
+    }).catch()
 }
 
 /**Pay another player
@@ -1854,7 +1858,7 @@ export function payUI(player) {
 
         player.runCommand(`scoreboard players add "${names[e[0]]}" ${mcl.wGet('darkoak:moneyscore')} ${e[1]}`)
         player.runCommand(`scoreboard players remove @s ${mcl.wGet('darkoak:moneyscore')} ${e[1]}`)
-    })
+    }).catch()
 }
 
 /**Profile editor
@@ -1888,7 +1892,7 @@ export function myProfile(player) {
         const e = evd.formValues
         const profile = { description: e[0], pronouns: e[1], age: e[2] }
         mcl.wSet(`darkoak:profile:${player.name}`, JSON.stringify(profile))
-    })
+    }).catch()
 }
 
 /**Profile
@@ -1942,9 +1946,9 @@ export function reportPlayerUI(player) {
             communityMain(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.wSet(`darkoak:report:${mcl.timeUuid()}`, JSON.stringify({ player: names[e[0]], reason: e[1], submitter: player.name }))
-    })
+    }).catch()
 }
 
 /**RTP
@@ -2005,5 +2009,6 @@ export function shopUI(player) {
             player.runCommand(`scoreboard players remove @s ${mcl.wGet('darkoak:moneyscore')} ${parts.price}`)
             player.runCommand(`give @s ${parts.item} ${parts.amount}`)
         }
-    })
+    }).catch()
 }
+// 2005 lines in one file

@@ -43,8 +43,6 @@ currently working on is below here
 
 Plots are similar but build structures in a co-ord space. This will get a tutorial on youtube to explain how to use it.
 
-landclaim add
-landclaim remove
 
 * means todo 
 *? means todo optional, probably planned
@@ -52,20 +50,13 @@ landclaim remove
 <b>f</b>
 changelog:
     added:
-        dimension selector to gens
-        landclaims
-        mob gens*
-        search button to data deleter
+        
 
     fixed:
-        locked chests are now unbreakable
-        item binding commands issue
+        
 
     changes:
-        pack icon changed
-        bindable items have been added to an item group
-        updated the sidebar to look better
-        hosts can now use the main item without the admin tag (it will auto give the tag)
+        
 
 
 
@@ -76,7 +67,7 @@ Auto-Sneak
 Auto-Sprint: 1
 Bhop
 Elytra fly: 1
-Fast Ladder: climbing and y velocity is too high
+Fast Ladder: 1
 Fast Stop
 Fly: 1, 2, 3
 Glide

@@ -141,7 +141,7 @@ export function enchantOnUse(evd) {
                 break
             case 'Dash':
                 const lk = player.getViewDirection()
-                player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
+                player.applyKnockback({x: lk.x * amount, z: lk.z * amount}, lk.y)
                 break
             case 'Extinguish':
                 player.extinguishFire(false)

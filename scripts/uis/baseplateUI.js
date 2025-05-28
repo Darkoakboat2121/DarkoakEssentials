@@ -1,5 +1,5 @@
 import { world, system, Player } from "@minecraft/server"
-import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
+import { MessageFormData, ModalFormData, ActionFormData, ModalFormResponse } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 
 /**Baseplate UI, a class for making updates easier */
@@ -16,9 +16,7 @@ export class bui {
     static namePicker(f, tag, text, hasEmpty, tooltip) {
         let p = mcl.playerNameArray(tag)
         if (hasEmpty) p.unshift('')
-        f.dropdown(text, p, {
-            tooltip: tooltip || ''
-        })
+        bui.dropdown(f, text || '', p || [''], 0, tooltip || '')
         return p
     }
 
@@ -71,7 +69,7 @@ export class bui {
      */
     static slider(f, label = '', minimum = 0, maximum = 10, defaultValue = minimum, valueStep = 1, tooltip = '') {
         return f.slider(label.toString() || '', parseInt(minimum) || 0, parseInt(maximum) || 0, {
-            valueStep: parseInt(valueStep) || 0,
+            valueStep: parseInt(valueStep) || 1,
             defaultValue: parseInt(defaultValue) || 0,
             tooltip: tooltip.toString() || ''
         })
@@ -103,7 +101,7 @@ export class bui {
      * @param {ModalFormData | ActionFormData} f 
      */
     static label(f, text = '') {
-        // return f.label(text.toString() || '')
+        return f.label(text.toString() || '')
     }
 
     /**Generic divider
@@ -121,5 +119,26 @@ export class bui {
             defaultValue: defaultValue.valueOf() || false,
             tooltip: tooltip.toString() || ''
         })
+    }
+
+    /**Filters for real values
+     * @param {ModalFormResponse} evd 
+     */
+    static formValues(evd) {
+        return evd.formValues.filter(e => e != null)
+    }
+
+    /**
+     * @param {ActionFormData | ModalFormData} f 
+     */
+    static header(f, text = '') {
+        f.header(text.toString() || '')
+    }
+
+    /**Generic submitbutton
+     * @param {ModalFormData} f 
+     */
+    static submitButton(f, text = '') {
+        f.submitButton(text.toString() || '')
     }
 }

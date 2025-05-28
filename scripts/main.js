@@ -23,7 +23,7 @@ import * as worldProtection from "./world/worldProtection"
 
 // seventh set up external uis / commands
 import * as external from "./external/external"
-import { enchantOnDamaged, enchantOnDeathKill, enchantOnHit, enchantOnJump, enchantOnUse } from "./enchanting"
+import { customEnchantActions, customEnchantEvents, enchantOnDamaged, enchantOnDeathKill, enchantOnHit, enchantOnJump, enchantOnUse } from "./enchanting"
 
 const cooldown = new Map()
 
@@ -39,17 +39,20 @@ world.afterEvents.entityHitEntity.subscribe((evd) => {
     enchantOnHit(evd)
 })
 
-// on spawn community giver and welcome message
+// on spawn community giver and welcome message and queue message system
 world.afterEvents.playerSpawn.subscribe((evd) => {
     communityGiver(evd)
     worldSettings.welcomeMessage(evd)
+    chat.messageQueueAndPlayerList(evd)
 })
 
-// chest lock and world interact settings
+// chest lock, world interact settings, landclaims, data editor, data editor block
 world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
     chestLock(evd)
     worldSettings.worldSettingsInteract(evd)
     worldProtection.placeBreakLandclaim(evd)
+    dataEditorBlock(evd)
+    worldSettings.interactCommandBlock(evd)
 })
 
 // antinpc, dataeditorentity, and on interact commands
@@ -116,8 +119,11 @@ system.runInterval(() => {
         actionBar(player)
         anticheat.anticheatMain(player)
         anticheat.cpsTester(player)
+        chat.nametag(player, mcl.jsonWGet('darkoak:chat:other'))
     }
 })
+
+// on player shoot arrow, if player has tag pacifist, apply pacifist tag to arrow
 
 /**
  * @param {ItemUseAfterEvent} evd 
@@ -197,6 +203,7 @@ function itemOpeners(evd) {
         return
     }
 
+
     if (item.typeId.startsWith('darkoak:dummy')) {
         for (let index = 0; index <= arrays.dummySize; index++) {
             if (item.typeId === `darkoak:dummy${index}`) {
@@ -246,6 +253,19 @@ function dataEditor(evd) {
         evd.cancel = true
         system.runTimeout(() => {
             interfacesTwo.dataEditorEntityUI(evd.player, evd.target)
+        })
+    }
+}
+
+/**
+ * 
+ * @param {PlayerInteractWithBlockBeforeEvent} evd 
+ */
+function dataEditorBlock(evd) {
+    if (evd.itemStack && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin') && evd.isFirstEvent) {
+        evd.cancel = true
+        system.runTimeout(() => {
+            interfacesTwo.dataEditorBlockUI(evd.player, evd.block)
         })
     }
 }
@@ -385,8 +405,25 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
     const player = evd.sourceEntity
     if (evd.id === 'darkoak:enchant') {
         if (!evd.sourceEntity) return
-        interfacesTwo.customEnchantsMain(evd.sourceEntity)
-        return
+        if (evd.message.trim() == '') {
+            interfacesTwo.customEnchantsMain(evd.sourceEntity)
+            return
+        } else {
+            const parts = evd.message.split(' ')
+            const event = parseInt(parts[0])
+            const action = parseInt(parts[1])
+            const power = parseInt(parts[2])
+
+            const i = mcl.getHeldItem(player)
+            let item = new ItemStack(i.type, i.amount)
+            let lore = i.getLore()
+            lore.push(`§r§5${customEnchantEvents[event]}-${customEnchantActions[action]}-${power}`)
+            item.setLore(lore)
+            item.nameTag = i.nameTag || item.nameTag
+
+            mcl.getItemContainer(player).setItem(player.selectedSlotIndex, item)
+            return
+        }
     }
     // if (evd.id === 'darkoak:bind') {
     //     if (!evd.sourceEntity) return

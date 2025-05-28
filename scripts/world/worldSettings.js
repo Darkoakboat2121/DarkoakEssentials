@@ -1,4 +1,4 @@
-import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
@@ -81,6 +81,24 @@ export function interactCommand(evd) {
         system.runTimeout(() => {
             evd.player.runCommand(command)
         })
+    }
+}
+
+/**
+ * @param {PlayerInteractWithBlockBeforeEvent} evd 
+ */
+export function interactCommandBlock(evd) {
+    if (!evd.isFirstEvent) return
+    const defaults = mcl.listGetValues('darkoak:blockinteractcommand:')
+    const loc = evd.block.location
+    for (let index = 0; index < defaults.length; index++) {
+        const p = JSON.parse(defaults[index])
+        if (p.coords.x === loc.x && p.coords.y === loc.y && p.coords.z === loc.z) {
+            system.runTimeout(() => {
+                evd.player.runCommand(p.command)
+            })
+            return
+        }
     }
 }
 

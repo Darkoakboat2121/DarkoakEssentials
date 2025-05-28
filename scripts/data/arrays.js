@@ -7,7 +7,6 @@ import { EntityComponentTypes, Player, system, world } from "@minecraft/server"
 /**List of usernames to ban automatically if prebans is set to true*/
 export const preBannedList = [
     'Noki5160', /*IP leaking*/
-    'TheMr8bit', /*Basic*/
     'K4leonidas', //Racism
     'HackerBase74', //Basic
     'Player847806825', //Alt
@@ -209,7 +208,7 @@ export function replacer(player, string) {
 
     }
 
-    // math
+    // math, btw this code is racist, idk why, it just gets censored in mc
     if (formattedString.includes('#(') && formattedString.includes(')#')) {
         try {
             let eq = mcl.getStringBetweenChars(formattedString, '#(', ')#')
@@ -227,8 +226,15 @@ export function replacer(player, string) {
 }
 
 
-export const dummySize = 22
+export const dummySize = 29
 export const version = '2.2.0, This Is Probably Wrong'
+
+/**Returns the money score
+ * @returns {string}
+ */
+export function getMoney() {
+    return mcl.wGet('darkoak:moneyscore')
+}
 
 export const hashtags = [
     '\nKeys:',
@@ -274,7 +280,8 @@ export const hashtagKeys = [
     '#landclaim add -> Claims Four Chunks Near The Player',
     '#landclaim remove -> Removes Current Land Claim',
     '#landclaim players -> Opens UI For Adding Players To a Landclaim',
-    '#version -> Says The Version Number In Chat'
+    '#version -> Says The Version Number In Chat',
+    '#message -> Opens A UI For Queuing A Message',
 ].join('\n')
 
 /**Array of strings for textures*/
@@ -327,6 +334,76 @@ export const emojis = [
     { m: ':lever:', e: '' },
     { m: ':banner_pattern_1:', e: '' },
     { m: ':empty_boots_1:', e: '' },
+    { m: ':tableflip:', e: '(╯‵□′)╯︵┻━┻' },
+    { m: ':untableflip:', e: '(ヘ･_･)ヘ┳━┳' },
+    { m: ':doubletableflip:', e: '┻━┻ ︵ヽ(`Д´)ﾉ︵ ┻━┻' },
+    { m: ':idk:', e: '¯\\_(ツ)_/¯' },
+    { m: ':cat:', e: 'ᓚᘏᗢ' },
+    { m: ':yo:', e: '(＾Ｕ＾)ノ~ＹＯ' },
+    { m: ':defeat:', e: '○|￣|_' },
+    { m: ':amongus:', e: 'ඞ' },
+    { m: ':cat2:', e: '/ᐠ｡ꞈ｡ᐟ\\' },
+    { m: ':nerd:', e: '(⌐■_■)' },
+    { m: ':nerd2:', e: '(⌐◕‿◕)' },
+]
+
+// this is a list of common abbreviations and their expanded forms for professionalism in chat
+// this also changes racist and toxic words to more professional ones
+// WARNING, CONTAINS RACIST WORDS, THEY ARE REPLACED WITH *RACISM HERE* IN THE EXPANDED FORM
+export const professionalism = [
+    { m: 'rn', e: 'right now' },
+    { m: 'idk', e: 'I don\'t know' },
+    { m: 'ik', e: 'I know' },
+    { m: 'ig', e: 'I guess' },
+    { m: 'ya', e: 'yes' },
+    { m: 'cant', e: 'can\'t' },
+    { m: 'im', e: 'I\'m' },
+    { m: 'i', e: 'I' },
+    { m: 'dont', e: 'don\'t' },
+    { m: 'yw', e: 'your welcome' },
+    { m: 'nvm', e: 'nevermind' },
+    { m: 'tbh', e: 'to be honest' },
+    { m: 'ty', e: 'thank you' },
+    { m: 'ok', e: 'okay' },
+    { m: 'gotta', e: 'got to' },
+    { m: 'yea', e: 'yes' },
+    { m: 'brakeing', e: 'breaking' },
+    { m: 'brb', e: 'be right back' },
+    { m: 'cya', e: 'see you' },
+    { m: 'gonna', e: 'going to' },
+    { m: 'wanna', e: 'want to' },
+    { m: 'u', e: 'you' },
+    { m: 'ur', e: 'your' },
+    { m: 'urself', e: 'yourself' },
+    { m: 'np', e: 'no problem' },
+    { m: 'bc', e: 'because' },
+    { m: 'asap', e: 'as soon as possible' },
+    { m: 'jk', e: 'just kidding' },
+    { m: 'smh', e: 'shaking my head' },
+    { m: 'rly', e: 'really' },
+    { m: 'pls', e: 'please' },
+    { m: 'plz', e: 'please' },
+    { m: 'thx', e: 'thanks' },
+    { m: 'sry', e: 'sorry' },
+    { m: 'irl', e: 'in real life' },
+    { m: 'btw', e: 'by the way' },
+    { m: 'havent', e: 'haven\'t' },
+    { m: 'wut', e: 'what' },
+    { m: 'gl', e: 'good luck' },
+    { m: 'glhf', e: 'good luck have fun' },
+    { m: 'idc', e: 'I don\'t care' },
+    { m: 'gg', e: 'good game' },
+    { m: 'afk', e: 'away from keyboard' },
+    { m: 'lmao', e: 'laughing my butt off' },
+    { m: 'wtf', e: 'what the heck' },
+    { m: 'kys', e: 'please get help' },
+    { m: 'dumb', e: 'uninformed' },
+    { m: 'hell', e: 'heck' },
+    { m: 'retard', e: 'less intelligent person' },
+    { m: 'damn', e: 'darn' },
+    { m: 'omg', e: 'oh my gosh' },
+    { m: 'nigger', e: '*racism here*' },
+    { m: 'nigga', e: '*racism here*' },
 ]
 
 

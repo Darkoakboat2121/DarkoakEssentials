@@ -178,6 +178,7 @@ export function lockedChestProtection(evd) {
  * @param {Player} player 
  */
 export function worldProtectionOther(player) {
+    if (mcl.isCreating(player)) return
     const d = mcl.jsonWGet('darkoak:worldprotection')
     const item = mcl.getHeldItem(player)
     if (d.water) {

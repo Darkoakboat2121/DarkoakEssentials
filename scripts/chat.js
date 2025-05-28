@@ -1,9 +1,9 @@
-import { world, system, Player, ChatSendBeforeEvent } from "@minecraft/server"
+import { world, system, Player, ChatSendBeforeEvent, PlayerSpawnAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
-import { emojis, replacer, version } from "./data/arrays"
-import { landclaimMainUI } from "./uis/interfacesTwo"
+import { emojis, professionalism, replacer, version } from "./data/arrays"
+import { landclaimMainUI, queueMessageUI } from "./uis/interfacesTwo"
 import { log } from "./world/anticheat"
 
 
@@ -21,7 +21,7 @@ export function chatSystem(evd) {
     const player = evd.sender
     const message = evd.message
 
-    let commands = mcl.listGetValues('darkoak:command:')
+    const commands = mcl.listGetValues('darkoak:command:')
     for (let index = 0; index < commands.length; index++) {
         const p = JSON.parse(commands[index])
         if (message.trimEnd() != p.message.trim()) continue
@@ -104,8 +104,8 @@ export function chatSystem(evd) {
     if (mcl.jsonWGet('darkoak:chat:other')) {
         /**@type {Array<string>} */
         let logs2 = mcl.jsonWGet('darkoak:messagelogs').log || []
-        if (logs2.length > 100) {
-            while (logs2.length > 100) {
+        if (logs2.length > 250) {
+            while (logs2.length > 250) {
                 logs2.shift()
             }
         }
@@ -117,13 +117,22 @@ export function chatSystem(evd) {
 
     let formattedMessage = message
     for (let index = 0; index < emojis.length; index++) {
-        let e = emojis[index]
+        const e = emojis[index]
         formattedMessage = formattedMessage.replaceAll(e.m, e.e)
     }
 
-    const p = player
     const ocs = mcl.jsonWGet('darkoak:chat:other')
-    nametag(p, ocs)
+
+    if (ocs.professional) {
+        formattedMessage = ' ' + formattedMessage + ' '
+        for (let index = 0; index < professionalism.length; index++) {
+            const pro = professionalism[index]
+            formattedMessage = formattedMessage.replaceAll((' ' + pro.m + ' '), (' ' + pro.e + ' '))
+        }
+        formattedMessage = formattedMessage.trimStart()
+        formattedMessage = mcl.uppercaseFirstLetter(formattedMessage)
+    }
+
 
     /**@type {Array<string>} */
     const tags = player.getTags()
@@ -184,11 +193,13 @@ function hashtag(hashtagKey, sender) {
                 let i = 0
                 while (i++ < 100) {
                     world.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
+                    world.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
                 }
                 break
             case 'cclocal':
                 let o = 0
                 while (o++ < 100) {
+                    sender.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
                     sender.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
                 }
                 break
@@ -244,6 +255,12 @@ function hashtag(hashtagKey, sender) {
             case 'version':
                 sender.sendMessage(version)
                 break
+            case 'message':
+                sender.sendMessage('Close Chat!')
+                system.runTimeout(() => {
+                    queueMessageUI(sender)
+                }, 20)
+                break
         }
     } catch {
         mcl.adminMessage(`A Custom Command That Uses A Hashtag-Key Is Having An Error: ${hashtagKey} from ${sender}`)
@@ -276,7 +293,11 @@ export function chatGames() {
     }
 }
 
-function nametag(p, ocs) {
+/**Interval event for nametags
+ * @param {Player} p 
+ * @param {object} ocs 
+ */
+export function nametag(p, ocs) {
     if (ocs.nametag && !ocs.healthDisplay) {
         /**@type {Player} */
         system.runTimeout(() => {
@@ -317,4 +338,26 @@ function landclaimCheck(a, b) {
 
     // check for overlap
     return !(aMaxX < bMinX || aMinX > bMaxX || aMaxZ < bMinZ || aMinZ > bMaxZ)
+}
+
+/**
+ * @param {PlayerSpawnAfterEvent} evd 
+ */
+export function messageQueueAndPlayerList(evd) {
+    if (!evd.initialSpawn) return
+    const player = evd.player
+    let players = mcl.getPlayerList() || []
+    if (!players.includes(player.name)) {
+        players.push(player.name)
+        mcl.jsonWSet('darkoak:playerlist', players)
+    }
+
+    const messages = mcl.listGetBoth('darkoak:queuemessage:')
+    for (let index = 0; index < messages.length; index++) {
+        const message = JSON.parse(messages[index].value)
+        if (message.player == player.name) {
+            player.sendMessage(`§a[Message Queue] §r§f${message.player} -> ${message.message}`)
+            mcl.wRemove(messages[index].id)
+        }
+    }
 }
