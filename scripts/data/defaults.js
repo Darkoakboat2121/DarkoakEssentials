@@ -6,43 +6,48 @@ import { mcl } from "../logic"
 
 
 export function logcheck() {
-    const log = mcl.wGet('darkoak:log')
-    let data = JSON.parse(log)
+    let log = mcl.jsonWGet('darkoak:log')
 
-    if (data.logs.length > 100) {
-        data.logs.shift()
+    if (log.logs.length > 100) {
+        log.logs.shift()
     }
 
-    mcl.wSet('darkoak:log', JSON.stringify(data))
+    mcl.jsonWSet('darkoak:log', log)
 }
 
-
-system.runInterval(() => {
+let ticker = 0
+/**Checks the byte count for massive sizes (mb) */
+export function byteChecker() {
+    if (ticker <= 6000) {
+        ticker += 1
+        return
+    }
     const byte = world.getDynamicPropertyTotalByteCount()
-    if (byte > 20000) {
+    if (byte > 1048576) {
         mcl.adminMessage(`Possibly Dangerous Property Count: ${byte.toString()}, Please Print The World Data`)
     }
-}, 6000)
+}
 
 
 let lastTime = Date.now()
 let sessionSeconds = 0
-system.runInterval(() => {
-    sessionSeconds++
-    mcl.wSet('darkoak:sseconds', sessionSeconds)
-    mcl.wSet('darkoak:sminutes', (sessionSeconds / 60))
+let tickcount = 0
+/**Gets tps, seconds, and minutes */
+export function timers() {
+    tickcount++
+    if (tickcount % 20 === 0) {
+        sessionSeconds++
+        mcl.wSet('darkoak:sseconds', sessionSeconds)
+        mcl.wSet('darkoak:sminutes', (sessionSeconds / 60))
 
-    const currentTime = Date.now()
-    const elapsedTime = (currentTime - lastTime) / 1000
-    let tps = 20 / elapsedTime
-    while (tps > 20) {
-        tps--
+        const currentTime = Date.now()
+        const elapsedTime = (currentTime - lastTime) / 1000
+        let tps = 20 / elapsedTime
+        if (tps > 20) tps = 20
+        mcl.wSet('darkoak:tps', tps.toFixed(0))
+        lastTime = currentTime
     }
-
-    mcl.wSet('darkoak:tps', tps.toFixed(0))
-
-    lastTime = currentTime
-}, 20)
+}
 
 export function defaultData() {
     const players = world.getAllPlayers()
@@ -136,7 +141,12 @@ export function defaultData() {
     }
 
     if (mcl.wGet('darkoak:welcome') === undefined) {
-        mcl.wSet('darkoak:welcome', 'Welcome! Use The Main UI Item To Start.')
+        mcl.jsonWSet('darkoak:welcome', {
+            welcome: 'Welcome! Use The Main UI Item To Start.',
+            welcomeS: false,
+            bye: 'Goodbye #name#!',
+            byeS: false,
+        })
     }
 
     if (mcl.wGet('darkoak:worldprotection') === undefined) {
@@ -179,6 +189,14 @@ export function defaultData() {
         })
     }
 
+    if (mcl.wGet('darkoak:moneyscore') === undefined) {
+        mcl.jsonWSet('darkoak:moneyscore', {
+            id: '',
+            tax: '0',
+            compression: '0',
+        })
+    }
+
 
     // Setup on first load
     if (!mcl.wGet('darkoak:setup')) {
@@ -218,7 +236,7 @@ export function defaultData() {
             tag: ''
         })
 
-
+        world.sendMessage('Darkoak Essentials Has Been Setup / Installed! Use The Main UI Item To Start')
         mcl.wSet('darkoak:setup', true)
     }
 }

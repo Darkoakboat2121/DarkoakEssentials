@@ -1,4 +1,4 @@
-import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
@@ -103,18 +103,28 @@ export function interactCommandBlock(evd) {
 }
 
 /**
- * @param {PlayerSpawnAfterEvent} evd 
+ * @param {PlayerSpawnAfterEvent | PlayerLeaveBeforeEvent} evd 
  */
 export function welcomeMessage(evd) {
-    if (!evd.initialSpawn) return
-
-    /**@type {string} */
-    let text = mcl.wGet('darkoak:welcome')
-    if (!text || text.trim().length < 1) return
-
-    system.runTimeout(() => {
-        evd.player.sendMessage(arrays.replacer(evd.player, text))
-    }, 100)
+    /**@type {{welcome: string, welcomeS: boolean, bye: string, byeS: string}} */
+    const d = mcl.jsonWGet('darkoak:welcome')
+    if (!d) return
+    if (evd instanceof PlayerSpawnAfterEvent) {
+        if (!evd.initialSpawn) return
+        system.runTimeout(() => {
+            if (d.welcomeS) {
+                world.sendMessage(arrays.replacer(evd.player, d.welcome))
+            } else {
+                evd.player.sendMessage(arrays.replacer(evd.player, d.welcome))
+            }
+        }, 100)
+    } else {
+        if (d.byeS) {
+            world.sendMessage(arrays.replacer(evd.player, d.bye))
+        } else {
+            evd.player.sendMessage(arrays.replacer(evd.player, d.bye))
+        }
+    }
 }
 
 /**Player tracking and world border
@@ -148,67 +158,32 @@ export function borderAndTracking(player) {
     }
 }
 
-/**
+/**Don't recommend touching lol
  * @param {Player} player 
  * @param {Object} d 
  */
 function tracking(player, d) {
-    if (d.flying && player.isFlying) {
-        player.addTag('darkoak:flying')
-        if (d.flyingC) player.runCommand(d.flyingC)
-    } else {
-        player.removeTag('darkoak:flying')
+
+    const objectKeys = arrays.trackingKeysObject
+    const playerKeys = arrays.trackingKeysPlayer
+    for (let index = 0; index < objectKeys.length; index++) {
+        const oKey = objectKeys[index]
+        const pKey = playerKeys[index]
+        
+        if (d[oKey] && player[pKey]) {
+            player.addTag(`darkoak:${oKey}`)
+            if (d[`${oKey}C`]) player.runCommand(arrays.replacer(player, d[`${oKey}C`]))
+        } else {
+            player.removeTag(`darkoak:${oKey}`)
+        }
     }
+}
 
-    if (d.gliding && player.isGliding) {
-        player.addTag('darkoak:gliding')
-        if (d.glidingC) player.runCommand(d.glidingC)
-    } else {
-        player.removeTag('darkoak:gliding')
-    }
-
-    if (d.climbing && player.isClimbing) {
-        player.addTag('darkoak:climbing')
-        if (d.climbingC) player.runCommand(d.climbingC)
-    } else {
-        player.removeTag('darkoak:climbing')
-    }
-
-    if (d.emoting && player.isEmoting) {
-        player.addTag('darkoak:emoting')
-        if (d.emotingC) player.runCommand(d.emotingC)
-    } else {
-        player.removeTag('darkoak:emoting')
-    }
-
-    if (d.falling && player.isFalling) {
-        player.addTag('darkoak:falling')
-        if (d.fallingC) player.runCommand(d.fallingC)
-    } else {
-        player.removeTag('darkoak:falling')
-    }
-
-    if (d.inwater && player.isInWater) {
-        player.addTag('darkoak:inwater')
-        if (d.inwaterC) player.runCommand(d.inwaterC)
-    } else {
-        player.removeTag('darkoak:inwater')
-    }
-
-    if (d.jumping && player.isJumping) {
-        player.addTag('darkoak:jumping')
-        if (d.jumpingC) player.runCommand(d.jumpingC)
-    } else {
-        player.removeTag('darkoak:jumping')
-    }
-
-    if (d.onground && player.isOnGround) {
-        player.addTag('darkoak:onground')
-        if (d.ongroundC) player.runCommand(d.ongroundC)
-    } else {
-        player.removeTag('darkoak:onground')
-    }
-
-
-
+/**
+ * @param {ItemReleaseUseAfterEvent} evd 
+ */
+export function pacifistArrowFix(evd) {
+    if (!evd.itemStack) return
+    if (evd.itemStack.typeId != 'minecraft:bow' || evd.itemStack.typeId != 'minecraft:crossbow') return
+    evd.source.runCommand('tag @e [type=arrow,r=0.5,c=1] add darkoak:pacifist')
 }

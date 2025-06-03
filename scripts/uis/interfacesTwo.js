@@ -3,7 +3,7 @@ import { ActionFormData, MessageFormData, ModalFormData, uiManager, UIManager } 
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
 import { customEnchantActions, customEnchantEvents } from "../enchanting"
-import { hashtags, preBannedList, icons } from "../data/arrays"
+import { hashtags, preBannedList, icons, compress, decompress } from "../data/arrays"
 import { bui } from "./baseplateUI"
 import * as modal from "./modalUI"
 
@@ -80,7 +80,7 @@ export function dataEditorBlockUI(player, block) {
         if (e[1] && e[1] != block.typeId) block.setType(e[1])
 
         if (e[3] != block.isWaterlogged) block.setWaterlogged(e[3])
-        
+
     }).catch()
 }
 
@@ -469,7 +469,7 @@ export function anticheatSettings(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Anti-speed 2', d.antispeed2)
-    bui.label(f, 'Checks If The Player Is Going At Insane Speeds')
+    bui.label(f, 'Checks If The Player Is Going At Insane Speeds (Also Slows Them Down)')
 
     bui.divider(f)
 
@@ -485,6 +485,11 @@ export function anticheatSettings(player) {
 
     bui.toggle(f, 'Three Strike Action', d.strike)
     bui.label(f, 'If This Is On And If A Player Triggers Three Anticheat Measures, The Player Gets Killed')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-crasher 1', d.anticrasher1)
+    bui.label(f, 'Stops Certain Characters From Showing In Chat (They Lag The Server)')
 
     bui.divider(f)
 
@@ -511,6 +516,7 @@ export function anticheatSettings(player) {
             antiblockreach: e[16],
             notify: e[17],
             strike: e[18],
+            anticrasher1: e[19]
         })
     }).catch()
 }
@@ -584,11 +590,90 @@ export function auctionHouse(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const selected = JSON.parse(items.at(evd.selection).value)
-        if (mcl.buy(player, selected.price)) {
-            player.runCommand(`give "${player.name}" ${selected.itemTypeId} ${selected.itemAmount}`)
-            mcl.wSet(items[index].id)
-        }
+        if (mcl.buy(player, selected.price, selected.itemTypeId, selected.itemAmount)) mcl.wSet(items[index].id)
     }).catch()
+}
+
+export function pressionUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Compress / Decompress')
+
+    bui.button(f, 'Compress Item')
+    bui.button(f, 'Decompress Item')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.communityMoneyUI(player)
+            return
+        }
+        switch (evd.selection) {
+            case 0:
+                compressUI(player)
+                break
+            case 1:
+                decompressUI(player)
+                break
+        }
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function compressUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Compress Item')
+
+    bui.slider(f, 'Amount Of Stacks To Compress', 1, 10) // 0
+
+    bui.toggle(f, 'Diamonds?') // 1
+    bui.toggle(f, 'Netherite Ingots?') // 2
+    bui.toggle(f, 'Iron Ingots?') // 3
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            pressionUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        if (e[1]) {
+            compress(player, e[0], 'diamond', 'darkoak:compressed_diamond', '§cNot Enough Diamonds!')
+        }
+        if (e[2]) {
+            compress(player, e[0], 'netherite_ingot', 'darkoak:compressed_netherite', '§cNot Enough Netherite Ingots!')
+        }
+        if (e[3]) {
+            compress(player, e[0], 'iron_ingot', 'darkoak:compressed_iron', '§cNot Enough Iron Ingots!')
+        }
+    })
+}
+
+export function decompressUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Decompress Item')
+
+    bui.slider(f, 'Amount Of Items To Decompress', 1, 10) // 0
+
+    bui.toggle(f, 'Diamonds?') // 1
+    bui.toggle(f, 'Netherite Ingots?') // 2
+    bui.toggle(f, 'Iron Ingots?') // 3
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            pressionUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        if (e[1]) {
+            decompress(player, e[0], 'darkoak:compressed_diamond', 'diamond', '§cNot Enough Compressed Diamonds!')
+        }
+        if (e[2]) {
+            decompress(player, e[0], 'darkoak:compressed_netherite', 'netherite_ingot', '§cNot Enough Compressed Netherite Ingots!')
+        }
+        if (e[3]) {
+            decompress(player, e[0], 'darkoak:compressed_iron', 'iron_ingot', '§cNot Enough Compressed Iron Ingots!')
+        }
+    })
 }
 
 /**
@@ -1065,6 +1150,7 @@ export function scriptSettings(player) {
     bui.toggle(f, 'Cancel Watchdog Terminating', d.cancelWatchdog, 'If Enabled, Attempts To Cancel A Scripting Crash')
     bui.toggle(f, 'Log Data To Console', d.datalog, 'Logs Data Changes To The Console')
     bui.toggle(f, 'Disable All Chat Systems', d.chatmaster, 'Toggles The Chat System, Useful For Compatibility')
+    bui.toggle(f, 'Disable All Custom Enchant Functionality', d.enchantsmaster, 'Toggles The Custom Enchant System')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -1073,6 +1159,7 @@ export function scriptSettings(player) {
             cancelWatchdog: e[0],
             datalog: e[1],
             chatmaster: e[2],
+            enchantsmaster: e[3],
         })
     }).catch()
 }
@@ -1291,7 +1378,7 @@ export function queueMessageUI(player) {
 
     bui.textField(f, 'Message:', 'Example: Hello World!')
 
-    f.show(player).then((evd) => {
+    bui.show(f, player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
         mcl.jsonWSet(`darkoak:queuemessage:${mcl.timeUuid()}`, {
@@ -1301,13 +1388,49 @@ export function queueMessageUI(player) {
     }).catch()
 }
 
+export function banOfflineUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Ban Player')
+
+    const playerList = mcl.getPlayerList()
+    bui.dropdown(f, 'Player:', playerList)
+    bui.textField(f, 'Reason / Ban Message', 'Example: Hacking')
+    bui.textField(f, 'Ban Time In Hours (Leave Empty For Forever):', 'Example: 24')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            playerPunishmentsMainUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        const selected = playerList[e[0]]
+        const admins = mcl.getAdminList()
+        if (admins.includes(selected)) {
+            mcl.adminMessage(`${player.name} Tried To Ban ${selected}`)
+            return
+        }
+
+        let time = e[2]
+        if (isNaN(time) || time === '' || parseInt(time) <= 0) {
+            time = -1
+        }
+        mcl.jsonWSet(`darkoak:bans:${mcl.timeUuid()}`, {
+            player: selected,
+            message: e[1],
+            time: parseInt(time) * 3600
+        })
+        mcl.adminMessage(`${selected} Has Been Banned!`)
+    }).catch()
+}
+
+
 export function darkoakboatBio(player) {
     let f = new ActionFormData()
     bui.title(f, 'Darkoakboat2121')
 
     bui.label('Hiya, im the boat himself. Im the dev of this very addon. Btw the replacer hashtag system is racist, im not sure why lol.')
 
-    f.show(player)
+    bui.show(f, player)
 }
 
 export function nokiBio(player) {
@@ -1316,16 +1439,17 @@ export function nokiBio(player) {
 
     bui.label('wip')
 
-    f.show(player)
+    bui.show(f, player)
 }
 
 export function canineyetiBio(player) {
     let f = new ActionFormData()
     bui.title(f, 'CanineYeti24175')
 
+    bui.label(f, 'Note From Darko: He\'s my best friend and has helped alot through my journey learning how to code this very addon. I want to give a special thanks to him.')
     bui.label(f, 'wip')
 
-    f.show(player)
+    bui.show(f, player)
 }
 
 export function tygerBio(player) {
@@ -1334,5 +1458,5 @@ export function tygerBio(player) {
 
     bui.label(f, 'Forgot most commands lol')
 
-    f.show(player)
+    bui.show(f, player)
 }

@@ -2,10 +2,11 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, auctionMain, autoResponseMainUI, canineyetiBio, chatGamesSettings, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, floatingTextMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, nokiBio, personalLogUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio } from "./interfacesTwo"
+import { addGiftcode, addRankUI, auctionMain, autoResponseMainUI, banOfflineUI, canineyetiBio, chatGamesSettings, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, floatingTextMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, nokiBio, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 
 // This file holds all the functions containing UI
+
 
 // Main UI: Opened by using the main item with the tag darkoak:admin
 export function mainUI(player) {
@@ -72,7 +73,7 @@ export function worldSettingsUI(player) {
 
     bui.button(f, 'Interaction Settings\n§7Modify Whether Interactions Can Take Place', arrays.icons.crossButton)
     bui.button(f, 'Bind Custom Item\n§7Bind Dummy Items', arrays.icons.goldenPicker)
-    bui.button(f, 'Welcome Message\n§7Set The Message That Players See When They Join')
+    bui.button(f, 'Welcome / Goodbye Messages\n§7Set Join / Leave Messages')
     bui.button(f, 'World Border\n§7Set The World Border Size', arrays.icons.block('barrier'))
     bui.button(f, 'Money ID\n§7Set The Scoreboard ID For Money', arrays.icons.minecoin)
     bui.button(f, 'Item Settings\n§7Settings For Custom Items')
@@ -151,6 +152,8 @@ export function itemBindsUI(player) {
     bui.label(f, 'More Commands:')
     bui.textField(f)
     bui.textField(f)
+    bui.textField(f)
+    bui.textField(f)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -162,6 +165,8 @@ export function itemBindsUI(player) {
             command1: e[1],
             command2: e[2],
             command3: e[3],
+            command4: e[4],
+            command5: e[5],
         })
     }).catch()
 }
@@ -172,16 +177,26 @@ export function itemBindsUI(player) {
 export function welcomeMessageUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Welcome Message')
+    const d = mcl.jsonWGet('darkoak:welcome') || { welcome: '', welcomeS: false, bye: '', byeS: false }
 
-    bui.textField(f, `${arrays.hashtags}\nMessage:`, 'Example: Welcome to Super-Skygen!', mcl.wGet('darkoak:welcome'))
+    bui.label(f, arrays.hashtags)
+    bui.textField(f, `\nMessage:`, 'Example: Welcome to Super-Skygen!', d.welcome)
+    bui.toggle(f, 'Global Welcome?', d.welcomeS)
+    bui.textField(f, 'Goodbye Message:', 'Example: Goodbye #name#!', d.bye)
+    bui.toggle(f, 'Global Goodbye?', d.byeS)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             worldSettingsUI(player)
             return
         }
-        mcl.wSet('darkoak:welcome', evd.formValues[0])
-        player.sendMessage(evd.formValues[0])
+        const e = bui.formValues(evd)
+        mcl.jsonWSet('darkoak:welcome', {
+            welcome: e[0],
+            welcomeS: e[1],
+            bye: e[2],
+            byeS: e[3]
+        })
     }).catch()
 }
 
@@ -195,11 +210,12 @@ export function worldBorderUI(player) {
             worldSettingsUI(player)
             return
         }
-        if (isNaN(evd.formValues[0])) {
+        const e = bui.formValues(evd)
+        if (isNaN(e[0])) {
             worldBorderUI(player)
             return
         }
-        mcl.wSet('darkoak:cws:border', evd.formValues[0])
+        mcl.wSet('darkoak:cws:border', e[0])
     }).catch()
 }
 
@@ -207,14 +223,22 @@ export function moneyUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Money ID')
 
-    bui.textField(f, '\nScore Name For Money:', 'Example: Money', mcl.wGet('darkoak:moneyscore'))
+    const ms = mcl.jsonWGet('darkoak:moneyscore')
+    bui.textField(f, '\nScore Name For Money:', 'Example: Money', ms['id'] || '')
+    bui.textField(f, 'Tax Percentage:', 'Example: 5', ms['tax'] || '', '0 to 100')
+    bui.textField(f, 'Compression Tax:', 'Example: 1', ms['compression'] || '', '0 To 64')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             worldSettingsUI(player)
             return
         }
-        mcl.wSet('darkoak:moneyscore', evd.formValues[0])
+        const e = bui.formValues(evd)
+        mcl.jsonWSet('darkoak:moneyscore', {
+            id: e[0].trim(),
+            tax: e[1].trim(),
+            compression: e[2].trim(),
+        })
     }).catch()
 }
 
@@ -273,7 +297,8 @@ export function playerDataMainUI(player) {
             playerSettingsUI(player)
             return
         }
-        playerDataViewUI(player, u[evd.formValues[0]])
+        const e = bui.formValues(evd)
+        playerDataViewUI(player, u[e[0]])
     }).catch()
 }
 
@@ -290,7 +315,7 @@ export function playerDataViewUI(playerToShow, playerToView) {
     bui.label(f, `Effects: ${mcl.playerEffectsArray(player)}`)
     bui.label(f, `Tags: ${mcl.playerTagsArray(player).join(', §r§f')}`)
 
-    bui.button(f, 'Dismiss')
+    bui.button(f, 'Reload')
     bui.divider(f)
     bui.label(f, 'Items:')
     // doesnt view armor or offhand, not considered inventory slots??
@@ -303,7 +328,25 @@ export function playerDataViewUI(playerToShow, playerToView) {
         bui.divider(f)
     }
 
-    f.show(playerToShow).catch((evd) => {
+    bui.button(f, 'Reload')
+
+    bui.divider(f)
+    bui.label(f, 'Player Data:')
+    const data = mcl.pListGetBoth(player)
+    for (let index = 0; index < data.length; index++) {
+        const d = data[index]
+        bui.label(f, `${d.id} -> ${d.value}`)
+        bui.divider(f)
+    }
+
+    bui.button(f, 'Reload')
+
+    bui.divider(f)
+
+    f.show(playerToShow).then((evd) => {
+        if (evd.canceled) return
+        playerDataViewUI(playerToShow, playerToView)
+    }).catch((evd) => {
         mcl.adminMessage(`Error Viewing Player: ${player.name}, Message: ${String(evd)}`)
     })
 }
@@ -314,6 +357,7 @@ export function playerPunishmentsMainUI(player) {
 
     bui.button(f, 'Ban A Player')
     bui.button(f, 'Unban A Player')
+    bui.button(f, 'Ban Offline Player')
     bui.button(f, 'Mute A Player')
     bui.button(f, 'Unmute A Player')
 
@@ -327,9 +371,12 @@ export function playerPunishmentsMainUI(player) {
                 unbanPlayerUI(player)
                 break
             case 2:
-                mutePlayerUI(player)
+                banOfflineUI(player)
                 break
             case 3:
+                mutePlayerUI(player)
+                break
+            case 4:
                 unmutePlayerUI(player)
                 break
             default:
@@ -352,7 +399,7 @@ export function banPlayerUI(player) {
             playerPunishmentsMainUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         if (mcl.isDOBAdmin(mcl.getPlayer(names[e[0]]))) {
             mcl.adminMessage(`${player.name} Tried To Ban ${names[e[0]]}`)
         }
@@ -375,7 +422,7 @@ export function unbanPlayerUI(player) {
 
     const bans = mcl.listGetBoth('darkoak:bans:')
 
-    if (bans === undefined || bans.length === 0) {
+    if (bans === undefined || bans.length == 0) {
         player.sendMessage('§cNo Bans Found§r')
         return
     }
@@ -408,7 +455,8 @@ export function mutePlayerUI(player) {
             playerPunishmentsMainUI(player)
             return
         }
-        player.runCommand(`tag ${names[evd.formValues[0]]} add darkoak:muted`)
+        const e = bui.formValues(evd)
+        player.runCommand(`tag ${names[e[0]]} add darkoak:muted`)
     }).catch()
 }
 
@@ -417,7 +465,7 @@ export function unmutePlayerUI(player) {
     bui.title(f, 'Unmute A Player')
 
     const names = bui.namePicker(f, 'darkoak:muted', '\nPlayer:')
-    if (names === undefined || names.length === 0) {
+    if (names === undefined || names.length == 0) {
         player.sendMessage('§cNo Mutes Found§r')
         return
     }
@@ -427,7 +475,8 @@ export function unmutePlayerUI(player) {
             playerPunishmentsMainUI(player)
             return
         }
-        player.runCommand(`tag ${names[evd.formValues[0]]} remove darkoak:muted`)
+        const e = bui.formValues(evd)
+        player.runCommand(`tag ${names[e[0]]} remove darkoak:muted`)
     }).catch()
 }
 
@@ -476,7 +525,7 @@ export function playerTrackingUI(player) {
             playerSettingsUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.jsonWSet('darkoak:tracking', {
             flying: e[0],
             flyingC: e[1],
@@ -639,10 +688,10 @@ export function chatCommandsAddUI(player) {
 
     bui.label(f, arrays.hashtags)
 
-    bui.textField(f, 'Message:', 'Example: !spawn')
+    bui.textField(f, 'Message:', 'Example: !spawn', '', arrays.chatCommandSelectors)
     bui.textField(f, `Add A Command Or Hashtag Key. Hashtag Keys Include:\n${arrays.hashtagKeys}\nCommand:`, 'Example: tp @s 0 0 0')
     bui.textField(f, 'Required Tag:', 'Example: Admin')
-    
+
     bui.label(f, 'Add More Commands:')
     bui.textField(f)
     bui.textField(f)
@@ -654,11 +703,11 @@ export function chatCommandsAddUI(player) {
         }
         const e = bui.formValues(evd)
         mcl.jsonWSet(`darkoak:command:${mcl.timeUuid()}`, {
-            message: e[0],
-            command: e[1],
-            tag: e[2],
-            command2: e[3],
-            command3: e[4]
+            message: e[0].trim(),
+            command: e[1].trim(),
+            tag: e[2].trim(),
+            command2: e[3].trim(),
+            command3: e[4].trim(),
         })
     }).catch()
 }
@@ -673,14 +722,16 @@ export function chatCommandsDeleteUI(player) {
 
     const commands = mcl.listGetBoth('darkoak:command:')
 
-    if (commands.length == 0) {
+    if (commands === undefined || commands.length == 0) {
         player.sendMessage('§cNo Chat Commands Found§r')
         return
     }
 
     for (let index = 0; index < commands.length; index++) {
         const c = JSON.parse(commands[index].value)
-        bui.button(f, `${c.message} | ${c.tag}\n${c.command}`)
+        bui.button(f, `${c.message || ''} | ${c.tag || ''}`)
+        bui.label(f, `${c.command || ''}\n${c.command2 || ''}\n${c.command3 || ''}`)
+        bui.divider(f)
     }
 
     f.show(player).then((evd) => {
@@ -702,7 +753,7 @@ export function chatCommandsEditPickerUI(player) {
 
     const commands = mcl.listGetBoth('darkoak:command:')
 
-    if (commands.length === 0) {
+    if (commands === undefined || commands.length === 0) {
         player.sendMessage('§cNo Chat Commands Found§r')
         return
     }
@@ -735,8 +786,8 @@ export function chatCommandsEditUI(player, chatCommand) {
     bui.textField(f, 'Edit Command:', '', parts.command)
     bui.textField(f, 'Edit Tag:', '', parts.tag)
     bui.label(f, 'More Commands:')
-    bui.textField(f)
-    bui.textField(f)
+    bui.textField(f, 'Command Two:', '', parts.command2)
+    bui.textField(f, 'Command Three:', '', parts.command3)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -768,12 +819,12 @@ export function chatCommandsViewUI(player) {
     for (let index = 0; index < values.length; index++) {
         const p = JSON.parse(values[index])
         bui.divider(f)
-        bui.label(f, `${p.message} | ${p.tag || 'No Tag'}\n${p.command}`)
+        bui.label(f, `${p.message || ''} | ${p.tag || 'No Tag'}\n${p.command || ''}\n${p.command2 || ''}\n${p.command3 || ''}`)
     }
 
     bui.button(f, `Dismiss`)
 
-    f.show(player)
+    bui.show(f, player)
 }
 
 export function censorSettingsMainUI(player) {
@@ -810,25 +861,29 @@ export function censorSettingsAddUI(player) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        mcl.wSet(`darkoak:censor:${mcl.timeUuid()}`, evd.formValues[0])
+        const e = bui.formValues(evd)
+        let censors = mcl.jsonWGet('darkoak:censor') || []
+        censors.push(e[0])
+        mcl.jsonWSet('darkoak:censor', censors)
     }).catch()
 }
 
 export function censorSettingsRemoveUI(player) {
     let f = new ModalFormData()
 
-    const words = mcl.listGetValues('darkoak:censor:')
-    const wordRaw = mcl.listGet('darkoak:censor:')
+    let words = mcl.jsonWGet('darkoak:censor') || []
 
-    if (words === undefined || words.length === 0) {
-        player.sendMessage('§cNo Words Found§r')
+    if (words === undefined || words.length == 0) {
+        player.sendMessage('§cNo Censored Words Found§r')
         return
     }
     bui.dropdown(f, '\nWord:', words)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        mcl.wSet(wordRaw[evd.formValues[0]])
+        const e = bui.formValues(evd)
+        words.splice(e[0], 1)
+        mcl.jsonWSet('darkoak:censor', words)
     }).catch()
 }
 
@@ -863,7 +918,7 @@ export function otherChatSettingsUI(player) {
             chatSettingsUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.jsonWSet('darkoak:chat:other', {
             proximity: e[0],
             nametag: e[1],
@@ -936,7 +991,8 @@ export function dashboardMainUI(player) {
                 player.sendMessage('§m----------------------§r')
                 const data = mcl.listGetBoth()
                 for (let index = 0; index < data.length; index++) {
-                    player.sendMessage(`${data[index].id} <> ${data[index].value}`)
+                    const da = data[index]
+                    player.sendMessage(`${da.id} <> ${da.value.toString()}`)
                 }
                 player.sendMessage(`Data Amount: ${world.getDynamicPropertyTotalByteCount().toString()}`)
                 break
@@ -1012,14 +1068,22 @@ export function dataDeleterSearchUI(player, search = '') {
     }).catch()
 }
 
+/**
+ * @param {Player} player 
+ */
 export function reportsUI(player) {
     let f = new ActionFormData()
     bui.title(f, 'Reports')
 
-    const values = mcl.listGetValues('darkoak:report:')
+    const reports = mcl.listGetBoth('darkoak:report:')
 
-    for (let index = 0; index < values.length; index++) {
-        const parts = JSON.parse(values[index])
+    if (reports === undefined || reports.length == 0) {
+        player.sendMessage('§cNo Reports Found§r')
+        return
+    }
+
+    for (let index = 0; index < reports.length; index++) {
+        const parts = JSON.parse(reports[index].value)
         bui.button(f, `${parts.player} Reported By: ${parts.submitter}\n${parts.reason}`)
     }
 
@@ -1028,21 +1092,25 @@ export function reportsUI(player) {
             dashboardMainUI(player)
             return
         }
-        const data = JSON.parse(values[evd.selection])
+        const data = JSON.parse(reports[evd.selection].value)
         let rf = new ActionFormData()
         bui.title(rf, data.player)
 
         bui.body(rf, `\nPlayer: ${data.player}\nSubmitted By: ${data.submitter}\n\nReason: ${data.reason}\n`)
 
         bui.button(rf, 'Take Action')
+        bui.button(rf, 'Delete Report', arrays.icons.trash)
         bui.button(rf, 'Dismiss')
 
         rf.show(player).then((revd) => {
             if (revd.canceled) {
                 reportsUI(player)
+                return
             }
-            if (revd.selection === 0) {
+            if (revd.selection == 0) {
                 playerPunishmentsMainUI(player)
+            } else if (revd.selection == 1) {
+                mcl.wRemove(reports[evd.selection].id)
             }
         }).catch()
     }).catch()
@@ -1075,7 +1143,7 @@ export function logsUI(player) {
             return
         }
 
-        if (evd.selection === 0) {
+        if (evd.selection == 0) {
             messageLogUI(player)
         }
     }).catch()
@@ -1130,6 +1198,22 @@ export function docsUI(player) {
         const em = emojis[index]
         bui.label(f, `${em.m} -> ${em.e}`)
     }
+
+    bui.divider(f)
+
+    bui.header(f, 'Replacer Hashtags')
+    bui.label(f, arrays.hashtags)
+
+    bui.divider(f)
+
+    bui.header(f, 'Chat Command Keys')
+    bui.label(f, arrays.hashtagKeys)
+
+    bui.divider(f)
+
+    bui.header(f, '§cDebug Events§r')
+    bui.label(f, '§cNot Recommended To Use!§r')
+    bui.label(f, arrays.debugEvents)
 
     bui.divider(f)
 
@@ -1314,7 +1398,7 @@ export function sidebarUI(player) {
     let f = new ModalFormData()
 
     const def = {
-        lines: ['', '', '', '', '', '', '', '', '']
+        lines: ['', '', '', '', '', '', '', '', '', '', '', '', '']
     }
 
     const d = mcl.jsonWGet('darkoak:sidebar') || def
@@ -1338,14 +1422,14 @@ export function sidebarUI(player) {
             lines: [
                 e[0],
                 e[1],
-                e[2], 
-                e[3], 
+                e[2],
+                e[3],
                 e[4],
                 e[5],
                 e[6],
                 e[7],
-                e[8], 
-                e[9], 
+                e[8],
+                e[9],
                 e[10],
                 e[11],
             ]
@@ -1591,6 +1675,7 @@ export function showHideOptionsSettingsUI(player) {
     f.toggle('Show Credits?\nPlease Don\'t Disable This', {
         defaultValue: en.credits || false
     })
+    bui.toggle(f, 'Show Pay / Shop -> Compress / Decompress?', en.payshop4)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1609,6 +1694,7 @@ export function showHideOptionsSettingsUI(player) {
             personallog: e[7],
             giftcodes: e[8],
             credits: e[9],
+            payshop4: e[10],
         })
     }).catch()
 }
@@ -1713,7 +1799,7 @@ export function communityMain(player) {
     if (en.personallog) bui.button(f, 'Personal Log')
     if (en.giftcodes) bui.button(f, 'Giftcodes')
     if (en.credits) bui.button(f, 'Credits', arrays.icons.item('boat_dark_oak'))
-    if (player.hasTag('darkoak:admin')) {
+    if (mcl.isDOBAdmin(player)) {
         bui.button(f, 'Community Settings\n(Admins Only)', arrays.icons.fourPlayers)
     }
 
@@ -1767,6 +1853,7 @@ export function communityMoneyUI(player) {
     if (en.payshop1) bui.button(f, 'Pay')
     if (en.payshop2) bui.button(f, 'Shop')
     if (en.payshop3) bui.button(f, 'Auction House')
+    if (en.payshop4) bui.button(f, 'Compress & Decompress')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1783,8 +1870,13 @@ export function communityMoneyUI(player) {
             shopUI(player)
             return
         }
-        if (en.payshop3 && evd.selection === selectionIndex) {
+        if (en.payshop3 && evd.selection === selectionIndex++) {
             auctionMain(player)
+            return
+        }
+        if (en.payshop4 && evd.selection === selectionIndex) {
+            pressionUI(player)
+            return
         } else {
             player.sendMessage('§cError§r')
         }
@@ -1811,7 +1903,7 @@ export function warpsUI(player) {
             communityMain(player)
             return
         }
-        const e = evd.selection.filter(e => e != null)
+        const e = evd.selection
         if (e === 0) {
             rtp(player)
             return
@@ -1819,7 +1911,7 @@ export function warpsUI(player) {
             tpaUI(player)
             return
         } else {
-            const data = JSON.parse(warps[evd.selection - 2])
+            const data = JSON.parse(warps[e - 2])
             let parts = ''
             if (data != undefined) {
                 parts = data.coords.split(' ')
@@ -1845,8 +1937,9 @@ export function payUI(player) {
             communityMoneyUI(player)
             return
         }
-        const e = evd.formValues
-        const score = world.scoreboard.getObjective(mcl.wGet('darkoak:moneyscore')).getScore(player)
+        const e = bui.formValues(evd)
+        const ms = arrays.getMoney()
+        const score = world.scoreboard.getObjective(ms).getScore(player)
         if (isNaN(e[1])) {
             payUI(player)
             return
@@ -1856,8 +1949,8 @@ export function payUI(player) {
             return
         }
 
-        player.runCommand(`scoreboard players add "${names[e[0]]}" ${mcl.wGet('darkoak:moneyscore')} ${e[1]}`)
-        player.runCommand(`scoreboard players remove @s ${mcl.wGet('darkoak:moneyscore')} ${e[1]}`)
+        player.runCommand(`scoreboard players add "${names[e[0]]}" ${ms} ${e[1]}`)
+        player.runCommand(`scoreboard players remove @s ${ms} ${e[1]}`)
     }).catch()
 }
 
@@ -1868,21 +1961,15 @@ export function myProfile(player) {
     let f = new ModalFormData()
     bui.title(f, 'My Profile')
 
-    if (mcl.wGet(`darkoak:profile:${player.name}`) === undefined) {
+    const parts = mcl.jsonWGet(`darkoak:profile:${player.name}`)
+    if (parts === undefined) {
         const defaultP = { description: '', pronouns: '', age: '' }
-        mcl.wSet(`darkoak:profile:${player.name}`, JSON.stringify(defaultP))
+        mcl.jsonWSet(`darkoak:profile:${player.name}`, defaultP)
     }
-    const parts = JSON.parse(mcl.wGet(`darkoak:profile:${player.name}`))
 
-    f.textField('\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', {
-        defaultValue: parts.description
-    })
-    f.textField('Pronouns:', 'Example: He / Him', {
-        defaultValue: parts.pronouns
-    })
-    f.textField('Age:', 'Example: 17', {
-        defaultValue: parts.age
-    })
+    bui.textField(f, '\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', parts.description)
+    bui.textField(f, 'Pronouns:', 'Example: He / Him', parts.pronouns, 'Good For Other Things Too!')
+    bui.textField(f, 'Age:', 'Example: 17', parts.age, 'Good For Other Things Too!')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1891,7 +1978,7 @@ export function myProfile(player) {
         }
         const e = evd.formValues
         const profile = { description: e[0], pronouns: e[1], age: e[2] }
-        mcl.wSet(`darkoak:profile:${player.name}`, JSON.stringify(profile))
+        mcl.jsonPSet(player, 'darkoak:profile', profile)
     }).catch()
 }
 
@@ -1901,26 +1988,27 @@ export function myProfile(player) {
  */
 export function viewProfile(playerToShow, playerToView) {
     let f = new ActionFormData()
-    const p = mcl.wGet(`darkoak:profile:${playerToView.name}`)
-    if (p === undefined) {
+
+    const parts = mcl.jsonPGet(playerToView, 'darkoak:profile')
+    if (parts === undefined) {
         playerToShow.sendMessage(`§c${playerToView.name}'s Profile Hasn't Been Set-up Yet§r`)
         return
     }
-    const parts = JSON.parse(p)
+
     bui.title(f, `${playerToView.name}'s Profile`)
 
-    f.header(playerToView.name)
+    bui.header(f, playerToView.name)
     bui.label(f, parts.pronouns)
     bui.label(f, `Age: ${parts.age}`)
 
     bui.divider(f)
 
-    f.header('Description')
+    bui.header(f, 'Description')
     bui.label(f, parts.description)
 
     bui.button(f, 'Dismiss')
 
-    f.show(playerToShow)
+    bui.show(f, playerToShow)
 }
 
 /**
@@ -1986,29 +2074,13 @@ export function shopUI(player) {
             communityMoneyUI(player)
             return
         }
-        const score = world.scoreboard.getObjective(mcl.wGet('darkoak:moneyscore')).getScore(player)
         /** @type {{ sell: boolean, item: string, amount: number, price: number }} */
         const parts = JSON.parse(value.at(evd.selection))
-
         if (parts.sell === true) {
-            player.runCommand(`testfor @s [hasitem={item=${parts.item} , quantity=${parts.amount}..}]`).then((evd) => {
-                if (evd.successCount > 0) {
-                    player.runCommand(`clear @s ${parts.item} 0 ${parts.amount}`)
-                    player.runCommand(`scoreboard players add @s ${mcl.wGet('darkoak:moneyscore')} ${parts.price}`)
-                } else {
-                    player.sendMessage('§cNot Enough Items§r')
-                    return
-                }
-            })
+            if (!mcl.sell(player, parts.price, parts.item, parts.amount)) player.sendMessage('§cNot Enough To Sell§r')
         } else {
-            if (score < parts.price) {
-                player.sendMessage('§cNot Enough Money§r')
-                return
-            }
-
-            player.runCommand(`scoreboard players remove @s ${mcl.wGet('darkoak:moneyscore')} ${parts.price}`)
-            player.runCommand(`give @s ${parts.item} ${parts.amount}`)
+            if (!mcl.buy(player, parts.price, parts.item, parts.amount)) player.sendMessage('§cNot Enough Money§r')
         }
     }).catch()
 }
-// 2005 lines in one file
+// 2085 lines in one file

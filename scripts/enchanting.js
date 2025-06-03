@@ -6,6 +6,8 @@ const nerf = 4
 
 export function enchantOnHit(evd) {
     if (evd.damagingEntity.typeId != 'minecraft:player') return
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    if (d.enchantsmaster) return
 
     const player = evd.damagingEntity
     const entity = evd.hitEntity
@@ -45,6 +47,8 @@ export function enchantOnHit(evd) {
  */
 export function enchantOnDeathKill(evd) {
     if (!evd.damageSource.damagingEntity) return
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    if (d.enchantsmaster) return
 
     // on death
     if (evd.deadEntity.typeId === 'minecraft:player') {
@@ -119,6 +123,8 @@ export function enchantOnDeathKill(evd) {
  * @param {ItemUseAfterEvent} evd 
  */
 export function enchantOnUse(evd) {
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    if (d.enchantsmaster) return
     const player = evd.source
 
     const i = mcl.getHeldItem(player)
@@ -155,6 +161,8 @@ export function enchantOnUse(evd) {
  * @param {Player} player 
  */
 export function enchantOnJump(player) {
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    if (d.enchantsmaster) return
     if (player.isOnGround) mcl.pSet(player, 'darkoak:enchant:jumping', false)
     if (!player.isJumping || mcl.pGet(player, 'darkoak:enchant:jumping') === true) return
     mcl.pSet(player, 'darkoak:enchant:jumping', true)
@@ -194,6 +202,8 @@ export function enchantOnJump(player) {
 export function enchantOnDamaged(evd) {
     if (evd.hurtEntity.typeId != 'minecraft:player') return
     if (!evd.damageSource.damagingEntity) return
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    if (d.enchantsmaster) return
 
     const player = evd.hurtEntity
     const entity = evd.damageSource.damagingEntity

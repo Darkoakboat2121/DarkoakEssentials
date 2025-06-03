@@ -187,7 +187,10 @@ export class mcl {
      * @param {any} data 
      */
     static jsonWUpdate(id, updateKey, data) {
-
+        let cd = mcl.jsonWGet(id)
+        if (!cd) cd = {}
+        cd[updateKey] = data
+        mcl.jsonWSet(id, cd)
     }
 
     /**Sets a player dynamic property
@@ -240,21 +243,54 @@ export class mcl {
         } else return undefined
     }
 
-    /**This function checks if the player can buy something
-     * @param {Player} player 
-     * @param {number} amount 
+    /**
+     * @param {Player} player Player that is buying
+     * @param {number} price Price to buy the item
+     * @param {string} result Item typeId to buy
+     * @param {number} amount Amount of the item to give on buy
+     * @returns {boolean} Whether the player successfully bought the item
      */
-    static buy(player, amount) {
+    static buy(player, price, result, amount) {
         const moneyScore = getMoney()
-        if (isNaN(amount) || world.scoreboard.getObjective(moneyScore).getScore(player) == undefined) {
+        const sc = world.scoreboard.getObjective(moneyScore || '')
+        if (!sc) return false
+        const sco = sc.getScore(player)
+        if (isNaN(price) || !sco) {
             return false
         }
-        if (world.scoreboard.getObjective(moneyScore).getScore(player) >= amount) {
-            player.runCommand(`scoreboard players remove "${player.name}" ${moneyScore} ${amount}`)
+        const mscore = mcl.jsonWGet('darkoak:moneyscore')
+        if (sco >= price) {
+            player.runCommand(`scoreboard players remove @s ${moneyScore} ${Math.floor(price * (1 - mscore.tax / 100))}`)
+            player.runCommand(`give @s ${result} ${amount}`)
             return true
         } else {
             return false
         }
+    }
+
+    /**
+     * @param {Player} player Player selling the item
+     * @param {number} price How much the item is selling for
+     * @param {string} itemToSell The item thats being sold, typeId
+     * @param {number} amount Amount required to sell
+     * @param {string} returnItem Item to return to the player after selling, typeId
+     * @param {number} returnAmount Amount of returnitems to return to the player
+     * @returns {boolean} Whether the player successfully sold the item
+     */
+    static sell(player, price, itemToSell, amount, returnItem, returnAmount) {
+        if (isNaN(price) || isNaN(amount)) return false
+
+        const ms = getMoney()
+        if (!ms) return false
+
+        const mscore = mcl.jsonWGet('darkoak:moneyscore')
+
+        if (player.runCommand(`testfor @s [hasitem={item=${itemToSell},quantity=${amount}..}]`).successCount == 0) return false
+        
+        player.runCommand(`clear @s ${itemToSell} ${amount}`)
+        player.runCommand(`scoreboard players add @s ${ms} ${Math.floor(price * (1 - mscore.tax / 100))}`)
+        if (returnItem) player.runCommand(`give @s ${returnItem} ${returnAmount}`)
+        return true
     }
 
     /**Gets scoreboard by objective
@@ -335,7 +371,7 @@ export class mcl {
 
     /**Returns a list of key value pairs of dynamic propertys
      * @param {Player} player 
-     * @param {string | undefined} key 
+     * @param {string | undefined} key If defined, the properties id must start with 'key'
      */
     static pListGetBoth(player, key) {
         if (key === undefined) {
@@ -671,7 +707,7 @@ export class mcl {
             if ((name === undefined || e.nameTag == name) && (tag === undefined || e.hasTag(tag))) {
                 return e
             }
-        } 
+        }
         return undefined
     }
 
@@ -680,5 +716,12 @@ export class mcl {
      */
     static getPlayerList() {
         return mcl.jsonWGet('darkoak:playerlist')
+    }
+
+    /**Returns a list of all admins
+     * @returns {string[]}
+     */
+    static getAdminList() {
+        return mcl.jsonWGet('darkoak:adminlist')
     }
 }

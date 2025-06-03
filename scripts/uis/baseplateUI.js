@@ -1,5 +1,5 @@
 import { world, system, Player } from "@minecraft/server"
-import { MessageFormData, ModalFormData, ActionFormData, ModalFormResponse } from "@minecraft/server-ui"
+import { MessageFormData, ModalFormData, ActionFormData, ModalFormResponse, MessageFormResponse, ActionFormResponse } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 
 /**Baseplate UI, a class for making updates easier */
@@ -13,10 +13,10 @@ export class bui {
      * @param {string | undefined} tooltip Tooltip text
      * @returns {string[]} 
      */
-    static namePicker(f, tag, text, hasEmpty, tooltip) {
+    static namePicker(f, tag, text = '', hasEmpty = false, tooltip = '') {
         let p = mcl.playerNameArray(tag)
         if (hasEmpty) p.unshift('')
-        bui.dropdown(f, text || '', p || [''], 0, tooltip || '')
+        bui.dropdown(f, text, p, 0, tooltip)
         return p
     }
 
@@ -132,13 +132,21 @@ export class bui {
      * @param {ActionFormData | ModalFormData} f 
      */
     static header(f, text = '') {
-        f.header(text.toString() || '')
+        return f.header(text.toString() || '')
     }
 
     /**Generic submitbutton
      * @param {ModalFormData} f 
      */
     static submitButton(f, text = '') {
-        f.submitButton(text.toString() || '')
+        return f.submitButton(text.toString() || '')
+    }
+
+    /**Generic show, made by M
+     * @param {MessageFormData | ActionFormData | ModalFormData} f 
+     * @param {Player} player 
+     */
+    static show(f, player) {
+        return f.show(player)
     }
 }

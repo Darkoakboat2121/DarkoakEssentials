@@ -26,11 +26,14 @@ export function antiFastPlace(evd) {
     const d = mcl.jsonWGet('darkoak:anticheat')
     const player = evd.player
     const block = evd.block
+    const current = mcl.pGet(player, 'darkoak:ac:blocksplaced') || 0
+
 
     if (d.antifastplace) {
-        player.setDynamicProperty('darkoak:ac:blocksplaced', (player.getDynamicProperty('darkoak:ac:blocksplaced') || 0) + 1)
-        if ((player.getDynamicProperty('darkoak:ac:blocksplaced') || 0) > 20) {
+        mcl.pSet(player, 'darkoak:ac:blocksplaced', current + 1)
+        if (current > 20) {
             evd.cancel = true
+            console.log(`Debug: ANTIFASTPLACE, ${player.name} ${block.typeId} ${current}`)
         }
     }
 
@@ -70,10 +73,10 @@ let ticker = 0
  */
 export function cpsTester(player) {
     if (ticker <= 20) {
-        ticker++
+        ticker += 1
         return
     }
-    player.setDynamicProperty('darkoak:ac:cps', 0)
+    mcl.pSet(player, 'darkoak:ac:cps', 0)
 
     if ((player.getDynamicProperty('darkoak:ac:blocksplaced') || 0) > 20) {
         log(`${player.name} -> anti-fast-place`)
@@ -131,30 +134,33 @@ export function anticheatMain(player) {
 
     const v = player.getVelocity()
     const vd = player.getViewDirection()
+    const gm = player.getGameMode()
     const dot = v.x * vd.x + v.z * vd.z
 
-    // Anti fly 1
-    if (player.getGameMode() != "creative" && player.getGameMode() != "spectator" && player.isFlying && d.antifly1) {
-        log(`${player.name} -> anti-fly 1`)
-    }
+    if (gm != "creative" && gm != "spectator") {
+        // anti fly 1
+        if (player.isFlying && d.antifly1) {
+            log(`${player.name} -> anti-fly 1`)
+        }
 
-    // anti fly 2
-    if (player.getGameMode() != "creative" && player.getGameMode() != "spectator" && player.isFlying && d.antifly2 && player.isGliding) {
-        log(`${player.name} -> anti-fly 2`)
-    }
+        // anti fly 2
+        if (player.isFlying && d.antifly2 && player.isGliding) {
+            log(`${player.name} -> anti-fly 2`)
+        }
 
-    // anti fly 3
-    if (player.getGameMode() != "creative" && player.getGameMode() != "spectator" && d.antifly3 && player.isGliding && v.y > 0.8 && v.x < 0.2 && v.z < 0.2 && vd.y < 1) {
-        log(`${player.name} -> anti-fly 3`)
+        // anti fly 3
+        if (d.antifly3 && player.isGliding && v.y > 0.8 && v.x < 0.2 && v.z < 0.2 && vd.y < 1) {
+            log(`${player.name} -> anti-fly 3`)
+        }
     }
 
     // anti invalid movements 1
-    if (player.isSneaking && player.isSprinting && d.antiinvalid1) {
+    if (d.antiinvalid1 && player.isSneaking && player.isSprinting && !player.isFlying) {
         log(`${player.name} -> anti-invalid 1`)
     }
 
     // anti invalid movements 2
-    if (d.antiinvalid2 && player.isSprinting && player.isOnGround && dot < -0.1) {
+    if (d.antiinvalid2 && player.isSprinting && player.isOnGround && dot < -0.3) {
         log(`${player.name} -> anti-invalid 2`)
     }
 
@@ -171,6 +177,7 @@ export function anticheatMain(player) {
     // anti speed 2
     if ((Math.abs(v.x) >= 10 || Math.abs(v.z) >= 10) && d.antispeed1) {
         log(`${player.name} -> speed 2`)
+        player.applyKnockback({x: v.x * -1, z: v.z * -1}, 0)
     }
 
     // anti illegal enchant

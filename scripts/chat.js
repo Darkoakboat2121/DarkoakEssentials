@@ -2,7 +2,7 @@ import { world, system, Player, ChatSendBeforeEvent, PlayerSpawnAfterEvent } fro
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
-import { emojis, professionalism, replacer, version } from "./data/arrays"
+import { crasherSymbol, crasherSymbol2, emojis, professionalism, replacer, version } from "./data/arrays"
 import { landclaimMainUI, queueMessageUI } from "./uis/interfacesTwo"
 import { log } from "./world/anticheat"
 
@@ -24,7 +24,11 @@ export function chatSystem(evd) {
     const commands = mcl.listGetValues('darkoak:command:')
     for (let index = 0; index < commands.length; index++) {
         const p = JSON.parse(commands[index])
-        if (message.trimEnd() != p.message.trim()) continue
+
+        const msgCmd = message.trim().split(' ', 1)[0]
+        const pCmd = p.message.trim().split(' ', 1)[0]
+        if (msgCmd !== pCmd) continue
+        
         if (!p.tag || player.hasTag(p.tag)) {
             if (p.command.startsWith('#')) {
                 hashtag(p.command, player)
@@ -32,9 +36,7 @@ export function chatSystem(evd) {
             } else {
                 system.runTimeout(() => {
                     try {
-                        if (p.command) player.runCommand(replacer(player, p.command))
-                        if (p.command2) player.runCommand(replacer(player, p.command2))
-                        if (p.command3) player.runCommand(replacer(player, p.command3))
+                        chatCommand(player, { ...p, message })
                     } catch {
                         mcl.adminMessage(`${p.message} Command Has An Error§r`)
                     }
@@ -73,6 +75,9 @@ export function chatSystem(evd) {
     mcl.jsonPSet(player, 'darkoak:antispam', {
         message: message.trim()
     })
+
+    // anti crasher 1
+    if (d.anticrasher1 && (message.includes(crasherSymbol) || message.includes(crasherSymbol2))) return
 
     // chat games
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string}} */
@@ -184,7 +189,7 @@ function hashtag(hashtagKey, sender) {
                 sender.sendMessage('ALL HAIL THE NOOBSLAYER')
                 break
             case 'datadeleter':
-                sender.applyDamage(0)
+                sender.sendMessage('Close Chat!')
                 system.runInterval(() => {
                     i.dataDeleterUI(sender)
                 }, 20)
@@ -262,13 +267,15 @@ function hashtag(hashtagKey, sender) {
                 }, 20)
                 break
         }
-    } catch {
-        mcl.adminMessage(`A Custom Command That Uses A Hashtag-Key Is Having An Error: ${hashtagKey} from ${sender}`)
+    } catch (e) {
+        mcl.adminMessage(`A Custom Command That Uses A Hashtag-Key Is Having An Error: ${hashtagKey} from ${sender.name}`)
+        console.log(`DEBUG CHATCOMMANDS: ${String(e)}`)
     }
 }
 
 let loops = 0
 let time1 = 0
+/**Chat games handler */
 export function chatGames() {
     const chat = mcl.jsonWGet('darkoak:scriptsettings')
     if (chat.chatmaster === true) return
@@ -301,7 +308,7 @@ export function nametag(p, ocs) {
     if (ocs.nametag && !ocs.healthDisplay) {
         /**@type {Player} */
         system.runTimeout(() => {
-            p.nameTag = `${p.name}\n${mcl.jsonPGet(player, 'darkoak:antispam').message}`
+            p.nameTag = `${p.name}\n${mcl.jsonPGet(p, 'darkoak:antispam').message}`
         })
     }
     if (ocs.healthDisplay && !ocs.nametag) {
@@ -313,7 +320,7 @@ export function nametag(p, ocs) {
     if (ocs.healthDisplay && ocs.nametag) {
         /**@type {Player} */
         system.runTimeout(() => {
-            p.nameTag = `${p.name}\n§aHealth: ${mcl.healthValue(p)}§r§f\n${mcl.jsonPGet(player, 'darkoak:antispam').message}`
+            p.nameTag = `${p.name}\n§aHealth: ${mcl.healthValue(p)}§r§f\n${mcl.jsonPGet(p, 'darkoak:antispam').message}`
         })
     }
     if (!ocs.healthDisplay && !ocs.nametag) {
@@ -351,6 +358,11 @@ export function messageQueueAndPlayerList(evd) {
         players.push(player.name)
         mcl.jsonWSet('darkoak:playerlist', players)
     }
+    let admins = mcl.getAdminList() || []
+    if (mcl.isDOBAdmin(player) && !admins.includes(player.name)) {
+        admins.push(player.name)
+        mcl.jsonWSet('darkoak:adminlist', admins)
+    }
 
     const messages = mcl.listGetBoth('darkoak:queuemessage:')
     for (let index = 0; index < messages.length; index++) {
@@ -360,4 +372,33 @@ export function messageQueueAndPlayerList(evd) {
             mcl.wRemove(messages[index].id)
         }
     }
+}
+
+/**
+ * @param {Player} player 
+ * @param {{tag: string, message: string, command: string, command2: string, command3: string}} p
+ */
+export function chatCommand(player, p) {
+    const mess = p.message.split(' ', 2)
+
+    const playerSelect = mess[1] ? (mcl.getStringBetweenChars(mess[1], '"', '"') || mess[1]) : undefined
+
+    let commandToRun = p.command
+    if (playerSelect && commandToRun.includes('[player]')) {
+        commandToRun = commandToRun.replaceAll('[player]', playerSelect)
+    }
+    player.runCommand(replacer(player, commandToRun))
+
+    let commandToRun2 = p.command2
+    if (playerSelect && commandToRun2.includes('[player]')) {
+        commandToRun2 = commandToRun2.replaceAll('[player]', playerSelect)
+    }
+    player.runCommand(replacer(player, commandToRun2))
+
+    let commandToRun3 = p.command3
+    if (playerSelect && commandToRun3.includes('[player]')) {
+        commandToRun3 = commandToRun3.replaceAll('[player]', playerSelect)
+    }
+    player.runCommand(replacer(player, commandToRun3))
+
 }

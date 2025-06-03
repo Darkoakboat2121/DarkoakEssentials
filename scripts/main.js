@@ -1,6 +1,6 @@
 // first is minecraft resources
 import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent } from "@minecraft/server"
-import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
+import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 
 // second is setting defaults
 import * as defaults from "./data/defaults"
@@ -24,6 +24,7 @@ import * as worldProtection from "./world/worldProtection"
 // seventh set up external uis / commands
 import * as external from "./external/external"
 import { customEnchantActions, customEnchantEvents, enchantOnDamaged, enchantOnDeathKill, enchantOnHit, enchantOnJump, enchantOnUse } from "./enchanting"
+import { bui } from "./uis/baseplateUI"
 
 const cooldown = new Map()
 
@@ -100,6 +101,24 @@ world.beforeEvents.playerGameModeChange.subscribe((evd) => {
     anticheat.antiGameMode(evd)
 })
 
+world.beforeEvents.playerLeave.subscribe((evd) => {
+    worldSettings.welcomeMessage(evd)
+    system.runTimeout(() => {
+        try {
+            uiManager.closeAllForms(evd.player)
+        } catch {
+
+        }
+    })
+})
+
+world.afterEvents.playerLeave.subscribe((evd) => {
+
+})
+
+world.afterEvents.itemReleaseUse.subscribe((evd) => {
+    worldSettings.pacifistArrowFix(evd)
+})
 
 // system for handling most system intervals
 system.runInterval(() => {
@@ -109,6 +128,8 @@ system.runInterval(() => {
     gens()
     bans()
     chat.chatGames()
+    defaults.byteChecker()
+    defaults.timers()
 
     const players = world.getAllPlayers()
     for (let index = 0; index < players.length; index++) {
@@ -120,6 +141,7 @@ system.runInterval(() => {
         anticheat.anticheatMain(player)
         anticheat.cpsTester(player)
         chat.nametag(player, mcl.jsonWGet('darkoak:chat:other'))
+        glideFeather(player)
     }
 })
 
@@ -178,7 +200,6 @@ function itemOpeners(evd) {
         }
     }
 
-
     if (item.typeId == 'darkoak:hop_feather' && (player.isOnGround || player.isClimbing || player.isInWater)) {
         const now = Date.now()
         const lastUsed = cooldown.get(player.name) || 0
@@ -206,12 +227,14 @@ function itemOpeners(evd) {
 
     if (item.typeId.startsWith('darkoak:dummy')) {
         for (let index = 0; index <= arrays.dummySize; index++) {
-            if (item.typeId === `darkoak:dummy${index}`) {
+            if (item.typeId == `darkoak:dummy${index}`) {
                 const c = mcl.jsonWGet(`darkoak:bind:${index}`)
                 if (!c) return
-                if (c.command1) evd.source.runCommand(arrays.replacer(player, c.command1))
-                if (c.command2) evd.source.runCommand(arrays.replacer(player, c.command2))
-                if (c.command3) evd.source.runCommand(arrays.replacer(player, c.command3))
+                const keys = Object.keys(c)
+                for (let index = 0; index < keys.length; index++) {
+                    const command = keys[index]
+                    if (c[command]) evd.source.runCommand(arrays.replacer(player, c[command]))
+                }
                 return
             }
         }
@@ -219,9 +242,9 @@ function itemOpeners(evd) {
 }
 
 function communityGiver(evd) {
-    const s = mcl.jsonWGet('darkoak:community:general').giveOnJoin
+    const s = mcl.jsonWGet('darkoak:community:general') || { giveOnJoin: false }
 
-    if (s && evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0) {
+    if (s.giveOnJoin && evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0) {
         evd.player.runCommand('give @s darkoak:community')
     }
 }
@@ -258,7 +281,6 @@ function dataEditor(evd) {
 }
 
 /**
- * 
  * @param {PlayerInteractWithBlockBeforeEvent} evd 
  */
 function dataEditorBlock(evd) {
@@ -315,15 +337,20 @@ function gens() {
         const parts = b.coords.split(' ')
         try {
             const block = world.getDimension(b.dimension || 'overworld')
-            if (!block.getBlock({
+            const coords = {
                 x: parseInt(parts[0]),
                 y: parseInt(parts[1]),
                 z: parseInt(parts[2])
+            }
+            if (!block.getBlock({
+                x: coords.x,
+                y: coords.y,
+                z: coords.z
             })) continue
             block.setBlockType({
-                x: parseInt(parts[0]),
-                y: parseInt(parts[1]),
-                z: parseInt(parts[2])
+                x: coords.x,
+                y: coords.y,
+                z: coords.z
             }, b.block)
         } catch {
             mcl.adminMessage(`Failed To Set Block ${b.block} At ${parts[0]} ${parts[1]} ${parts[2]}`)
@@ -348,14 +375,7 @@ function gens() {
                     spawn.spawnEntity(m.mob, m.loc)
                 }
             } else {
-                mcl.jsonWSet(mobs[index].id, {
-                    mob: m.mob,
-                    loc: m.loc,
-                    interval: m.interval,
-                    current: m.current - 1,
-                    max: m.max,
-                    dimension: m.dimension
-                })
+                mcl.jsonWUpdate(mobs[index].id, 'current', m.current - 1)
             }
         } catch (e) {
             mcl.adminMessage(`Failed To Spawn Mob ${m.mob} At ${m.loc.x} ${m.loc.y} ${m.loc.z}, ${e}`)
@@ -364,9 +384,12 @@ function gens() {
 }
 
 let ticker = 0
+/**Ban system */
 function bans() {
-    ticker++
-    if (ticker < 200) return
+    if (ticker < 200) {
+        ticker++
+        return
+    }
 
     const p = world.getAllPlayers()[0]
     const d = mcl.jsonWGet('darkoak:anticheat')
@@ -390,11 +413,7 @@ function bans() {
             mcl.wRemove(ban.id)
             continue
         }
-        mcl.jsonWSet(ban.id, {
-            player: data.player,
-            message: data.message,
-            time: data.time - 1
-        })
+        mcl.jsonWUpdate(ban.id, 'time', data.time - 1)
         if (!mcl.getPlayer(data.player)) continue
         p.runCommand(`kick "${data.player}" ${data.message || ''}`)
     }
@@ -470,6 +489,7 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
         }
         try {
             const p = arrays.replacer(player, evd.message).split(' ')
+            player.applyKnockback({ x: 0, z: 0 }, player.getVelocity().y * -1)
             player.applyKnockback({ x: parseFloat(p[0]), z: parseFloat(p[1]), }, parseFloat(p[2]))
             return
         } catch {
@@ -506,6 +526,30 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
             return
         }
     }
+
+    // DEBUG EVENTS
+    if (evd.id == 'darkoak:debug') {
+        try {
+            switch (evd.message) {
+                case '':
+                case 'help':
+                    mcl.adminMessage(arrays.debugEvents)
+                    break
+                case 'aclog':
+                    anticheat.log(`${player.nameTag} -> DEBUG TEST`)
+                    break
+                case 'playerlist':
+                    mcl.adminMessage(mcl.getPlayerList().join('\n'))
+                    break
+                case 'bytes':
+                case 'bytesize':
+                    mcl.adminMessage(world.getDynamicPropertyTotalByteCount().toString())
+                    break
+            }
+        } catch (e) {
+            mcl.adminMessage(`AW HECK IT BROK: ${String(e)}`)
+        }
+    }
 })
 
 system.beforeEvents.watchdogTerminate.subscribe((evd) => {
@@ -520,11 +564,11 @@ system.beforeEvents.watchdogTerminate.subscribe((evd) => {
 function actionUIBuilder(playerToShow, title, body, buttons) {
     let f = new ActionFormData()
 
-    f.title(arrays.replacer(playerToShow, title))
-    f.body(arrays.replacer(playerToShow, body))
+    bui.title(f, arrays.replacer(playerToShow, title))
+    bui.body(f, arrays.replacer(playerToShow, body))
 
-    for (const button of buttons) {
-        f.button(arrays.replacer(playerToShow, button.title))
+    for (let index = 0; index < buttons.length; index++) {
+        bui.button(f, arrays.replacer(playerToShow, buttons[index].title))
     }
 
     f.show(playerToShow).then((evd) => {
@@ -595,4 +639,13 @@ function actionBar(player) {
     /**@type {{lines: ["a", "b", "c"]}} */
     const text2 = mcl.jsonWGet('darkoak:sidebar')
     if (text2) player.runCommand(`titleraw @s title {"rawtext":[{"text":"${arrays.replacer(player, text2.lines.join('\n'))}"}]}`)
+}
+
+/**Glide feather
+ * @param {Player} player 
+ */
+function glideFeather(player) {
+    const view = player.getViewDirection()
+    const item = mcl.getHeldItem(player)
+    if (item && item.typeId == 'darkoak:glide_feather' && !player.isOnGround && !player.isJumping && !player.isSneaking) player.applyKnockback({ x: view.x / 2, z: view.z / 2 }, player.getVelocity().y * -1)
 }

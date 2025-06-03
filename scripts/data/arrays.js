@@ -1,5 +1,5 @@
 
-// This file holds data
+// This file holds data and some helper functions
 
 import { mcl } from "../logic"
 import { EntityComponentTypes, Player, system, world } from "@minecraft/server"
@@ -227,13 +227,14 @@ export function replacer(player, string) {
 
 
 export const dummySize = 29
-export const version = '2.2.0, This Is Probably Wrong'
+export const version = '2.2.3, This Is Probably Wrong'
 
-/**Returns the money score
- * @returns {string}
+/**Returns the money scoreboard id
+ * @returns {string | undefined}
  */
 export function getMoney() {
-    return mcl.wGet('darkoak:moneyscore')
+    const ms = mcl.jsonWGet('darkoak:moneyscore')
+    if (ms && ms.id) return ms.id
 }
 
 export const hashtags = [
@@ -282,6 +283,18 @@ export const hashtagKeys = [
     '#landclaim players -> Opens UI For Adding Players To a Landclaim',
     '#version -> Says The Version Number In Chat',
     '#message -> Opens A UI For Queuing A Message',
+].join('\n')
+
+export const chatCommandSelectors = [
+    '[player] -> Player Name Selector'
+].join('\n')
+
+export const debugEvents = [
+    'DEBUG LIST: | || || |_',
+    'aclog -> Log yourself in anticheat',
+    'help -> Help list (this lol)',
+    'playerlist -> All players list',
+    'bytesize -> Byte size'
 ].join('\n')
 
 /**Array of strings for textures*/
@@ -404,8 +417,62 @@ export const professionalism = [
     { m: 'omg', e: 'oh my gosh' },
     { m: 'nigger', e: '*racism here*' },
     { m: 'nigga', e: '*racism here*' },
+    { m: 'wdym', e: 'what do you mean' },
+    { m: 'wb', e: 'welcome back' }
 ]
 
+export const trackingKeysObject = [
+    'flying',
+    'gliding',
+    'climbing',
+    'emoting',
+    'falling',
+    'inwater',
+    'jumping',
+    'onground',
+]
+
+export const trackingKeysPlayer = [
+    'isFlying',
+    'isGliding',
+    'isClimbing',
+    'isEmoting',
+    'isFalling',
+    'isInWater',
+    'isJumping',
+    'isOnGround',
+]
+
+export const crasherSymbol = ''
+export const crasherSymbol2 = 'ï£¿'
+
+/**
+ * @param {Player} player Player that the item amount runs on
+ * @param {number} amount Amount of compressions
+ * @param {string} compressed Item to compress (64 -> 1)
+ * @param {string} result Item in return for compressing
+ * @param {string} errorMessage Message to display if the player doesnt have enough items
+ */
+export function compress(player, amount, compressed, result, errorMessage) {
+    if (player.runCommand(`testfor @s [hasitem={item=${compressed},quantity=${amount * 64}..}]`).successCount > 0) {
+        player.runCommand(`clear @s ${compressed} 0 ${amount * 64}`)
+        player.runCommand(`give @s ${result} ${amount}`)
+    } else {
+        player.sendMessage(errorMessage)
+    }
+}
+
+export function decompress(player, amount, decompressed, result, errorMessage) {
+    const mscore = mcl.jsonWGet('darkoak:moneyscore')
+    if (!mscore) throw new Error('Yeah honestly you\'re screwed')
+    const ipd = 64 - (mscore.compression || 0)
+    if (player.runCommand(`testfor @s [hasitem={item=${decompressed},quantity=${amount}..}]`).successCount > 0) {
+        player.runCommand(`clear @s ${decompressed} 0 ${amount}`)
+        player.runCommand(`give @s ${result} ${(ipd * amount)}`)
+    } else {
+        player.sendMessage(errorMessage)
+    }
+}
 
 // dynamic propertys can hold 32767 characters
 
