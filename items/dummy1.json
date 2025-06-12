@@ -2,11 +2,7 @@
     "format_version": "1.21.60",
     "minecraft:item": {
         "description": {
-            "identifier": "darkoak:dummy1",
-            "menu_category": {
-                "category": "items",
-                "group": "darkoak:bindables"
-            }
+            "identifier": "darkoak:dummy1"
         },
         "components": {
             "minecraft:allow_off_hand": false,

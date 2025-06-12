@@ -14,7 +14,11 @@
       80
     ],
     "uuid": "9506c0be-216b-49fe-b0c7-f1c5536882f2",
-    "version": [2,2,4]
+    "version": [
+      2,
+      2,
+      4
+    ]
   },
   "modules": [
     {
@@ -49,6 +53,13 @@
     {
       "module_name": "@minecraft/server-ui",
       "version": "2.0.0-beta"
+    },
+    {
+      "module_name": "@minecraft/server-admin",
+      "version": "1.0.0-beta"
+    },
+    {
+      "uuid": "5cc81451-170f-49fa-94a5-6f532c0c1f92"
     }
   ]
 }

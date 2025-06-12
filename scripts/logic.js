@@ -162,7 +162,7 @@ export class mcl {
 
     /**Gets a global data object
      * @param {string} id 
-     * @returns {object}
+     * @returns {object | undefined}
      */
     static jsonWGet(id) {
         const t = world.getDynamicProperty(id)
@@ -427,35 +427,40 @@ export class mcl {
     /**Returns an array of a inputted players tags
      * @param {Player | undefined} player 
     */
-    static playerTagsArray(player) {
+    static playerTagsArray(player, filter = '') {
         if (player != undefined) {
             const tags = player.getTags()
             if (tags.length == 0) {
-                return 'No Tags Found'
+                return []
             } else {
-                return tags
+                return tags.filter(e => e.startsWith(filter))
             }
         } else {
             let u = []
             let players = world.getAllPlayers()
             for (let index = 0; index < players.length; index++) {
-                const tags = players[index].getTags()
+                const tags = players[index].getTags().filter(e => e.startsWith(filter))
                 if (tags.length == 0) continue
-                u.push(tags)
+                for (let index = 0; index < tags.length; index++) {
+                    if (u.includes(tags[index])) continue
+                    u.push(tags[index])
+                }
             }
             if (u.length === 0) {
-                return 'No Tags Found'
+                return []
             } else {
-                return [...new Set(u)]
+                return u
             }
         }
     }
 
     /**Checks if the inputted player is the host by checking its id
-     * @param {Player} player 
+     * @param {Player | string} player Accepts a player or a players name, returns false if the player isn't the host
     */
     static isHost(player) {
-        if (player.id == '-4294967295') {
+        const p = (typeof player === 'string') ? mcl.getPlayer(player) : player
+        if (!p) return false
+        if (p.id == '-4294967295') {
             return true
         } else return false
     }
@@ -723,5 +728,35 @@ export class mcl {
      */
     static getAdminList() {
         return mcl.jsonWGet('darkoak:adminlist')
+    }
+
+    /**Returns a list of all moderators
+     * @returns {string[]}
+     */
+    static getModList() {
+        return mcl.jsonWGet('darkoak:modlist')
+    }
+
+    /**Returns a list of all banned players, or undefined if there are no bans
+     * @returns {string[] | undefined} 
+     */
+    static getBanList() {
+        const bans = mcl.listGetBoth('darkoak:bans:')
+        if (!bans) return undefined
+
+        let u = []
+        for (let index = 0; index < bans.length; index++) {
+            const ban = JSON.parse(bans[index].value)
+            u.push(ban.player)
+        }
+        return u
+    }
+
+    /**Stops a players movements
+     * @param {Player} player 
+     */
+    static stopPlayer(player) {
+        const v = player.getVelocity()
+        player.applyKnockback({x: v.x * -1, z: v.z * -1}, v.y * -1)
     }
 }

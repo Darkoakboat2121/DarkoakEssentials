@@ -10,3 +10,7 @@ entity=darkoak:floating_text
 item=darkoak:anticheat
 item=darkoak:chest_lock
 item=darkoak:main
+item=darkoak:community
+item=darkoak:generators
+item=darkoak:world_protection
+item=darkoak:data_editor

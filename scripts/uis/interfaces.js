@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, auctionMain, autoResponseMainUI, banOfflineUI, canineyetiBio, chatGamesSettings, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, floatingTextMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, nokiBio, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio } from "./interfacesTwo"
+import { addGiftcode, addRankUI, adminAndPlayerListUI, auctionMain, autoResponseMainUI, banOfflineUI, canineyetiBio, chatGamesSettings, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, floatingTextMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, nokiBio, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 
 // This file holds all the functions containing UI
@@ -65,7 +65,9 @@ export function mainUI(player) {
     }).catch()
 }
 
-// Main ui for world settings
+/**Main ui for world settings
+ * @param {Player} player 
+ */
 export function worldSettingsUI(player) {
     let f = new ActionFormData()
     bui.title(f, 'World Settings')
@@ -142,18 +144,9 @@ export function worldInteractionSettings(player) {
 
 export function itemBindsUI(player) {
     let f = new ModalFormData()
-    bui.title(f, 'Bind Custom Item')
-
-    bui.label(f, arrays.hashtags)
+    bui.title(f, 'Bind Custom Item Picker')
 
     bui.slider(f, '\nItem Number', 1, arrays.dummySize)
-    bui.textField(f, 'Command:', 'Example: tp @s 0 1 0')
-
-    bui.label(f, 'More Commands:')
-    bui.textField(f)
-    bui.textField(f)
-    bui.textField(f)
-    bui.textField(f)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -161,12 +154,38 @@ export function itemBindsUI(player) {
             return
         }
         const e = bui.formValues(evd)
-        mcl.jsonWSet(`darkoak:bind:${e[0]}`, {
-            command1: e[1],
-            command2: e[2],
-            command3: e[3],
-            command4: e[4],
-            command5: e[5],
+        itemBindsTextUI(player, e[0])
+    }).catch()
+}
+
+export function itemBindsTextUI(player, bindNum) {
+    let f = new ModalFormData()
+    bui.title(f, 'Bind Custom Item')
+
+    bui.label(f, arrays.hashtags)
+
+    const c = mcl.jsonWGet(`darkoak:bind:${bindNum}`)
+
+    bui.textField(f, 'Command:', 'Example: tp @s 0 1 0', c?.command1)
+
+    bui.label(f, 'More Commands:')
+    bui.textField(f, '', '', c?.command2)
+    bui.textField(f, '', '', c?.command3)
+    bui.textField(f, '', '', c?.command4)
+    bui.textField(f, '', '', c?.command5)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            worldSettingsUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        mcl.jsonWSet(`darkoak:bind:${bindNum}`, {
+            command1: e[0],
+            command2: e[1],
+            command3: e[2],
+            command4: e[3],
+            command5: e[4],
         })
     }).catch()
 }
@@ -979,6 +998,7 @@ export function dashboardMainUI(player) {
     bui.button(f, 'Reports')
     bui.button(f, 'Logs')
     bui.button(f, 'Docs')
+    bui.button(f, 'Admins And Players')
     bui.button(f, 'Script Settings / Master Settings\n§cExperimental§r')
 
     f.show(player).then((evd) => {
@@ -1013,6 +1033,9 @@ export function dashboardMainUI(player) {
                 docsUI(player)
                 break
             case 5:
+                adminAndPlayerListUI(player)
+                break
+            case 6:
                 scriptSettings(player)
                 break
             default:
@@ -1154,12 +1177,13 @@ export function docsUI(player) {
     bui.title(f, 'Documentation')
 
     bui.header(f, 'Scriptevents')
-    bui.label(f, 'darkoak:enchant [event?] [action?] [power?] -> Opens Custom Enchant Menu, Or If The Parameters Are Defined It Enchants Using Said Parameters (? means optional)')
-    bui.label(f, 'darkoak:spawn [itemtype] [amount] [x] [y] [z] -> Spawns An Item')
+    bui.label(f, 'darkoak:enchant [event?: number] [action?: number] [power?: number] -> Opens Custom Enchant Menu, Or If The Parameters Are Defined It Enchants Using Said Parameters (? Means Optional)')
+    bui.label(f, 'darkoak:spawn [itemtype: string] [amount: number] [x: number] [y: number] [z: number] -> Spawns An Item')
     bui.label(f, 'darkoak:command [Minecraft Command] -> Runs A Command With Replacer Hashtags')
-    bui.label(f, 'darkoak:knockback [x] [z] [vertical strength] -> Applys Knockback To A Player')
-    bui.label(f, 'darkoak:if [value] [value] [Minecraft Command] -> If The Two Values Match It Runs The Command')
-    bui.label(f, 'darkoak:variable [name] [value] -> Sets A Custom Variable Which Can Be Used In Replacer Hashtags')
+    bui.label(f, 'darkoak:knockback [x: number] [z: number] [vertical_strength: number] -> Applys Knockback To A Player')
+    bui.label(f, 'darkoak:if [value: any] [value: any] [Minecraft Command] -> If The Two Values Match It Runs The Command')
+    bui.label(f, 'darkoak:variable [name: string] [value: any] -> Sets A Custom Variable Which Can Be Used In Replacer Hashtags')
+    bui.label(f, 'darkoak:projectile [type: string] [x: number] [y: number] [z: number] [force: number] -> Shoots A Projectile Of The Specified Type Towards XYZ With The Specified Force')
 
     bui.divider(f)
 
@@ -1193,11 +1217,13 @@ export function docsUI(player) {
     bui.divider(f)
 
     bui.header(f, 'Emojis')
+    let emojiString = []
     const emojis = arrays.emojis
     for (let index = 0; index < emojis.length; index++) {
         const em = emojis[index]
-        bui.label(f, `${em.m} -> ${em.e}`)
+        emojiString.push(`${em.m} -> ${em.e}`)
     }
+    bui.label(f, emojiString.join('\n'))
 
     bui.divider(f)
 
@@ -1792,7 +1818,7 @@ export function communityMain(player) {
 
     const en = mcl.jsonWGet('darkoak:communityshowhide')
 
-    if (en.payshop0) bui.button(f, 'Pay / Shop', arrays.icons.minecoin)
+    if (en.payshop0) bui.button(f, 'Money', arrays.icons.minecoin)
     if (en.warps) bui.button(f, 'Warps')
     if (en.report) bui.button(f, 'Report')
     if (en.myprofile) bui.button(f, 'My Profile', arrays.icons.whitePlayer)

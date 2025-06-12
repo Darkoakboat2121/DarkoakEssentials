@@ -1,0 +1,86 @@
+{
+    "format_version": "1.21.60",
+    "minecraft:crafting_items_catalog": {
+        "categories": [
+            {
+                "category_name": "items",
+                "groups": [
+                    {
+                        "group_identifier": {
+                            "icon": "darkoak:dummy1",
+                            "name": "darkoak:bindables"
+                        },
+                        "items": [
+                            "darkoak:dummy1",
+                            "darkoak:dummy2",
+                            "darkoak:dummy3",
+                            "darkoak:dummy4",
+                            "darkoak:dummy5",
+                            "darkoak:dummy6",
+                            "darkoak:dummy7",
+                            "darkoak:dummy8",
+                            "darkoak:dummy9",
+                            "darkoak:dummy10",
+                            "darkoak:dummy11",
+                            "darkoak:dummy12",
+                            "darkoak:dummy13",
+                            "darkoak:dummy14",
+                            "darkoak:dummy15",
+                            "darkoak:dummy16",
+                            "darkoak:dummy17",
+                            "darkoak:dummy18",
+                            "darkoak:dummy19",
+                            "darkoak:dummy20",
+                            "darkoak:dummy21",
+                            "darkoak:dummy22",
+                            "darkoak:dummy23",
+                            "darkoak:dummy24",
+                            "darkoak:dummy25",
+                            "darkoak:dummy26",
+                            "darkoak:dummy27",
+                            "darkoak:dummy28",
+                            "darkoak:dummy29"
+                        ]
+                    },
+                    {
+                        "group_identifier": {
+                            "icon": "darkoak:main",
+                            "name": "darkoak:main"
+                        },
+                        "items": [
+                            "darkoak:main",
+                            "darkoak:chest_lock",
+                            "darkoak:world_protection",
+                            "darkoak:anticheat",
+                            "darkoak:generators",
+                            "darkoak:data_editor",
+                            "darkoak:community"
+                        ]
+                    },
+                    {
+                        "group_identifier": {
+                            "icon": "darkoak:dash_feather",
+                            "name": "darkoak:feathers"
+                        },
+                        "items": [
+                            "darkoak:dash_feather",
+                            "darkoak:hop_feather",
+                            "darkoak:glide_feather"
+                        ]
+                    },
+                    {
+                        "group_identifier": {
+                            "icon": "darkoak:compressed_diamond",
+                            "name": "darkoak:compressed"
+                        },
+                        "items": [
+                            "darkoak:compressed_diamond",
+                            "darkoak:compressed_iron",
+                            "darkoak:compressed_netherite"
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -212,7 +212,8 @@ function hashtag(hashtagKey, sender) {
                 world.sendMessage(mcl.randomNumber(100).toString())
                 break
             case 'emojis':
-                for (const emoji of emojis) {
+                for (let index = 0; index < emojis.length; index++) {
+                    const emoji = emojis[index]
                     sender.sendMessage(`${emoji.m} -> ${emoji.e}`)
                 }
                 break
@@ -243,6 +244,8 @@ function hashtag(hashtagKey, sender) {
             case 'landclaim remove':
                 if (!mcl.wRemove(`darkoak:landclaim:${sender.name}`)) {
                     sender.sendMessage('§cYou Don\'t Own A Landclaim!§r')
+                } else {
+                    sender.sendMessage('§cYou No Longer Own A Landclaim!§r')
                 }
                 break
             case 'landclaim players':
@@ -306,25 +309,21 @@ export function chatGames() {
  */
 export function nametag(p, ocs) {
     if (ocs.nametag && !ocs.healthDisplay) {
-        /**@type {Player} */
         system.runTimeout(() => {
             p.nameTag = `${p.name}\n${mcl.jsonPGet(p, 'darkoak:antispam').message}`
         })
     }
     if (ocs.healthDisplay && !ocs.nametag) {
-        /**@type {Player} */
         system.runTimeout(() => {
             p.nameTag = `${p.name}\n§aHealth: ${mcl.healthValue(p)}§r§f`
         })
     }
     if (ocs.healthDisplay && ocs.nametag) {
-        /**@type {Player} */
         system.runTimeout(() => {
             p.nameTag = `${p.name}\n§aHealth: ${mcl.healthValue(p)}§r§f\n${mcl.jsonPGet(p, 'darkoak:antispam').message}`
         })
     }
     if (!ocs.healthDisplay && !ocs.nametag) {
-        /**@type {Player} */
         system.runTimeout(() => {
             p.nameTag = p.name
         })
@@ -351,16 +350,20 @@ function landclaimCheck(a, b) {
  * @param {PlayerSpawnAfterEvent} evd 
  */
 export function messageQueueAndPlayerList(evd) {
-    if (!evd.initialSpawn) return
     const player = evd.player
+
     let players = mcl.getPlayerList() || []
     if (!players.includes(player.name)) {
         players.push(player.name)
         mcl.jsonWSet('darkoak:playerlist', players)
     }
+    
     let admins = mcl.getAdminList() || []
     if (mcl.isDOBAdmin(player) && !admins.includes(player.name)) {
         admins.push(player.name)
+        mcl.jsonWSet('darkoak:adminlist', admins)
+    } else if (!mcl.isDOBAdmin(player) && admins.includes(player.name)) {
+        admins = admins.filter(e => e !== player.name)
         mcl.jsonWSet('darkoak:adminlist', admins)
     }
 

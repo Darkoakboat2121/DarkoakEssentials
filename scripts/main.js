@@ -1,6 +1,7 @@
 // first is minecraft resources
-import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent } from "@minecraft/server"
+import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
+import { transferPlayer } from "@minecraft/server-admin"
 
 // second is setting defaults
 import * as defaults from "./data/defaults"
@@ -32,6 +33,7 @@ const cooldown = new Map()
 world.afterEvents.itemUse.subscribe((evd) => {
     itemOpeners(evd)
     enchantOnUse(evd)
+    worldSettings.bindedItems(evd)
 })
 
 // anticps and onhitenchants
@@ -118,6 +120,10 @@ world.afterEvents.playerLeave.subscribe((evd) => {
 
 world.afterEvents.itemReleaseUse.subscribe((evd) => {
     worldSettings.pacifistArrowFix(evd)
+})
+
+system.afterEvents.scriptEventReceive.subscribe((evd) => {
+    scriptEvents(evd)
 })
 
 // system for handling most system intervals
@@ -218,7 +224,6 @@ function itemOpeners(evd) {
         return
     }
 
-    // checks if the player is using the dash feather item
     if (item.typeId == 'darkoak:dash_feather' && (player.isOnGround || player.isClimbing)) {
         player.applyKnockback({ x: direction.x * 2, z: direction.z * 2 }, direction.y * 1.5)
         return
@@ -242,9 +247,9 @@ function itemOpeners(evd) {
 }
 
 function communityGiver(evd) {
-    const s = mcl.jsonWGet('darkoak:community:general') || { giveOnJoin: false }
+    const s = mcl.jsonWGet('darkoak:community:general')
 
-    if (s.giveOnJoin && evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0) {
+    if (s?.giveOnJoin && evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0) {
         evd.player.runCommand('give @s darkoak:community')
     }
 }
@@ -363,14 +368,7 @@ function gens() {
         try {
             if (m.current == 0) {
                 const spawn = world.getDimension(m.dimension || 'overworld')
-                mcl.jsonWSet(mobs[index].id, {
-                    mob: m.mob,
-                    loc: m.loc,
-                    interval: m.interval,
-                    current: m.interval,
-                    max: m.max,
-                    dimension: m.dimension
-                })
+                mcl.jsonWUpdate(mobs[index].id, 'current', m.interval)
                 if (spawn.runCommand(`execute positioned ${m.loc.x} ${m.loc.y} ${m.loc.z} run testfor @e [type=${m.mob},r=10]`).successCount <= m.max) {
                     spawn.spawnEntity(m.mob, m.loc)
                 }
@@ -378,7 +376,8 @@ function gens() {
                 mcl.jsonWUpdate(mobs[index].id, 'current', m.current - 1)
             }
         } catch (e) {
-            mcl.adminMessage(`Failed To Spawn Mob ${m.mob} At ${m.loc.x} ${m.loc.y} ${m.loc.z}, ${e}`)
+            mcl.adminMessage(`Failed To Spawn Mob ${m.mob} At ${m.loc.x} ${m.loc.y} ${m.loc.z}`)
+            console.error(`Error: ${String(e)}`)
         }
     }
 }
@@ -419,13 +418,20 @@ function bans() {
     }
 }
 
-
-system.afterEvents.scriptEventReceive.subscribe((evd) => {
+/**Holds non-UI script events
+ * @param {ScriptEventCommandMessageAfterEvent} evd 
+ */
+function scriptEvents(evd) {
+    /**@type {Player | Entity | undefined} */
     const player = evd.sourceEntity
+    if (evd.id == 'darkoak:help') {
+        if (!player) return
+        player.sendMessage(arrays.scriptEvents.join('\n'))
+    }
     if (evd.id === 'darkoak:enchant') {
-        if (!evd.sourceEntity) return
+        if (!player) return
         if (evd.message.trim() == '') {
-            interfacesTwo.customEnchantsMain(evd.sourceEntity)
+            interfacesTwo.customEnchantsMain(player)
             return
         } else {
             const parts = evd.message.split(' ')
@@ -444,11 +450,11 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
             return
         }
     }
-    // if (evd.id === 'darkoak:bind') {
-    //     if (!evd.sourceEntity) return
-    //     interfacesTwo.itemBindingUI(evd.sourceEntity)
-    //     return
-    // }
+    if (evd.id === 'darkoak:bind') {
+        if (!player) return
+        interfacesTwo.itemBindingUI(player)
+        return
+    }
     if (evd.id === 'darkoak:spawn') {
         const b = evd.sourceBlock || player
         if (!b) {
@@ -526,6 +532,83 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
             return
         }
     }
+    if (evd.id == 'darkoak:projectile') {
+        if (!player) {
+            mcl.adminMessage(`The darkoak:projectile Scriptevent Needs To Execute From An Entity`)
+            return
+        }
+        try {
+            // scriptevent darkoak:projectile [type] [towards x] [towards y] [towards z] [force]
+            const parts = arrays.replacer(player, evd.message).split(' ')
+
+            const spawnPos = {
+                x: player.location.x + parseFloat(parts[1]),
+                y: player.location.y + parseFloat(parts[2]),
+                z: player.location.z + parseFloat(parts[3]),
+            }
+
+            const projectile = world.getDimension(player.dimension.id).spawnEntity(parts[0], spawnPos)
+            const force = parseFloat(parts[4]) || 1
+            const view = player.getViewDirection()
+            projectile.applyImpulse({
+                x: view.x * force,
+                y: view.y * force,
+                z: view.z * force,
+            })
+
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:projectile From ${player.nameTag} Has An Error`)
+            return
+        }
+    }
+    if (evd.id == 'darkoak:openui') {
+        if (!player) {
+            mcl.adminMessage(`The darkoak:openui Scriptevent Needs To Execute From A Player`)
+            return
+        }
+        try {
+            const parts = evd.message.split(' ')
+            const uiName = parts[0]
+            const args = parts.slice(1)
+
+            if (typeof interfaces[uiName] === 'function') {
+                interfaces[uiName](player, ...args)
+            } else if (typeof interfacesTwo[uiName] === 'function') {
+                interfacesTwo[uiName](player, ...args)
+            } else {
+                player.sendMessage(`§cUI "${uiName}" Not Found\nUse The Scriptevent darkoak:uihelp For A List Of Names§r`)
+            }
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:openui From ${player.nameTag} Has An Error`)
+            return
+        }
+    }
+    if (evd.id == 'darkoak:uihelp') {
+        if (!player) {
+            mcl.adminMessage(`The darkoak:uihelp Scriptevent Needs To Execute From A Player`)
+            return
+        }
+        try {
+            const uis = Object.keys(interfaces).concat(Object.keys(interfacesTwo))
+            player.sendMessage(`§uAvailable UIs:§a\n${uis.join('\n')}\n§rUse darkoak:openui [UI Name] [Args] To Open A UI.`)
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:uihelp From ${player.nameTag} Has An Error`)
+            return
+        }
+    }
+    if (evd.id == 'darkoak:transfer') {
+        if (!player) {
+            mcl.adminMessage(`The darkoak:transfer Scriptevent Needs To Execute From A Player`)
+            return
+        }
+        try {
+            const parts = evd.message.split(' ')
+            transferPlayer(player, parts[0], parseInt(parts[1]))
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:transfer From ${player.nameTag} Has An Error`)
+            return
+        }
+    }
 
     // DEBUG EVENTS
     if (evd.id == 'darkoak:debug') {
@@ -546,11 +629,13 @@ system.afterEvents.scriptEventReceive.subscribe((evd) => {
                     mcl.adminMessage(world.getDynamicPropertyTotalByteCount().toString())
                     break
             }
+            return
         } catch (e) {
             mcl.adminMessage(`AW HECK IT BROK: ${String(e)}`)
+            return
         }
     }
-})
+}
 
 system.beforeEvents.watchdogTerminate.subscribe((evd) => {
     const d = mcl.jsonWGet('darkoak:scriptsettings')
@@ -636,7 +721,7 @@ function actionBar(player) {
     const text = mcl.wGet('darkoak:actionbar')
     if (text) player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, text)}"}]}`)
 
-    /**@type {{lines: ["a", "b", "c"]}} */
+    /**@type {{lines: [string, string, string]}} */
     const text2 = mcl.jsonWGet('darkoak:sidebar')
     if (text2) player.runCommand(`titleraw @s title {"rawtext":[{"text":"${arrays.replacer(player, text2.lines.join('\n'))}"}]}`)
 }

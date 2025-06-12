@@ -1,4 +1,4 @@
-import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
@@ -113,16 +113,16 @@ export function welcomeMessage(evd) {
         if (!evd.initialSpawn) return
         system.runTimeout(() => {
             if (d.welcomeS) {
-                world.sendMessage(arrays.replacer(evd.player, d.welcome))
+                world.sendMessage(arrays.replacer(evd.player, d.welcome || ''))
             } else {
-                evd.player.sendMessage(arrays.replacer(evd.player, d.welcome))
+                evd.player.sendMessage(arrays.replacer(evd.player, d.welcome || ''))
             }
         }, 100)
     } else {
         if (d.byeS) {
-            world.sendMessage(arrays.replacer(evd.player, d.bye))
+            world.sendMessage(arrays.replacer(evd.player, d.bye || ''))
         } else {
-            evd.player.sendMessage(arrays.replacer(evd.player, d.bye))
+            evd.player.sendMessage(arrays.replacer(evd.player, d.bye || ''))
         }
     }
 }
@@ -186,4 +186,17 @@ export function pacifistArrowFix(evd) {
     if (!evd.itemStack) return
     if (evd.itemStack.typeId != 'minecraft:bow' || evd.itemStack.typeId != 'minecraft:crossbow') return
     evd.source.runCommand('tag @e [type=arrow,r=0.5,c=1] add darkoak:pacifist')
+}
+
+/**
+ * @param {ItemUseAfterEvent} evd 
+ */
+export function bindedItems(evd) {
+    const item = mcl.jsonWGet(`darkoak:bind:${evd.itemStack.typeId}`)
+    if (!item) return
+    if (item.command1) {
+        system.runTimeout(() => {
+            evd.source.runCommand(arrays.replacer(evd.source, item.command1))
+        })
+    }
 }

@@ -114,6 +114,8 @@ export function replacer(player, string) {
     const view = player.getViewDirection()
     const loc = player.location
     const velo = player.getVelocity()
+
+    const time = new Date()
     // let block = undefined
     // if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block) {
     //     block = player.getBlockFromViewDirection().block
@@ -147,6 +149,9 @@ export function replacer(player, string) {
         .replaceAll('#viewz#', view.z.toFixed(0))
         .replaceAll('#graphics#', player.graphicsMode.toString())
         .replaceAll('#input#', player.inputInfo.lastInputModeUsed.toString())
+        .replaceAll('#time1#', `${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`)
+        .replaceAll('#time2#', `${time.getHours()}:${time.getMinutes()}`)
+        .replaceAll('#year#', time.getFullYear().toString())
 
 
     // emojis
@@ -269,6 +274,9 @@ export const hashtags = [
     '#graphics# -> The Players Graphics Mode',
     '#input# -> The Players Input Mode',
     '#{variable}# -> Custom Variable, Replace variable With The Variable Name',
+    '#time1# -> Current Time In HH:MM:SS Format',
+    '#time2# -> Current Time In HH:MM Format',
+    '#year# -> Current Year',
 ].join('\n')
 
 export const hashtagKeys = [
@@ -473,6 +481,22 @@ export function decompress(player, amount, decompressed, result, errorMessage) {
         player.sendMessage(errorMessage)
     }
 }
+
+export const scriptEvents = [
+    'darkoak:help -> Help List',
+    'darkoak:enchant -> Opens Enchanting UI / Enchants Held Item',
+    'darkoak:bind',
+    'darkoak:spawn',
+    'darkoak:command',
+    'darkoak:knockback',
+    'darkoak:if',
+    'darkoak:variable',
+    'darkoak:projectile',
+    'darkoak:openui',
+    'darkoak:uihelp',
+    'darkoak:debug',
+    'darkoak:transfer'
+]
 
 // dynamic propertys can hold 32767 characters
 

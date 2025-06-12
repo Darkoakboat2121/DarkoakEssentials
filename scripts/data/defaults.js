@@ -63,7 +63,7 @@ export function defaultData() {
 
         if (mcl.pGet(player, 'darkoak:antispam') == undefined) {
             mcl.jsonPSet(player, 'darkoak:antispam', {
-                message: 'placeholder'
+                message: ''
             })
         }
     }
@@ -80,7 +80,7 @@ export function defaultData() {
 
     if (mcl.wGet('darkoak:messagelogs') === undefined) {
         mcl.jsonWSet('darkoak:messagelogs', {
-            log: ['placeholder', 'placeholder2']
+            log: ['', '']
         })
     }
 
@@ -136,7 +136,7 @@ export function defaultData() {
     if (mcl.wGet('darkoak:scriptsettings') === undefined) {
         mcl.jsonWSet('darkoak:scriptsettings', {
             cancelWatchdog: false,
-            datalog: false
+            datalog: false,
         })
     }
 

@@ -899,12 +899,7 @@ export function landclaimAddPlayerUI(player) {
         if (evd.canceled) return
         const e = bui.formValues(evd)
         let d = mcl.jsonWGet(`darkoak:landclaim:${player.name}`)
-        mcl.jsonWSet(`darkoak:landclaim:${player.name}`, {
-            p1: { x: d.p1.x, z: d.p1.z },
-            p2: { x: d.p2.x, z: d.p2.z },
-            owner: d.owner,
-            players: d.players.push(pl[e[0]])
-        })
+        mcl.jsonWUpdate(`darkoak:landclaim:${player.name}`, 'players', d.players.push(pl[e[0]]))
     }).catch()
 }
 
@@ -918,13 +913,7 @@ export function landclaimRemovePlayerUI(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
-        mcl.jsonWSet(`darkoak:landclaim:${player.name}`, {
-            p1: { x: d.p1.x, z: d.p1.z },
-            p2: { x: d.p2.x, z: d.p2.z },
-            owner: d.owner,
-            players: d.players.slice(e[0], e[0])
-        })
-        // remove the player that was picked, not sure if working, check please
+        mcl.jsonWUpdate(`darkoak:landclaim:${player.name}`, 'players', d.players.slice(e[0], e[0]))
     }).catch()
 }
 
@@ -948,7 +937,7 @@ export function removeRankUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Remove Rank')
 
-    const tl = mcl.playerTagsArray().filter(e => e.startsWith('rank:'))
+    const tl = mcl.playerTagsArray(undefined, 'rank:')
 
     const pl = bui.namePicker(f, undefined, '\nPlayer:')
     bui.dropdown(f, 'Rank To Remove:', tl.map(e => e.replace('rank:', '')))
@@ -967,6 +956,7 @@ export function addGiftcode(player) {
 
     bui.textField(f, 'Code:', 'Example: secretcode123')
     bui.textField(f, 'Command On Redeem:', 'Example: give @s diamond 1')
+    bui.toggle(f, 'One Use Per Player?', false)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -975,6 +965,7 @@ export function addGiftcode(player) {
         mcl.jsonWSet(`darkoak:giftcode:${mcl.timeUuid()}`, {
             code: e[0],
             command: e[1],
+            oneUse: e[2],
         })
     }).catch()
 }
@@ -994,8 +985,19 @@ export function redeemGiftcodeUI(player, priorCode, failMessage) {
         for (let index = 0; index < codes.length; index++) {
             const code = JSON.parse(codes[index].value)
             if (e[0] === code.code) {
-                if (code.command) player.runCommand(code.command)
-                mcl.wRemove(codes[index].id)
+                if (code.oneUse) {
+                    if (mcl.pGet(player, `darkoak:giftcode:${code.code}`)) {
+                        redeemGiftcodeUI(player, e[0], '§cYou Already Redeemed This Code!§r')
+                        return
+                    } else {
+                        mcl.pSet(player, `darkoak:giftcode:${code.code}`, true)
+                        if (code.command) player.runCommand(code.command)
+                        return
+                    }
+                } else {
+                    if (code.command) player.runCommand(code.command)
+                    mcl.wRemove(codes[index].id)
+                }
                 return
             }
         }
@@ -1203,15 +1205,22 @@ export function autoResponseMainUI(player) {
 
     bui.button(f, 'Add', icons.thinPlus)
     bui.button(f, 'Remove', icons.trash)
+    bui.button(f, 'Modify')
 
     f.show(player).then((evd) => {
-        if (evd.canceled) return
+        if (evd.canceled) {
+            interfaces.chatSettingsUI(player)
+            return
+        }
         switch (evd.selection) {
             case 0:
                 autoResponseAddUI(player)
                 break
             case 1:
                 autoResponseRemoveUI(player)
+                break
+            case 2:
+                autoResponseModifyUI(player)
                 break
         }
     }).catch()
@@ -1253,6 +1262,50 @@ export function autoResponseRemoveUI(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         mcl.wRemove(res[evd.selection].id)
+    }).catch()
+}
+
+export function autoResponseModifyUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Auto-Response Modifying')
+
+    const res = mcl.listGetBoth('darkoak:autoresponse:')
+
+    if (res === undefined || res.length === 0) {
+        player.sendMessage('§cNo Auto-Responses Found§r')
+        return
+    }
+
+    for (let index = 0; index < res.length; index++) {
+        const p = JSON.parse(res[index].value)
+        bui.label(f, `Word / Phrase: ${p.word}\nResponse: ${p.response}`)
+        bui.button(f, 'Modify?')
+        bui.divider(f)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            autoResponseMainUI(player)
+            return
+        }
+        const selected = JSON.parse(res[evd.selection].value)
+
+        let rf = new ModalFormData()
+        bui.title(rf, 'Auto-Response Modifying')
+
+        bui.label(rf, hashtags)
+
+        bui.textField(rf, 'Word / Phrase:', 'Example: plot', selected.word)
+
+        bui.textField(rf, 'Response:', 'Example: Plots are $30000', selected.response)
+        bui.submitButton(rf, 'Modify?')
+
+        rf.show(player).then((revd) => {
+            if (revd.canceled) return
+            const re = bui.formValues(revd)
+            mcl.jsonWUpdate(res.at(evd.selection).id, 'word', re[0])
+            mcl.jsonWUpdate(res.at(evd.selection).id, 'response', re[1])
+        }).catch()
     }).catch()
 }
 
@@ -1423,12 +1476,67 @@ export function banOfflineUI(player) {
     }).catch()
 }
 
+export function itemBindingUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Bind Held Item Type')
+    bui.label(f, 'Will Bind All Items Of The Type You Are Holding!')
+
+    const d = mcl.jsonWGet(`darkoak:bind:${mcl.getHeldItem(player).typeId}`)
+
+    bui.textField(f, 'Command:', 'Example: tp @s 0 2 0', d.command1)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = bui.formValues(evd)
+        mcl.jsonWSet(`darkoak:bind:${mcl.getHeldItem(player).typeId}`, {
+            command1: e[0],
+        })
+    })
+}
+
+export function adminAndPlayerListUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Admin & Player List')
+    bui.header(f, 'Admins:')
+
+    const admins = mcl.getAdminList()
+    const players = mcl.getPlayerList()
+    const mods = mcl.getModList()
+    const banned = mcl.getBanList()
+
+    for (let index = 0; index < admins.length; index++) {
+        const admin = admins[index]
+        bui.label(f, admin)
+    }
+
+    bui.divider(f)
+    bui.header(f, 'All Players:')
+
+    for (let index = 0; index < players.length; index++) {
+        const player = players[index]
+        let finalName = [player]
+        if (mcl.isHost(player)) finalName.push('[§gOwner§r]')
+        if (admins && admins.includes(player)) finalName.push('[§mAdmin§r]')
+        if (mods && mods.includes(player)) finalName.push('[§uMod§r]')
+        if (banned && banned.includes(player)) finalName.push('[§cBanned§r]')
+        bui.label(f, finalName.join(' '))
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.dashboardMainUI(player)
+            return
+        }
+    })
+}
+
 
 export function darkoakboatBio(player) {
     let f = new ActionFormData()
     bui.title(f, 'Darkoakboat2121')
 
-    bui.label('Hiya, im the boat himself. Im the dev of this very addon. Btw the replacer hashtag system is racist, im not sure why lol.')
+    bui.label(f, 'Hiya, im the boat himself. Im the dev of this very addon. Btw the replacer hashtag system is racist, im not sure why lol.')
+    bui.label(f, 'Read it: http://secdown.rf.gd/book-of-bandits/')
 
     bui.show(f, player)
 }
@@ -1437,7 +1545,7 @@ export function nokiBio(player) {
     let f = new ActionFormData()
     bui.title(f, 'Noki5160')
 
-    bui.label('wip')
+    bui.label(f, 'wip')
 
     bui.show(f, player)
 }
