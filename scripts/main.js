@@ -1,5 +1,5 @@
 // first is minecraft resources
-import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent } from "@minecraft/server"
+import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import { transferPlayer } from "@minecraft/server-admin"
 
@@ -34,12 +34,22 @@ world.afterEvents.itemUse.subscribe((evd) => {
     itemOpeners(evd)
     enchantOnUse(evd)
     worldSettings.bindedItems(evd)
+
+    // system.sendScriptEvent('darkoak:afteritemuse', JSON.stringify({
+    //     itemStack: evd.itemStack,
+    //     source: evd.source
+    // }))
 })
 
 // anticps and onhitenchants
 world.afterEvents.entityHitEntity.subscribe((evd) => {
     anticheat.antiCps(evd)
     enchantOnHit(evd)
+
+    // system.sendScriptEvent('darkoak:afterentityhitentity', JSON.stringify({
+    //     damagingEntity: evd.damagingEntity,
+    //     hitEntity: evd.hitEntity
+    // }))
 })
 
 // on spawn community giver and welcome message and queue message system
@@ -47,6 +57,12 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
     communityGiver(evd)
     worldSettings.welcomeMessage(evd)
     chat.messageQueueAndPlayerList(evd)
+    moneySetter(evd)
+
+    // system.sendScriptEvent('darkoak:afterplayerspawn', JSON.stringify({
+    //     initialSpawn: evd.initialSpawn,
+    //     player: mcl.playerToData(evd.player)
+    // }))
 })
 
 // chest lock, world interact settings, landclaims, data editor, data editor block
@@ -56,6 +72,17 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
     worldProtection.placeBreakLandclaim(evd)
     dataEditorBlock(evd)
     worldSettings.interactCommandBlock(evd)
+
+    // system.runTimeout(() => {
+    //     system.sendScriptEvent('darkoak:beforeplayerinteractwithblock', JSON.stringify({
+    //         block: evd.block,
+    //         blockFace: evd.blockFace,
+    //         faceLocation: evd.faceLocation,
+    //         isFirstEvent: evd.isFirstEvent,
+    //         itemStack: evd.itemStack,
+    //         player: evd.player
+    //     }))
+    // })
 })
 
 // antinpc, dataeditorentity, and on interact commands
@@ -63,50 +90,128 @@ world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
     anticheat.antiNpc(evd)
     dataEditor(evd)
     worldSettings.interactCommand(evd)
+
+    // system.sendScriptEvent('darkoak:beforeplayerinteractwithentity', JSON.stringify({
+    //     itemStack: evd.itemStack,
+    //     player: evd.player,
+    //     target: evd.target
+    // }))
 })
 
+// Entity hurt
 world.afterEvents.entityHurt.subscribe((evd) => {
     enchantOnDamaged(evd)
+
+    // system.sendScriptEvent('darkoak:afterentityhurt', JSON.stringify({
+    //     damage: evd.damage,
+    //     damageSource: evd.damageSource,
+    //     hurtEntity: evd.hurtEntity
+    // }))
 })
 
+// Entity Die
 world.afterEvents.entityDie.subscribe((evd) => {
     enchantOnDeathKill(evd)
+
+    // system.sendScriptEvent('darkoak:afterentitydie', JSON.stringify({
+    //     damageSource: evd.damageSource,
+    //     deadEntity: evd.deadEntity
+    // }))
 })
 
+// Player Chat send
 world.beforeEvents.chatSend.subscribe((evd) => {
     chat.chatSystem(evd)
+
+    // system.runTimeout(() => {
+    //     system.sendScriptEvent('darkoak:beforechatsend', JSON.stringify({
+    //         message: evd.message,
+    //         sender: mcl.playerToData(evd.sender),
+    //         targets: evd.targets
+    //     }))
+    // })
 })
 
+// Player break block
 world.afterEvents.playerBreakBlock.subscribe((evd) => {
     worldSettings.signFixer(evd)
+
+    // system.sendScriptEvent('darkoak:afterplayerbreakblock', JSON.stringify({
+    //     block: evd.block,
+    //     brokenBlockPermutation: evd.brokenBlockPermutation,
+    //     dimension: evd.dimension,
+    //     itemStackAfterBreak: evd.itemStackAfterBreak,
+    //     itemStackBeforeBreak: evd.itemStackBeforeBreak,
+    //     player: evd.player
+    // }))
 })
 
+// worldSettingsBreak, antiNuker, lockedchestprotection
 world.beforeEvents.playerBreakBlock.subscribe((evd) => {
     worldSettings.worldSettingsBreak(evd)
     worldProtection.placeBreakProtection(evd)
     worldProtection.placeBreakLandclaim(evd)
     anticheat.antiNuker(evd)
     worldProtection.lockedChestProtection(evd)
+
+    // system.runTimeout(() => {
+    //     system.sendScriptEvent('darkoak:beforeplayerbreakblock', JSON.stringify({
+    //         block: evd.block,
+    //         dimension: evd.dimension,
+    //         itemStack: evd.itemStack,
+    //         player: mcl.playerToData(evd.player)
+    //     }))
+    // })
 })
 
+// Breakprotection & Landclaim
 world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
     worldProtection.placeBreakProtection(evd)
     worldProtection.placeBreakLandclaim(evd)
     anticheat.antiFastPlace(evd)
+
+    // system.sendScriptEvent('darkoak:beforeplayerplaceblock', JSON.stringify({
+    //     block: evd.block,
+    //     dimension: evd.dimension,
+    //     face: evd.face,
+    //     faceLocation: evd.faceLocation,
+    //     permutationBeingPlaced: evd.permutationBeingPlaced,
+    //     player: evd.player
+    // }))
 })
 
+// Before explosion
 world.beforeEvents.explosion.subscribe((evd) => {
     worldProtection.explosionProtectionLandclaim(evd)
+
+    // system.sendScriptEvent('darkoak:beforeexplosion', JSON.stringify({
+    //     dimension: evd.dimension,
+    //     impactedBlocks: evd.getImpactedBlocks(),
+    //     source: evd.source
+    // }))
 })
 
+// Gamemode change
 world.beforeEvents.playerGameModeChange.subscribe((evd) => {
     anticheat.antiGameMode(evd)
+
+    system.runTimeout(() => {
+        // system.sendScriptEvent('darkoak:beforeplayergamemodechange', JSON.stringify({
+        //     fromGamemode: evd.fromGameMode,
+        //     player: evd.player,
+        //     toGameMode: evd.toGameMode
+        // }))
+    })
 })
 
 world.beforeEvents.playerLeave.subscribe((evd) => {
     worldSettings.welcomeMessage(evd)
+    arrays.storePlayerData(evd.player)
     system.runTimeout(() => {
         try {
+            // system.sendScriptEvent('darkoak:beforeplayerleave', JSON.stringify({
+            //     player: evd.player
+            // }))
             uiManager.closeAllForms(evd.player)
         } catch {
 
@@ -116,14 +221,37 @@ world.beforeEvents.playerLeave.subscribe((evd) => {
 
 world.afterEvents.playerLeave.subscribe((evd) => {
 
+    // system.sendScriptEvent('darkoak:afterplayerleave', JSON.stringify({
+    //     playerId: evd.playerId,
+    //     playerName: evd.playerName
+    // }))
 })
 
 world.afterEvents.itemReleaseUse.subscribe((evd) => {
     worldSettings.pacifistArrowFix(evd)
+
+    // system.sendScriptEvent('darkoak:afteritemreleaseuse', JSON.stringify({
+    //     itemStack: evd.itemStack,
+    //     source: mcl.playerToData(evd.source)
+    // }))
 })
 
 system.afterEvents.scriptEventReceive.subscribe((evd) => {
     scriptEvents(evd)
+
+    // if (evd.id != 'darkoak:scriptevent') system.sendScriptEvent('darkoak:scriptevent', JSON.stringify({
+    //     id: evd.id,
+    //     initiator: evd.initiator,
+    //     message: evd.message,
+    //     sourceBlock: evd.sourceBlock,
+    //     sourceEntity: evd.sourceEntity,
+    //     sourceType: evd.sourceType
+    // }))
+    // world.sendMessage(evd.message)
+})
+
+system.beforeEvents.startup.subscribe((evd) => {
+    customSlashCommands(evd)
 })
 
 // system for handling most system intervals
@@ -137,6 +265,8 @@ system.runInterval(() => {
     defaults.byteChecker()
     defaults.timers()
 
+    landclaimBorders()
+
     const players = world.getAllPlayers()
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
@@ -149,9 +279,14 @@ system.runInterval(() => {
         chat.nametag(player, mcl.jsonWGet('darkoak:chat:other'))
         glideFeather(player)
     }
+
+    // system.sendScriptEvent('darkoak:interval', JSON.stringify({
+    //     sentTime: Date.now(),
+    //     currentTick: system.currentTick
+    // }))
 })
 
-// on player shoot arrow, if player has tag pacifist, apply pacifist tag to arrow
+
 
 /**
  * @param {ItemUseAfterEvent} evd 
@@ -187,7 +322,12 @@ function itemOpeners(evd) {
     }
 
     if (item.typeId == 'darkoak:generators' && player.hasTag('darkoak:admin')) {
-        interfacesTwo.genMainUI(player)
+        const block = player.getBlockFromViewDirection()
+        if (block && block?.block.typeId.endsWith('_sign')) {
+            interfacesTwo.signsPlusMainUI(player)
+        } else {
+            interfacesTwo.genMainUI(player)
+        }
         return
     }
 
@@ -380,6 +520,19 @@ function gens() {
             console.error(`Error: ${String(e)}`)
         }
     }
+
+    const signs = mcl.listGetBoth('darkoak:signsplus:')
+    for (let index = 0; index < signs.length; index++) {
+        const sign = JSON.parse(signs[index].value)
+
+        try {
+
+            const block = mcl.getBlock(sign.location, sign.dimension)
+
+        } catch (e) {
+            mcl.adminMessage(`Failed To Use Signs+ On Sign: ${sign.location.x} ${sign.location.y} ${sign.location.z}`)
+        }
+    }
 }
 
 let ticker = 0
@@ -413,9 +566,111 @@ function bans() {
             continue
         }
         mcl.jsonWUpdate(ban.id, 'time', data.time - 1)
-        if (!mcl.getPlayer(data.player)) continue
-        p.runCommand(`kick "${data.player}" ${data.message || ''}`)
+        const banned = mcl.getPlayer(data.player)
+        if (!banned) continue
+        if (!data?.crash) {
+            p.runCommand(`kick "${data.player}" ${data?.message || ''}`)
+        } else {
+            let o = 0
+            while (o++ < 100) {
+                banned.sendMessage(`§a§k`)
+                banned.sendMessage(`§a§k`)
+                banned.sendMessage(`§a§k`)
+            }
+            p.runCommand(`kick "${data.player}" ${data?.message || ''}`)
+        }
     }
+
+    /**@type {{enabled: boolean, whitelist: string}} */
+    const whitelist = mcl.jsonWGet('darkoak:whitelist')
+    if (whitelist?.enabled) {
+        const wlp = whitelist?.whitelist.split(',').map(e => e.trim())
+
+        const ps = world.getAllPlayers()
+        for (let index = 0; index < ps.length; index++) {
+            const pl = ps[index]
+            if (wlp.includes(pl.name)) continue
+
+            console.log(`kicking ${pl.name}, hes not on whitelist`)
+            p.runCommand(`kick "${pl.name}" You Aren\'t On The Whitelist!`)
+        }
+    }
+}
+
+let lcticker = 0
+function landclaimBorders() {
+
+    if (lcticker < 5) {
+        lcticker++
+        return
+    } else lcticker = 0
+
+    const lcs = mcl.listGetBoth('darkoak:landclaim:')
+    const players = world.getAllPlayers()
+
+    for (let index = 0; index < lcs.length; index++) {
+        const area = JSON.parse(lcs[index].value)
+
+        const minX = Math.min(area.p1.x, area.p2.x)
+        const maxX = Math.max(area.p1.x, area.p2.x)
+        const minZ = Math.min(area.p1.z, area.p2.z)
+        const maxZ = Math.max(area.p1.z, area.p2.z)
+
+        for (let index = 0; index < players.length; index++) {
+            const player = players[index]
+
+            const l = player.location
+
+            if (l.x >= minX && l.x <= maxX && l.z >= minZ && l.z <= maxZ) {
+                if (area.players.includes(player.name) || area.owner === player.name) {
+                    player.spawnParticle('minecraft:endrod', {
+                        x: l.x,
+                        y: l.y + 0.2,
+                        z: l.z
+                    })
+                } else {
+                    player.spawnParticle('minecraft:falling_border_dust_particle', {
+                        x: l.x,
+                        y: l.y + 0.2,
+                        z: l.z
+                    })
+                }
+            }
+        }
+    }
+
+    // for (let i = 0; i < lcs.length; i++) {
+    //     const lc = JSON.parse(lcs[i].value)
+    //     const minX = Math.min(lc.p1.x, lc.p2.x)
+    //     const maxX = Math.max(lc.p1.x, lc.p2.x)
+    //     const minZ = Math.min(lc.p1.z, lc.p2.z)
+    //     const maxZ = Math.max(lc.p1.z, lc.p2.z)
+
+    //     for (let x = minX; x <= maxX; x++) {
+    //         for (let z of [minZ, maxZ]) {
+    //             for (let p = 0; p < players.length; p++) {
+    //                 const y = players[p].location.y
+    //                 players[p].spawnParticle('minecraft:endrod', {
+    //                     x: x + 0.0,
+    //                     y: y + 0.2,
+    //                     z: z + 0.0
+    //                 })
+    //             }
+    //         }
+    //     }
+    //     for (let z = minZ + 1; z < maxZ; z++) {
+    //         for (let x of [minX, maxX]) {
+    //             for (let p = 0; p < players.length; p++) {
+    //                 const y = players[p].location.y
+    //                 players[p].spawnParticle('minecraft:endrod', {
+    //                     x: x + 0.0,
+    //                     y: y + 0.2,
+    //                     z: z + 0.0
+    //                 })
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 /**Holds non-UI script events
@@ -603,9 +858,41 @@ function scriptEvents(evd) {
         }
         try {
             const parts = evd.message.split(' ')
-            transferPlayer(player, parts[0], parseInt(parts[1]))
+            transferPlayer(player, { hostname: parts[0], port: parseInt(parts[1]) })
         } catch {
             mcl.adminMessage(`Scriptevent darkoak:transfer From ${player.nameTag} Has An Error`)
+            return
+        }
+    }
+    if (evd.id == 'darkoak:explode') {
+        if (!player) {
+            mcl.adminMessage(`The darkoak:explode Scriptevent Needs To Execute From An Entity`)
+            return
+        }
+        // scriptevent darkoak:explode [x]0 [y]1 [z]2 [radius]3 [fire]4 [breaksBlocks]5
+        // example: scriptevent darkoak:explode 0 64 0 5 true true
+        try {
+            const parts = arrays.replacer(player, evd.message).split(' ')
+            const loc = {
+                x: parseFloat(parts[0] || player.location.x),
+                y: parseFloat(parts[1] || player.location.y),
+                z: parseFloat(parts[2] || player.location.z),
+            }
+            world.getDimension(player.dimension.id).createExplosion(loc, parseFloat(parts[3]) || 5, {
+                causesFire: Boolean(parts[4]) || false,
+                breaksBlocks: Boolean(parts[5]) || false,
+            })
+        } catch {
+            mcl.adminMessage(`Scriptevent darkoak:explode From ${player.nameTag} Has An Error`)
+            return
+        }
+    }
+    if (evd.id == 'darkoak:retrievedata') {
+        try {
+            system.sendScriptEvent('darkoak:data', mcl.wGet(evd.message))
+            return
+        } catch {
+            system.sendScriptEvent('darkoak:data', undefined)
             return
         }
     }
@@ -733,4 +1020,462 @@ function glideFeather(player) {
     const view = player.getViewDirection()
     const item = mcl.getHeldItem(player)
     if (item && item.typeId == 'darkoak:glide_feather' && !player.isOnGround && !player.isJumping && !player.isSneaking) player.applyKnockback({ x: view.x / 2, z: view.z / 2 }, player.getVelocity().y * -1)
+}
+
+/**
+ * 
+ * @param {PlayerSpawnAfterEvent} evd 
+ */
+function moneySetter(evd) {
+    mcl.addScore(evd.player, 0)
+}
+
+/**
+ * @param {StartupEvent} evd 
+ */
+function customSlashCommands(evd) {
+
+    evd.customCommandRegistry.registerEnum('darkoak:dimensions', ['overworld', 'nether', 'end'])
+
+    evd.customCommandRegistry.registerEnum('darkoak:moneyfunctions', ['add', 'remove', 'set'])
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:money',
+        description: 'Command For Accessing The Money System',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            },
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:moneyfunctions'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'amount'
+            }
+        ]
+    }, (evd, player, moneyfunctions, amount) => {
+        system.runTimeout(() => {
+            switch (moneyfunctions) {
+                case 'add':
+                    mcl.addScore(player[0], amount)
+                    break
+                case 'remove':
+                    mcl.removeScore(player[0], amount)
+                    break
+                case 'set':
+                    mcl.setScore(player[0], amount)
+                    break
+            }
+            evd?.sourceEntity.sendMessage(`§a${player[0].name} Now Has $${mcl.getScore(player[0]).toString()}§r`)
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:transfer',
+        description: 'Transfer The Selected Player To A Specified Server',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'hostname'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'port'
+            }
+        ]
+    }, (evd, player, hostname, port) => {
+        system.runTimeout(() => {
+            for (let index = 0; index < player.length; index++) {
+                const p = player[index]
+                transferPlayer(p, { hostname: hostname, port: port })
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:help',
+        description: 'Shows The List Of Commands',
+        permissionLevel: CommandPermissionLevel.GameDirectors
+    }, (evd) => {
+        evd?.sourceEntity.sendMessage(arrays.scriptEvents.join('\n'))
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:enchantsevents', customEnchantEvents)
+    evd.customCommandRegistry.registerEnum('darkoak:enchantsactions', customEnchantActions)
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:enchant',
+        description: 'Applies Custom Enchants',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:enchantsevents'
+            },
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:enchantsactions'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'power'
+            }
+        ]
+    }, (evd, player, enchantsevents, enchantsactions, power) => {
+        system.runTimeout(() => {
+            if (enchantsevents === undefined) {
+                interfacesTwo.customEnchantsMain(player[0])
+                return
+            }
+
+            const i = mcl.getHeldItem(player[0])
+            if (!i) return
+            let item = new ItemStack(i.type, i.amount)
+            let lore = i.getLore()
+            lore.push(`§r§5${enchantsevents}-${enchantsactions}-${power}`)
+            item.setLore(lore)
+            item.nameTag = i.nameTag
+
+            mcl.getItemContainer(player[0]).setItem(player[0].selectedSlotIndex, item)
+            return
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:spawn',
+        description: 'Spawns Items With Specified Parameters',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.ItemType,
+                name: 'itemType'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'amount'
+            },
+            {
+                type: CustomCommandParamType.Location,
+                name: 'location'
+            }
+        ]
+    }, (evd, itemType, amount, location) => {
+        system.runTimeout(() => {
+            const dimen = evd.initiator?.dimension || evd.sourceBlock?.dimension || evd.sourceEntity?.dimension
+            const item = new ItemStack(itemType, amount)
+            world.getDimension(dimen.id).spawnItem(item, location)
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:command',
+        description: 'Runs A Command Using Replacer Hashtags',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.EntitySelector,
+                name: 'entity'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'command'
+            }
+        ]
+    }, (evd, entity, command) => {
+        system.runTimeout(() => {
+            for (let index = 0; index < entity.length; index++) {
+                const e = entity[index]
+                e.runCommand(arrays.replacer(e, command))
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:knockback',
+        description: 'Applies Knockback To An Entity',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.EntitySelector,
+                name: 'entity'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'x'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'y'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'z'
+            },
+        ]
+    }, (evd, entity, x, y, z) => {
+        system.runTimeout(() => {
+            for (let index = 0; index < entity.length; index++) {
+                /**@type {Entity} */
+                const e = entity[index]
+                e.applyKnockback({ x: 0, z: 0 }, e.getVelocity().y * -1)
+                e.applyKnockback({ x: x, z: z, }, y)
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:if',
+        description: 'Checks If Param1 Is Equal To Param2, If Equal Runs Command',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'param1'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'param2'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'command'
+            }
+        ]
+    }, (evd, player, param1, param2, command) => {
+        system.runTimeout(() => {
+            for (let index = 0; index < player.length; index++) {
+                const p = player[index]
+                if (arrays.replacer(p, param1) != arrays.replacer(p, param2)) continue
+                p.runCommand(arrays.replacer(p, command))
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:variable',
+        description: 'Sets A Custom Variable',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'variable_name'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'data'
+            }
+        ]
+    }, (evd, player, variable_name, data) => {
+        for (let index = 0; index < player.length; index++) {
+            const p = player[index]
+            mcl.wSet(`darkoak:vars:${arrays.replacer(p, variable_name)}`, arrays.replacer(p, data))
+        }
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:projectile',
+        description: 'Summons And Shoots A Projectile',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            },
+            {
+                type: CustomCommandParamType.EntityType,
+                name: 'type'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'x'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'y'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'z'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'force'
+            },
+        ]
+    }, (evd, player, type, x, y, z, force) => {
+        system.runTimeout(() => {
+            for (let index = 0; index < player.length; index++) {
+                /**@type {Player} */
+                const p = player[index]
+                const spawnPos = {
+                    x: p.location.x + parseFloat(arrays.replacer(p, x)),
+                    y: p.location.y + parseFloat(arrays.replacer(p, y)),
+                    z: p.location.z + parseFloat(arrays.replacer(p, z)),
+                }
+                const projectile = world.getDimension(p.dimension.id).spawnEntity(type.id, spawnPos)
+                const view = p.getViewDirection()
+                projectile.applyImpulse({
+                    x: view.x * force,
+                    y: view.y * force,
+                    z: view.z * force,
+                })
+            }
+        })
+    })
+
+    const uis = Object.keys(interfaces).concat(Object.keys(interfacesTwo))
+    evd.customCommandRegistry.registerEnum('darkoak:uilist', uis)
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:openui',
+        description: 'Opens Any UI From This Addon',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            },
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:uilist'
+            }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.String,
+                name: 'args'
+            }
+        ]
+    }, (evd, player, uilist, args) => {
+        system.runTimeout(() => {
+            for (let index = 0; index < player.length; index++) {
+                const p = player[index]
+                if (typeof interfaces[uilist] === 'function') {
+                    interfaces[uilist](p, ...(args ? args.split(' ') : []))
+                } else if (typeof interfacesTwo[uilist] === 'function') {
+                    interfacesTwo[uilist](p, ...(args ? args.split(' ') : []))
+                }
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:explode',
+        description: 'Summons An Explosion With Specific Parameters',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:dimensions'
+            },
+            {
+                type: CustomCommandParamType.Location,
+                name: 'location'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'radius'
+            },
+            {
+                type: CustomCommandParamType.Boolean,
+                name: 'breaksblocks'
+            },
+            {
+                type: CustomCommandParamType.Boolean,
+                name: 'fire'
+            }
+        ]
+    }, (evd, dimension, location, radius, breaksblocks, fire) => {
+        system.runTimeout(() => {
+            world.getDimension(dimension).createExplosion(location, radius, {
+                causesFire: fire,
+                breaksBlocks: breaksblocks,
+            })
+        })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:debugtypes', ['aclog', 'playerlist', 'bytes', 'bytesize'])
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:debug',
+        description: 'DO NOT USE',
+        permissionLevel: CommandPermissionLevel.Admin,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            },
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:debugtypes'
+            }
+        ]
+    }, (evd, player, debugtype) => {
+        system.runTimeout(() => {
+            switch (debugtype) {
+                case 'aclog':
+                    anticheat.log(`${player.nameTag} -> DEBUG TEST`)
+                    break
+                case 'playerlist':
+                    mcl.adminMessage(mcl.getPlayerList().join('\n'))
+                    break
+                case 'bytes':
+                case 'bytesize':
+                    mcl.adminMessage(world.getDynamicPropertyTotalByteCount().toString())
+                    break
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:boats',
+        description: 'Checks Boat-Catcher Amounts',
+        permissionLevel: CommandPermissionLevel.Any,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            }
+        ]
+    }, (evd, player) => {
+        system.runTimeout(() => {
+            if (evd.sourceEntity && evd.sourceEntity.typeId == 'minecraft:player') {
+                /**@type {Player} */
+                const p = evd.sourceEntity
+
+                /**@type {Player} */
+                const ptc = player[0]
+                const boats = mcl.jsonPGet(ptc, 'darkoak:boats')
+                if (!boats) {
+                    p.sendMessage(`§c${ptc.name} Has No Boats§r`)
+                    return
+                }
+                p.sendMessage(`§a${ptc.name} Has The Following Boats:§r`)
+                for (let index = 0; index < boats.length; index++) {
+                    const b = boats[index]
+
+                    p.sendMessage(`§a${b.type}: ${b.amount}§r`)
+                }
+            }
+        })
+    })
 }

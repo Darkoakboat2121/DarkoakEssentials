@@ -63,6 +63,7 @@ export function placeBreakLandclaim(evd) {
             for (let index = 0; index < area.players.length; index++) {
                 if (evd.player.name === area.players[index]) return
             }
+            if (evd.player.name === area.owner) return
             evd.cancel = true
             evd.player.sendMessage(`§cThis Land Is Owned By ${area.owner}§r`)
             return

@@ -1,2 +1,2 @@
-import { world, system, DimensionTypes } from "@minecraft/server"
+import { world, system } from "@minecraft/server"
 

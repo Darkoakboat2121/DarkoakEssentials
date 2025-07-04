@@ -2,11 +2,10 @@
 // This file holds data and some helper functions
 
 import { mcl } from "../logic"
-import { EntityComponentTypes, Player, system, world } from "@minecraft/server"
+import { EntityComponentTypes, Player, PlayerJoinAfterEvent, PlayerLeaveBeforeEvent, system, world } from "@minecraft/server"
 
 /**List of usernames to ban automatically if prebans is set to true*/
 export const preBannedList = [
-    'Noki5160', /*IP leaking*/
     'K4leonidas', //Racism
     'HackerBase74', //Basic
     'Player847806825', //Alt
@@ -35,6 +34,10 @@ export const preBannedList = [
     'DaniCR214874', //Basic
     'herobrine229343', //Basic
     'Zac10284', //Chat crasher tech
+    'pluckmc', //Nuking
+    'xsemgamingYTx', //Basic, op abuse
+    'Diamondkid 7231', //Above average
+    'Mario X082', //Basic
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -152,6 +155,7 @@ export function replacer(player, string) {
         .replaceAll('#time1#', `${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`)
         .replaceAll('#time2#', `${time.getHours()}:${time.getMinutes()}`)
         .replaceAll('#year#', time.getFullYear().toString())
+        .replaceAll('#money#', mcl.getScore(player).toString())
 
 
     // emojis
@@ -231,16 +235,8 @@ export function replacer(player, string) {
 }
 
 
-export const dummySize = 29
+export const dummySize = 35
 export const version = '2.2.3, This Is Probably Wrong'
-
-/**Returns the money scoreboard id
- * @returns {string | undefined}
- */
-export function getMoney() {
-    const ms = mcl.jsonWGet('darkoak:moneyscore')
-    if (ms && ms.id) return ms.id
-}
 
 export const hashtags = [
     '\nKeys:',
@@ -486,7 +482,7 @@ export const scriptEvents = [
     'darkoak:help -> Help List',
     'darkoak:enchant -> Opens Enchanting UI / Enchants Held Item',
     'darkoak:bind',
-    'darkoak:spawn',
+    'darkoak:spawn -> Spawns Items',
     'darkoak:command',
     'darkoak:knockback',
     'darkoak:if',
@@ -497,6 +493,29 @@ export const scriptEvents = [
     'darkoak:debug',
     'darkoak:transfer'
 ]
+
+export const boatTypes = [
+    'Oak Boat',
+    'Spruce Boat',
+    'Birch Boat',
+    'Jungle Boat',
+    'Acacia Boat',
+    'Dark Oak Boat',
+    'Mangrove Boat',
+    'Cherry Boat',
+    'Pale Oak Boat',
+    'Bamboo Raft',
+    'Minecart???',
+    'Saddle???',
+]
+
+/**
+ * @param {Player} player
+ */
+export function storePlayerData(player) {
+    mcl.jsonWSet(`darkoak:playerdata:${player.name}`, mcl.playerToData(player))
+}
+
 
 // dynamic propertys can hold 32767 characters
 

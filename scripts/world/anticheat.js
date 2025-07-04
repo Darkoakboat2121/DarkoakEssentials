@@ -9,13 +9,23 @@ import { logcheck } from "../data/defaults"
  */
 export function antiNuker(evd) {
     const d = mcl.jsonWGet('darkoak:anticheat')
-    if (!d.antinuker) return
     const player = evd.player
 
-    player.setDynamicProperty('darkoak:ac:blocksbroken', (player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) + 1)
+    if (d?.antinuker) {
+        player.setDynamicProperty('darkoak:ac:blocksbroken', (player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) + 1)
 
-    if ((player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) > 45) {
-        evd.cancel = true
+        if ((player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) > 45) {
+            evd.cancel = true
+        }
+    }
+
+    if (d?.antinuker2) {
+        const b = player.getBlockFromViewDirection()
+        const l = evd.block.location
+        if (b && (b.block.location.x != l.x && b.block.location.y != l.y && b.block.location.z != l.z)) {
+            evd.cancel = true
+            log(`${player.name} -> anti-nuker 2`)
+        }
     }
 }
 
@@ -177,7 +187,7 @@ export function anticheatMain(player) {
     // anti speed 2
     if ((Math.abs(v.x) >= 10 || Math.abs(v.z) >= 10) && d.antispeed1) {
         log(`${player.name} -> speed 2`)
-        player.applyKnockback({x: v.x * -1, z: v.z * -1}, 0)
+        player.applyKnockback({ x: v.x * -1, z: v.z * -1 }, 0)
     }
 
     // anti illegal enchant
@@ -217,7 +227,13 @@ export function log(mess) {
         mcl.pSet(player, 'darkoak:strikes', current + 1)
         if (current >= 3) {
             mcl.pSet(player, 'darkoak:strikes', 0)
-            player.kill()
+            system.runTimeout(() => {
+                try {
+                    player.kill()
+                } catch {
+
+                }
+            })
         }
     }
     logcheck()

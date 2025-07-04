@@ -50,23 +50,26 @@ Plots are similar but build structures in a co-ord space. This will get a tutori
 <b>f</b>
 changelog:
     added:
-        darkoak:projectile scriptevent (/scriptevent darkoak:projectile [type] [towards x] [towards y] [towards z] [force])
-        #bind chat hashtagkey, allows you to bind vanilla items
-        admin and player list UI
-        darkoak:openui & darkoak:uihelp & darkoak:help & darkoak:transfer scriptevents
-        giftcodes now have an additional option
-        time replacers
+        all scriptevents now have a /command variant
+        save/load inventory commands *? (methods: structure saving with: [chests, entities])
+        nicknames *
+        world edit *?
+        signs+ * (spinning signs, rainbow text, bad apple lol, delays, slideshows)
+        catcher game *? (fennec discord cat game)
+        leveling system *?
+        whitelist system
 
-
+        
     fixed:
-        auto-response now has a modify button
-        admin list now removes listed players that arent admin anymore
-        rank removing UI
-
+        arrows and pacifist
+        banning admins
+        owner fix *
+        landclaims
+        
 
     changes:
-        bindable items now have defaults
-        all items have been added to their group sorted by use
+        more stuff to profiles *
+        
 
 
 

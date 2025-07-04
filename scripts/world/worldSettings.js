@@ -9,26 +9,73 @@ import { mcl } from "../logic"
  * @param {PlayerBreakBlockBeforeEvent} evd 
  */
 export function worldSettingsBreak(evd) {
+    const d = mcl.jsonWGet('darkoak:cws')
     if (!mcl.isCreating(evd.player)) {
-        switch (mcl.wGet('darkoak:cws:breakblocks')) {
-            case 2:
-                if (evd.block.matches('minecraft:frame') || evd.block.matches('minecraft:glow_frame')) {
-                    evd.cancel = true
-                }
-                break
-
-            case 3:
-                if (evd.block.typeId == 'minecraft:sign') mcl.jsonWSet('darkoak:signrestore', mcl.getSign(evd.block))
-                evd.cancel = true
-                break
+        if (d?.breakblocks) {
+            evd.cancel = true
+            return
         }
-    } else if (evd.player.getGameMode() != "creative") {
+        if (d?.breakitemframes && (evd.block.typeId == 'minecraft:frame' || evd.block.typeId == 'minecraft:glow_frame')) {
+            evd.cancel = true
+            return
+        }
+    }
+    if (evd.player.getGameMode() != "creative") {
         let blocks = mcl.listGetValues('darkoak:cws:unbreakableBlocks')
         for (let index = 0; index < blocks.length; index++) {
             if (evd.block.typeId === blocks[index]) {
                 evd.cancel
                 return
             }
+        }
+    }
+}
+
+/**
+ * 
+ * @param {PlayerInteractWithBlockBeforeEvent} evd 
+ * @returns 
+ */
+export function worldSettingsInteract(evd) {
+    if (!mcl.isCreating(evd.player)) {
+        const d = mcl.jsonWGet('darkoak:cws')
+        if (d?.interactwithblocks) {
+            evd.cancel = true
+            return
+        }
+        if (d?.interactwithitemframes && (evd.block.typeId == 'minecraft:frame' || evd.block.typeId == 'minecraft:glow_frame')) {
+            evd.cancel = true
+            return
+        }
+        if (d?.interactwithenderchests && evd.block.typeId == 'minecraft:ender_chest') {
+            evd.cancel = true
+            return
+        }
+        if (d?.interactwithsigns && evd.block.typeId.endsWith('_sign')) {
+            evd.cancel = true
+            return
+        }
+        if (d?.interactwithlogs && evd.block.typeId.endsWith('_log')) {
+            evd.cancel = true
+            return
+        }
+        if (d?.interactwithgrass && evd.block.typeId == 'minecraft:grass_block') {
+            evd.cancel = true
+            return
+        }
+    }
+}
+
+export function worldSettingsEntityInteract(evd) {
+    if (!mcl.isCreating(evd.player)) {
+        const d = mcl.jsonWGet('darkoak:cws')
+        if (d?.interactwithentities) {
+            evd.cancel = true
+            return
+        }
+        if (d?.interactwithvillagers && evd.entity.typeId == 'minecraft:villager_v2') {
+            evd.cancel = true
+            return
         }
     }
 }
@@ -42,35 +89,6 @@ export function signFixer(evd) {
         if (block.typeId == 'minecraft:sign') {
             const sign = mcl.jsonWGet('darkoak:signrestore')
             mcl.rewriteSign(block, sign.waxed, sign.text, sign.color)
-        }
-    }
-}
-
-
-export function worldSettingsInteract(evd) {
-    if (!mcl.isCreating(evd.player)) {
-        switch (mcl.wGet('darkoak:cws:interactwithblocks')) {
-            case 2:
-                if (evd.block.matches('minecraft:frame') || evd.block.matches('minecraft:glow_frame')) {
-                    evd.cancel = true
-                    return
-                }
-                break
-            case 3:
-                if (evd.block.matches('minecraft:ender_chest')) {
-                    evd.cancel = true
-                    return
-                }
-                break
-            case 4:
-                if (evd.block.matches('minecraft:frame') || evd.block.matches('minecraft:glow_frame') || evd.block.matches('minecraft:ender_chest')) {
-                    evd.cancel = true
-                    return
-                }
-                break
-            case 5:
-                evd.cancel = true
-                break
         }
     }
 }
@@ -112,14 +130,14 @@ export function welcomeMessage(evd) {
     if (evd instanceof PlayerSpawnAfterEvent) {
         if (!evd.initialSpawn) return
         system.runTimeout(() => {
-            if (d.welcomeS) {
+            if (d?.welcomeS) {
                 world.sendMessage(arrays.replacer(evd.player, d.welcome || ''))
             } else {
                 evd.player.sendMessage(arrays.replacer(evd.player, d.welcome || ''))
             }
         }, 100)
     } else {
-        if (d.byeS) {
+        if (d?.byeS) {
             world.sendMessage(arrays.replacer(evd.player, d.bye || ''))
         } else {
             evd.player.sendMessage(arrays.replacer(evd.player, d.bye || ''))
@@ -185,7 +203,10 @@ function tracking(player, d) {
 export function pacifistArrowFix(evd) {
     if (!evd.itemStack) return
     if (evd.itemStack.typeId != 'minecraft:bow' || evd.itemStack.typeId != 'minecraft:crossbow') return
-    evd.source.runCommand('tag @e [type=arrow,r=0.5,c=1] add darkoak:pacifist')
+    const tags = ['darkoak:pacifist', 'darkoak:team1', 'darkoak:team2', 'darkoak:team3', 'darkoak:team4']
+    for (let index = 0; index < tags.length; index++) {
+        if (evd.source.hasTag(tags[index])) evd.source.runCommand(`tag @e [type=arrow,r=0.5,c=1] add ${tags[index]}`)
+    }
 }
 
 /**

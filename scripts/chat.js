@@ -2,7 +2,7 @@ import { world, system, Player, ChatSendBeforeEvent, PlayerSpawnAfterEvent } fro
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
-import { crasherSymbol, crasherSymbol2, emojis, professionalism, replacer, version } from "./data/arrays"
+import { boatTypes, crasherSymbol, crasherSymbol2, emojis, professionalism, replacer, version } from "./data/arrays"
 import { landclaimMainUI, queueMessageUI } from "./uis/interfacesTwo"
 import { log } from "./world/anticheat"
 
@@ -93,6 +93,23 @@ export function chatSystem(evd) {
             return
         }
     }
+
+    const boat = mcl.wGet('darkoak:boatcatcher:boat')
+    if (boat) {
+        if (message.trim() == 'CATCH') {
+            const bac = mcl.jsonPGet(player, 'darkoak:boatcatcher')
+            if (!bac) {
+                mcl.jsonPSet(player, 'darkoak:boatcatcher', {
+                    
+                })
+            }
+
+            world.sendMessage(`§a${player.name} Caught A(n) ${boat}!`)
+            mcl.wRemove('darkoak:boatcatcher:boat')
+            return
+        }
+    }
+
 
     // auto response
     const res = mcl.listGetValues('darkoak:autoresponse:')
@@ -278,15 +295,16 @@ function hashtag(hashtagKey, sender) {
 
 let loops = 0
 let time1 = 0
+let time2 = 205
 /**Chat games handler */
 export function chatGames() {
     const chat = mcl.jsonWGet('darkoak:scriptsettings')
     if (chat.chatmaster === true) return
 
-    /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string}} */
+    /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string, catcherEnabled: boolean, catcherInterval: number}} */
     const d = mcl.jsonWGet('darkoak:chatgames')
     if (!d) return
-    if (d.unscrambleEnabled) {
+    if (d?.unscrambleEnabled) {
         time1++
 
         if (time1 >= (d.unscrambleInterval * 60) * 20) {
@@ -299,6 +317,20 @@ export function chatGames() {
             world.sendMessage(`§a[${loops}] Unscramble for a prize! Word:§r§f ${mcl.stringScrambler(word)}`)
 
             mcl.wSet('darkoak:chatgame1:word', word)
+        }
+    }
+
+    if (d?.catcherEnabled) {
+        time2++
+
+        if (time2 >= (d.catcherInterval * 60) * 20) {
+            time2 = 0
+            loops++
+
+            const btc = boatTypes[mcl.randomNumber(boatTypes.length - 1)]
+
+            world.sendMessage(`§a[${loops}] Boat-Catcher! Type 'CATCH' To Catch A(n) ${btc}!`)
+            mcl.wSet('darkoak:boatcatcher:boat', btc)
         }
     }
 }

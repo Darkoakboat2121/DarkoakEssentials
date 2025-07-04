@@ -20,6 +20,16 @@ export class bui {
         return p
     }
 
+    /**Adds a dropdown to a ModalForm and returns the offline included player list
+     * @param {ModalFormData} f 
+     * @returns {string[]} Player list
+     */
+    static offlineNamePicker(f, text = '', defaultIndex = 0, tooltip = '') {
+        const p = mcl.getPlayerList()
+        bui.dropdown(f, text, p, defaultIndex, tooltip)
+        return p
+    }
+
     /**Adds a dropdown to a ModalForm with dimensions and returns the dimensions
      * @param {ModalFormData} f 
      * @param {Player} player 
@@ -116,7 +126,7 @@ export class bui {
      */
     static toggle(f, label = '', defaultValue = false, tooltip = '') {
         return f.toggle(label.toString() || '', {
-            defaultValue: defaultValue.valueOf() || false,
+            defaultValue: defaultValue || false,
             tooltip: tooltip.toString() || ''
         })
     }

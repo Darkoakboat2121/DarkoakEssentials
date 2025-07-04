@@ -1,65 +1,62 @@
 {
-  "format_version": 2,
-  "metadata": {
-    "authors": [
-      "Darkoakboat2121"
-    ]
-  },
-  "header": {
-    "name": "§aDarkoak §9Essentials §aV2.2.4§r§f",
-    "description": "§uAn essentials addon made to be §asimple§u. Made by Darkoakboat2121§r§f",
-    "min_engine_version": [
-      1,
-      21,
-      80
-    ],
-    "uuid": "9506c0be-216b-49fe-b0c7-f1c5536882f2",
-    "version": [
-      2,
-      2,
-      4
-    ]
-  },
-  "modules": [
-    {
-      "type": "data",
-      "uuid": "8d96f528-5e8a-419d-9f95-7d48809614cd",
-      "version": [
-        1,
-        0,
-        0
-      ]
-    },
-    {
-      "type": "script",
-      "language": "javascript",
-      "uuid": "7c7bfda0-3738-4193-af28-012ee915fdc6",
-      "entry": "scripts/main.js",
-      "version": [
-        1,
-        0,
-        0
-      ]
-    }
-  ],
-  "capabilities": [
-    "script_eval"
-  ],
-  "dependencies": [
-    {
-      "module_name": "@minecraft/server",
-      "version": "2.0.0-beta"
-    },
-    {
-      "module_name": "@minecraft/server-ui",
-      "version": "2.0.0-beta"
-    },
-    {
-      "module_name": "@minecraft/server-admin",
-      "version": "1.0.0-beta"
-    },
-    {
-      "uuid": "5cc81451-170f-49fa-94a5-6f532c0c1f92"
-    }
-  ]
+	"format_version": 2,
+	"metadata": {
+		"authors": [
+			"Darkoakboat2121"
+		]
+	},
+	"header": {
+		"name": "§aDarkoak §9Essentials §aV2.2.6§r§f",
+		"description": "§uAn essentials addon made to be §asimple§u. Made by Darkoakboat2121§r§f",
+		"min_engine_version": [
+			1,
+			21,
+			80
+		],
+		"uuid": "5571c81e-a743-4b4b-ad0e-312b2e3f3c64",
+		"version": [
+			2,
+			2,
+			6
+		]
+	},
+	"modules": [
+		{
+			"type": "data",
+			"uuid": "0798031e-f1bb-4005-9cef-060d099eab2a",
+			"version": [
+				1,
+				0,
+				0
+			]
+		},
+		{
+			"type": "script",
+			"language": "javascript",
+			"uuid": "d0263c98-b451-4b4c-9d01-c0146831ecbc",
+			"entry": "scripts/main.js",
+			"version": [
+				1,
+				0,
+				0
+			]
+		}
+	],
+	"capabilities": [
+		"script_eval"
+	],
+	"dependencies": [
+		{
+			"module_name": "@minecraft/server",
+			"version": "2.1.0-beta"
+		},
+		{
+			"module_name": "@minecraft/server-ui",
+			"version": "2.1.0-beta"
+		},
+		{
+			"module_name": "@minecraft/server-admin",
+			"version": "1.0.0-beta"
+		}
+	]
 }

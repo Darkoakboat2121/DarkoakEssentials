@@ -191,7 +191,6 @@ export function defaultData() {
 
     if (mcl.wGet('darkoak:moneyscore') === undefined) {
         mcl.jsonWSet('darkoak:moneyscore', {
-            id: '',
             tax: '0',
             compression: '0',
         })

@@ -3,7 +3,7 @@ import { ActionFormData, MessageFormData, ModalFormData, uiManager, UIManager } 
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
 import { customEnchantActions, customEnchantEvents } from "../enchanting"
-import { hashtags, preBannedList, icons, compress, decompress } from "../data/arrays"
+import { hashtags, preBannedList, icons, compress, decompress, replacer, crasherSymbol } from "../data/arrays"
 import { bui } from "./baseplateUI"
 import * as modal from "./modalUI"
 
@@ -92,6 +92,8 @@ export function genMainUI(player) {
     bui.button(f, 'Remove An Ore Gen\n§7Remove an Existing Ore Generator', icons.block('redstone_ore'))
     bui.button(f, 'Modify An Ore Gen\n§7Modify An Existing Ore Generator', icons.block('gold_ore'))
     bui.button(f, 'Add New Mob Gen')
+    bui.button(f, 'Remove A Mob Gen')
+    bui.button(f, 'Modify A Mob Gen')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -108,6 +110,12 @@ export function genMainUI(player) {
                 break
             case 3:
                 mobGenAddUI(player)
+                break
+            case 4:
+                mobGenRemoveUI(player)
+                break
+            case 5:
+                mobGenModifyUI(player)
                 break
             default:
                 player.sendMessage('§cError§r')
@@ -143,7 +151,9 @@ export function genAddUI(player) {
         const blockId = e[0].trim()
         const coords1 = e[1].trim()
         mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, {
-            block: blockId, coords: coords1, dimension: dimensions[e[2]]
+            block: blockId,
+            coords: coords1,
+            dimension: dimensions[e[2]]
         })
     }).catch()
 }
@@ -202,26 +212,9 @@ export function genModifyUI(player, gen) {
     f.textField('Block ID:', '', {
         defaultValue: data.block
     })
-    f.textField('Co-ords:', '', {
-        defaultValue: data.coords
-    })
+    bui.textField(f, 'Co-ords:', '', data.coords)
 
-    const dimensions = ['overworld', 'nether', 'the_end']
-    let def = 0
-    switch (player.dimension.id) {
-        case 'overworld':
-            def = 0
-            break
-        case 'nether':
-            def = 1
-            break
-        case 'the_end':
-            def = 2
-            break
-    }
-    f.dropdown('Dimension:', dimensions, {
-        defaultValueIndex: def
-    })
+    const dimensions = bui.dimensionPicker(f, player, true)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -360,10 +353,13 @@ export function anticheatMain(player) {
         return
     }
 
-    if (player.hasTag('darkoak:admin')) {
+    if (mcl.isDOBAdmin(player)) {
         bui.button(f, 'Anticheat Settings')
     }
-    if (player.hasTag('darkoak:admin') || player.hasTag('darkoak:mod')) {
+    if (mcl.isDOBAdmin(player)) {
+        bui.button(f, 'Logs')
+    }
+    if (mcl.isDOBAdmin(player) || player.hasTag('darkoak:mod')) {
         bui.button(f, 'Punishments', icons.item('flint_and_steel'))
     }
 
@@ -372,6 +368,8 @@ export function anticheatMain(player) {
         if (player.hasTag('darkoak:admin')) {
             if (evd.selection === 0) {
                 anticheatSettings(player)
+            } else if (evd.selection === 1) {
+                interfaces.logsUI(player)
             } else {
                 interfaces.playerPunishmentsMainUI(player)
             }
@@ -391,105 +389,110 @@ export function anticheatSettings(player) {
 
     bui.label(f, '§cRemember To Always Verify If The Player Is Actually Hacking. Anticheat Always Has A Chance Of False Positives.')
 
-    bui.toggle(f, 'Pre-bans', d.prebans)
+    bui.toggle(f, 'Pre-bans', d?.prebans)
     bui.label(f, 'Automatically Bans Hackers Darkoakboat2121 Knows About')
     bui.label(f, `Full list:\n${preBannedList.join(' | ')}`)
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-nuker', d.antinuker)
+    bui.toggle(f, 'Anti-nuker 1', d?.antinuker)
     bui.label(f, 'Checks If A Player Is Breaking Blocks Too Fast')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-fast-place', d.antifastplace)
+    bui.toggle(f, 'Anti-fast-place', d?.antifastplace)
     bui.label(f, 'Checks If A Player Is Placing Blocks Too Fast')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-fly 1', d.antifly1)
+    bui.toggle(f, 'Anti-fly 1', d?.antifly1)
     bui.label(f, 'Checks If A Player Is Flying Like In Creative Mode But Without Creative')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-speed 1', d.antispeed1)
+    bui.toggle(f, 'Anti-speed 1', d?.antispeed1)
     bui.label(f, 'Checks If Player Is Moving Too Fast')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-spam', d.antispam)
+    bui.toggle(f, 'Anti-spam', d?.antispam)
     bui.label(f, 'Checks The Players Recent Messages For Repeats, Automatically Formats To Ensure Spaces And Formatting Codes Don\'t Bypass It')
     bui.label(f, 'This Also Checks If The Message Matches Common Hack Client Messages')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-illegal-enchant', d.antiillegalenchant)
+    bui.toggle(f, 'Anti-illegal-enchant', d?.antiillegalenchant)
     bui.label(f, 'Checks If The Held Item Of A Player Has Illegal Enchants')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-killaura', d.antikillaura)
+    bui.toggle(f, 'Anti-killaura', d?.antikillaura)
     bui.label(f, 'Checks If The Players CPS Is Too High')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-gamemode-switcher', d.antigamemode)
+    bui.toggle(f, 'Anti-gamemode-switcher', d?.antigamemode)
     bui.label(f, 'Prevents Non-Admins From Changing Gamemodes §c(Buggy)§r')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Npc detector', d.npcdetect)
+    bui.toggle(f, 'Npc detector', d?.npcdetect)
     bui.label(f, 'Sends Chat Message To Admins When A Npc Is Interacted With, Also Prevents Usage Of Npc\'s §c(Don\'t Enable If You Use Npc\'s)§r')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-fly 2', d.antifly2)
+    bui.toggle(f, 'Anti-fly 2', d?.antifly2)
     bui.label(f, 'Checks If The Player Is Flying And Gliding At The Same Time')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-fly 3', d.antifly3)
+    bui.toggle(f, 'Anti-fly 3', d?.antifly3)
     bui.label(f, 'Checks If The Player Is Gliding Weirdly (If Player Is Going Up Without Looking Up)')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-invalid 1', d.antiinvalid1)
+    bui.toggle(f, 'Anti-invalid 1', d?.antiinvalid1)
     bui.label(f, 'Checks If The Player Is Sneaking And Sprinting At The Same Time')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-invalid 2', d.antiinvalid2)
+    bui.toggle(f, 'Anti-invalid 2', d?.antiinvalid2)
     bui.label(f, 'Checks If The Player Is Sprinting Backwards')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-invalid 3', d.antiinvalid3)
+    bui.toggle(f, 'Anti-invalid 3', d?.antiinvalid3)
     bui.label(f, 'Checks If The Player Is Climbing A Ladder Too Quickly')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-speed 2', d.antispeed2)
+    bui.toggle(f, 'Anti-speed 2', d?.antispeed2)
     bui.label(f, 'Checks If The Player Is Going At Insane Speeds (Also Slows Them Down)')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-block-reach', d.antiblockreach)
+    bui.toggle(f, 'Anti-block-reach', d?.antiblockreach)
     bui.label(f, 'Checks If The Player Places A Block Farther Away Than Allowed (Also Cancels Block Placement If Too Far)')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Notify Admins In Chat', d.notify)
+    bui.toggle(f, 'Notify Admins In Chat', d?.notify)
     bui.label(f, 'If This Is On It Notifies Admins When An Anticheat Module Goes Off')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Three Strike Action', d.strike)
+    bui.toggle(f, 'Three Strike Action', d?.strike)
     bui.label(f, 'If This Is On And If A Player Triggers Three Anticheat Measures, The Player Gets Killed')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-crasher 1', d.anticrasher1)
+    bui.toggle(f, 'Anti-crasher 1', d?.anticrasher1)
     bui.label(f, 'Stops Certain Characters From Showing In Chat (They Lag The Server)')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-nuker 2', d?.antinuker2)
+    bui.label(f, 'Checks If The Player Is Looking At A Different Block Than They Are Breaking')
 
     bui.divider(f)
 
@@ -516,7 +519,8 @@ export function anticheatSettings(player) {
             antiblockreach: e[16],
             notify: e[17],
             strike: e[18],
-            anticrasher1: e[19]
+            anticrasher1: e[19],
+            antinuker2: e[20],
         })
     }).catch()
 }
@@ -1121,10 +1125,15 @@ export function chatGamesSettings(player) {
 
     const d = mcl.jsonWGet('darkoak:chatgames')
 
-    bui.toggle(f, 'Unscrambler Enabled?', d.unscrambleEnabled, 'Toggles Whether The Game Runs')
-    bui.textField(f, 'List Of Words', 'Example: word1, word2, word3', d.unscrambleWords, 'Seperate Words With , ')
-    bui.slider(f, 'Interval', 1, 10, d.unscrambleInterval, 1, 'Interval In Minutes Between Games')
-    bui.textField(f, 'Reward Command:', 'Example: give @s diamond 1', d.unscrambleCommand, 'Command To Run On Successful Guess, Runs From The Guesser')
+    bui.toggle(f, 'Unscrambler Enabled?', d?.unscrambleEnabled, 'Toggles Whether The Game Runs')
+    bui.textField(f, 'List Of Words', 'Example: word1, word2, word3', d?.unscrambleWords, 'Seperate Words With , ')
+    bui.slider(f, 'Interval', 1, 10, d?.unscrambleInterval, 1, 'Interval In Minutes Between Games')
+    bui.textField(f, 'Reward Command:', 'Example: give @s diamond 1', d?.unscrambleCommand, 'Command To Run On Successful Guess, Runs From The Guesser')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Boat-Catcher Enabled?', d?.catcherEnabled, 'Toggles Whether The Game Runs')
+    bui.slider(f, 'Boat-Catcher Interval', 1, 10, d?.catcherInterval, 1, 'Interval In Minutes Between Games')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1138,6 +1147,8 @@ export function chatGamesSettings(player) {
             unscrambleWords: e[1],
             unscrambleInterval: e[2],
             unscrambleCommand: e[3],
+            catcherEnabled: e[4],
+            catcherInterval: e[5],
         })
     }).catch()
 }
@@ -1422,12 +1433,89 @@ export function mobGenAddUI(player) {
     }).catch()
 }
 
+export function mobGenRemoveUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Remove Mob Gen')
+
+    const gens = mcl.listGetBoth('darkoak:mobgen:')
+    for (let index = 0; index < gens.length; index++) {
+        const gen = JSON.parse(gens[index].value)
+        bui.label(f, `Location: ${gen.location}, Dimension: ${gen.dimension}`)
+        bui.label(f, `Mob: ${gen.mob}, Interval: ${gen.interval}, Max Amount: ${gen.max}`)
+        bui.button(f, 'Delete?')
+        bui.divider(f)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            genMainUI(player)
+            return
+        }
+        mcl.wRemove(gens[evd.selection].id)
+    })
+}
+
+export function mobGenModifyUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Modify Mob Gen')
+
+    const gens = mcl.listGetBoth('darkoak:mobgen:')
+    for (let index = 0; index < gens.length; index++) {
+        const gen = JSON.parse(gens[index].value)
+        bui.label(f, `Location: ${gen?.location}, Dimension: ${gen?.dimension}`)
+        bui.label(f, `Mob: ${gen?.mob}, Interval: ${gen?.interval}, Max Amount: ${gen?.max}`)
+        bui.button(f, 'Modify?')
+        bui.divider(f)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            genMainUI(player)
+            return
+        }
+        mobGenModifyNotPickerUI(player, gens[evd.selection])
+    })
+}
+
+/**
+ * 
+ * @param {Player} player 
+ * @param {{id: string, value: string}} data 
+ */
+export function mobGenModifyNotPickerUI(player, data) {
+    let f = new ModalFormData()
+    bui.title(f, 'Modify Mob Gen')
+
+    const gen = JSON.parse(data.value)
+
+    bui.textField(f, 'Mob Type:', 'Example: minecraft:zombie', gen?.mob)
+    bui.slider(f, 'Spawn Interval', 0, 10, gen?.interval, 1, 'Minutes Inbetween Spawns')
+    bui.slider(f, 'Max Number Of Mobs', 1, 10, 1, 1, 'Mobs Won\'t Spawn If There Is More Than This Amount Nearby', gen?.max)
+
+    bui.label(f, 'Spawns At Your Present Location!')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            genMainUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        mcl.jsonWSet(data.id, {
+            mob: e[0],
+            loc: player.location,
+            interval: (e[1] * 60) * 20,
+            current: 0,
+            max: e[2],
+            dimension: player.dimension.id,
+        })
+    }).catch()
+}
+
 export function queueMessageUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Queue Message')
 
-    const players = mcl.getPlayerList()
-    bui.dropdown(f, 'Player:', players)
+    const players = bui.offlineNamePicker(f, 'Players:')
 
     bui.textField(f, 'Message:', 'Example: Hello World!')
 
@@ -1452,7 +1540,7 @@ export function banOfflineUI(player) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
-            playerPunishmentsMainUI(player)
+            interfaces.playerPunishmentsMainUI(player)
             return
         }
         const e = bui.formValues(evd)
@@ -1530,6 +1618,392 @@ export function adminAndPlayerListUI(player) {
     })
 }
 
+/**
+ * @param {Player} player 
+ */
+export function gamblingMainUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Gambling')
+
+    const isAdmin = mcl.isDOBAdmin(player)
+
+    bui.button(f, 'Gamble!')
+    if (isAdmin) bui.button(f, 'Gambling Settings')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.communityMoneyUI(player)
+            return
+        }
+        switch (evd.selection) {
+            case 0:
+                gambleUI(player)
+                break
+            case 1:
+                if (isAdmin) {
+                    gamblingSettingsUI(player)
+                } else {
+                    mcl.adminMessage(`Check ${player.name} For Weird Permissions`)
+                }
+                break
+        }
+    })
+}
+
+export function gambleUI(player, message = 'LETS GO GAMBLING!') {
+    let f = new ActionFormData()
+
+    const amountCurrent = mcl.getScore(player)
+
+    bui.title(f, 'Gambling Time!')
+    bui.label(f, message)
+    bui.label(f, `Your Money: ${amountCurrent}`)
+    bui.button(f, 'Gamble!')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            gamblingMainUI(player)
+            return
+        }
+        const d = mcl.jsonWGet('darkoak:gambling')
+        const gamb = mcl.randomNumber(100)
+
+        if (amountCurrent < d?.cost || 0) {
+            gambleUI(player, '§cNot Enough Money!§r')
+            return
+        }
+        mcl.removeScore(player, parseInt(d?.cost))
+
+        if (gamb <= d?.rewardChance) {
+            if (d?.moneyReward) {
+                mcl.addScore(player, parseInt(d?.reward1) || 100)
+                mcl.addScore(player, parseInt(d?.reward2) || 100)
+                gambleUI(player, 'You Can\'t Stop Winning!')
+            } else {
+                player.runCommand(replacer(player, d?.reward1))
+                player.runCommand(replacer(player, d?.reward2))
+                gambleUI(player, 'You Can\'t Stop Winning!')
+            }
+        } else {
+            if (mcl.randomNumber(100) == 100) {
+                gambleUI(player, 'Honestly, Just Stop Gambling')
+            } else {
+                gambleUI(player, 'Aw Dangit...')
+            }
+        }
+    })
+}
+
+export function gamblingSettingsUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Gambling Settings')
+    const d = mcl.jsonWGet('darkoak:gambling')
+
+    bui.textField(f, 'Gambling Cost:', 'Example: 1000', d?.cost)
+    bui.toggle(f, 'Money Reward?\nIf Disabled Runs Command', d?.moneyReward)
+    bui.slider(f, 'Reward Chance', 1, 100, d?.rewardChance || 50, 1)
+
+    bui.textField(f, 'Money Amount / Reward Command:', 'Example: 1000', d?.reward1)
+    bui.textField(f, 'Money Amount / Reward Command:', 'Example: give @s diamond 1', d?.reward2)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            gamblingMainUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        if (isNaN(e[0])) {
+            player.sendMessage('§cInvalid Cost!§r')
+            return
+        }
+        mcl.jsonWSet('darkoak:gambling', {
+            cost: e[0],
+            moneyReward: e[1],
+            rewardChance: e[2],
+            reward1: e[3],
+            reward2: e[4],
+        })
+    })
+}
+
+export function crashPlayerUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, '§cCrash A Player§r')
+
+    const u = bui.namePicker(f, undefined, 'Player:')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.playerPunishmentsMainUI(player)
+            return
+        }
+        const p = mcl.getPlayer(u[bui.formValues(evd)[0]])
+        if (mcl.isDOBAdmin(p)) {
+            mcl.adminMessage(`${player.name} Attempted To Crash Admin: ${p.name}`)
+            return
+        }
+        let o = 0
+        while (o++ < 100) {
+            if (p) p.sendMessage(`§a§k`)
+            if (p) p.sendMessage(`§a§k`)
+            if (p) p.sendMessage(`§a§k`)
+        }
+    })
+}
+
+export function otherPlayerSettingsUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Other Player Settings')
+
+    bui.button(f, 'Bounty Settings')
+    bui.button(f, 'Whitelist')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.playerSettingsUI(player)
+            return
+        }
+        switch (evd.selection) {
+            case 0:
+                bountySettingsUI(player)
+                break
+            case 1:
+                whitelistUI(player)
+                break
+        }
+    })
+}
+
+export function bountySettingsUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Bounty Settings')
+
+    const d = mcl.jsonWGet('darkoak:bountysettings')
+
+    bui.toggle(f, 'Enabled?', d?.enabled)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            otherPlayerSettingsUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        mcl.jsonWSet('darkoak:bountysettings', {
+            enabled: e[0],
+        })
+    })
+}
+
+export function bountyMainUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Bountys')
+
+    bui.button(f, 'Place A Bounty')
+
+    bui.button(f, 'Look At Bountys')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.communityMoneyUI(player)
+            return
+        }
+        switch (evd.selection) {
+            case 0:
+                bountyPlaceUI(player)
+                break
+            case 1:
+                bountyListUI(player)
+                break
+        }
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function bountyPlaceUI(player, errorMessage = '') {
+    let f = new ModalFormData()
+    bui.title(f, 'Place A Bounty')
+
+    bui.label(f, errorMessage)
+
+    const u = bui.namePicker(f, undefined, 'Player:')
+
+    bui.textField(f, 'Price:', 'Example: 10000', '', 'Has To Be A Number')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            bountyMainUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+
+        if (isNaN(e[1])) {
+            bountyPlaceUI(player, `${e[1]} Isn\'t A Number`)
+            return
+        }
+
+        mcl.jsonWSet(`darkoak:bounty:${mcl.timeUuid()}`, {
+            placer: player.name,
+            bounted: u[e[0]],
+            amount: e[1],
+        })
+    })
+}
+
+export function bountyListUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Bounty List')
+
+    const bounties = mcl.listGetValues('darkoak:bounty:')
+    for (let index = 0; index < bounties.length; index++) {
+        const b = JSON.parse(bounties[index])
+        bui.label(f, `${b.placer} -> "${b.bounted}" For ${b.amount}`)
+        bui.divider(f)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            bountyMainUI(player)
+            return
+        }
+    })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function signsPlusMainUI(player) {
+    let f = new ModalFormData()
+    const sign = player.getBlockFromViewDirection()?.block
+    if (!sign) {
+        player.sendMessage('§cNo Sign Found§r')
+    }
+    const signData = mcl.getSign(sign)
+
+    const lines = signData.text.split('\n')
+
+    const wdr = mcl.getDataByLocation('darkoak:signsplus:', 'location', sign.location)
+    let wd = {}
+    if (wdr) wd = JSON.parse(wdr.value)
+    
+    bui.title(f, 'Signs+')
+    
+    bui.toggle(f, 'Spin?', wd?.spin?.enabled) // 0
+    bui.toggle(f, 'Clockwise?', wd?.spin?.clockwise) // 1
+    
+    bui.divider(f)
+    bui.label(f, 'Line 1 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
+    bui.textField(f, 'Line 1, Frame 1', 'Example: &-------', wd?.line1?.f1 || lines[0]) // 2
+    bui.textField(f, 'Line 1, Frame 2', 'Example: --&-----', wd?.line1?.f2) // 3
+    bui.textField(f, 'Line 1, Frame 3', 'Example: ----&---', wd?.line1?.f3) // 4
+    bui.textField(f, 'Line 1, Frame 4', 'Example: ------&-', wd?.line1?.f4) // 5
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.label(f, 'Line 2 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
+    bui.textField(f, 'Line 2, Frame 1', 'Example: &-------', wd?.line2?.f1 || lines[1]) // 2
+    bui.textField(f, 'Line 2, Frame 2', 'Example: --&-----', wd?.line2?.f2) // 3
+    bui.textField(f, 'Line 2, Frame 3', 'Example: ----&---', wd?.line2?.f3) // 4
+    bui.textField(f, 'Line 2, Frame 4', 'Example: ------&-', wd?.line2?.f4) // 5
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.label(f, 'Line 3 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
+    bui.textField(f, 'Line 3, Frame 1', 'Example: &-------', wd?.line3?.f1 || lines[2]) // 2
+    bui.textField(f, 'Line 3, Frame 2', 'Example: --&-----', wd?.line3?.f2) // 3
+    bui.textField(f, 'Line 3, Frame 3', 'Example: ----&---', wd?.line3?.f3) // 4
+    bui.textField(f, 'Line 3, Frame 4', 'Example: ------&-', wd?.line3?.f4) // 5
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.label(f, 'Line 4 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
+    bui.textField(f, 'Line 4, Frame 1', 'Example: &-------', wd?.line4?.f1 || lines[3]) // 2
+    bui.textField(f, 'Line 4, Frame 2', 'Example: --&-----', wd?.line4?.f2) // 3
+    bui.textField(f, 'Line 4, Frame 3', 'Example: ----&---', wd?.line4?.f3) // 4
+    bui.textField(f, 'Line 4, Frame 4', 'Example: ------&-', wd?.line4?.f4) // 5
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.label(f, 'Colors')
+    bui.toggle(f, 'Rainbow Text?', wd?.color?.rainbow) // 18
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.label(f, 'Other Settings')
+    bui.toggle(f, 'Waxed?', signData.waxed) // 19
+    bui.divider(f)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            return
+        }
+        const e = bui.formValues(evd)
+
+        let noWall = e[0]
+        if (sign.typeId.includes('wall')) noWall = false
+
+        mcl.rewriteSign(sign, e[19])
+
+        mcl.jsonWSet(`darkoak:signsplus:${mcl.timeUuid()}`, {
+            location: sign.location,
+            dimension: sign.dimension.id,
+            spin: {
+                enabled: noWall,
+                clockwise: e[1]
+            },
+            line1: {
+                f1: e[2],
+                f2: e[3],
+                f3: e[4],
+                f4: e[5],
+            },
+            line2: {
+                f1: e[6],
+                f2: e[7],
+                f3: e[8],
+                f4: e[9],
+            },
+            line3: {
+                f1: e[10],
+                f2: e[11],
+                f3: e[12],
+                f4: e[13],
+            },
+            line4: {
+                f1: e[14],
+                f2: e[15],
+                f3: e[16],
+                f4: e[17],
+            },
+            color: {
+                rainbow: e[18],
+            },
+        })
+    })
+}
+
+export function whitelistUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Whitelist')
+
+    const d = mcl.jsonWGet('darkoak:whitelist')
+
+    bui.toggle(f, 'Enabled?', d?.enabled)
+    bui.textField(f, 'Whitelist:', 'Example: Darko, Noki, CanineYeti', d?.whitelist)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            otherPlayerSettingsUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        mcl.jsonWSet('darkoak:whitelist', {
+            enabled: e[0],
+            whitelist: e[1],
+        })
+    })
+}
 
 export function darkoakboatBio(player) {
     let f = new ActionFormData()
@@ -1545,7 +2019,7 @@ export function nokiBio(player) {
     let f = new ActionFormData()
     bui.title(f, 'Noki5160')
 
-    bui.label(f, 'wip')
+    bui.label(f, '@612racks or @six12racks on everything.')
 
     bui.show(f, player)
 }

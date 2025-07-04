@@ -1,5 +1,4 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide } from "@minecraft/server";
-import { getMoney } from "./data/arrays";
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel } from "@minecraft/server"
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting API*/
 export class mcl {
@@ -85,6 +84,9 @@ export class mcl {
         return newMessage
     }
 
+    /**Gets a variety of number properties
+     * @param {number} num 
+     */
     static numberProperties(num) {
         let even = false
         if (num % 2 === 0) {
@@ -94,7 +96,32 @@ export class mcl {
             isEven: even,
             isOdd: !even,
             isNumber: !isNaN(num),
+            factorial: mcl.factorial(num),
         }
+    }
+
+    /**Calculates the factorial of a number
+     * @param {number} num 
+     * @returns {number}
+     */
+    static factorial(num) {
+        if (num === 1) return 1
+        return num * mcl.factorial(num - 1)
+    }
+
+    /**DO NOT USE THIS FUNCTION, IT IS HORRIBLE AND SLOW
+     * @param {number[]} array 
+     * @returns {number[]}
+     */
+    static horribleArraySorter(array) {
+        let u = []
+        for (let index = 0; index < array.length; index++) {
+            const num = array[index]
+            system.runTimeout(() => {
+                u.push(num)
+            }, num)
+        }
+        return u
     }
 
     /**Gets strings from inbetween certain strings
@@ -196,9 +223,10 @@ export class mcl {
     /**Sets a player dynamic property
      * @param {Player} player
      * @param {string} id 
-     * @param {boolean | number | string | Vector3 | undefined} setTo
+     * @param {boolean | number | string | Vector3} setTo
      */
     static pSet(player, id, setTo) {
+        // mcl.wSet(`darkoak:${player.name}:${id}`, setTo)
         player.setDynamicProperty(id, setTo)
     }
 
@@ -207,6 +235,7 @@ export class mcl {
      * @param {string} id 
      */
     static pGet(player, id) {
+        // return mcl.wGet(`darkoak:${player.name}:${id}`)
         return player.getDynamicProperty(id)
     }
 
@@ -214,9 +243,15 @@ export class mcl {
      * @param {Player} player 
      * @param {string} id 
      * @param {object} data 
+     * @returns {boolean} Whether it successfully saved or not
      */
     static jsonPSet(player, id, data) {
-        player.setDynamicProperty(id, JSON.stringify(data))
+        try {
+            mcl.pSet(player, id, JSON.stringify(data))
+            return true
+        } catch {
+            return false
+        }
     }
 
     /**
@@ -225,12 +260,26 @@ export class mcl {
      * @returns {object}
      */
     static jsonPGet(player, id) {
-        const t = player.getDynamicProperty(id)
-        if (t == undefined) {
+        const t = mcl.pGet(player, id)
+        if (t === undefined) {
             return undefined
         } else {
             return JSON.parse(t)
         }
+    }
+
+    /**
+     * 
+     * @param {Player} player 
+     * @param {string} id 
+     * @param {string} updateKey 
+     * @param {Object} data 
+     */
+    static jsonPUpdate(player, id, updateKey, data) {
+        let cd = mcl.jsonPGet(player, id)
+        if (!cd) cd = {}
+        cd[updateKey] = data
+        mcl.jsonPSet(player, id, cd)
     }
 
     /**
@@ -243,55 +292,6 @@ export class mcl {
         } else return undefined
     }
 
-    /**
-     * @param {Player} player Player that is buying
-     * @param {number} price Price to buy the item
-     * @param {string} result Item typeId to buy
-     * @param {number} amount Amount of the item to give on buy
-     * @returns {boolean} Whether the player successfully bought the item
-     */
-    static buy(player, price, result, amount) {
-        const moneyScore = getMoney()
-        const sc = world.scoreboard.getObjective(moneyScore || '')
-        if (!sc) return false
-        const sco = sc.getScore(player)
-        if (isNaN(price) || !sco) {
-            return false
-        }
-        const mscore = mcl.jsonWGet('darkoak:moneyscore')
-        if (sco >= price) {
-            player.runCommand(`scoreboard players remove @s ${moneyScore} ${Math.floor(price * (1 - mscore.tax / 100))}`)
-            player.runCommand(`give @s ${result} ${amount}`)
-            return true
-        } else {
-            return false
-        }
-    }
-
-    /**
-     * @param {Player} player Player selling the item
-     * @param {number} price How much the item is selling for
-     * @param {string} itemToSell The item thats being sold, typeId
-     * @param {number} amount Amount required to sell
-     * @param {string} returnItem Item to return to the player after selling, typeId
-     * @param {number} returnAmount Amount of returnitems to return to the player
-     * @returns {boolean} Whether the player successfully sold the item
-     */
-    static sell(player, price, itemToSell, amount, returnItem, returnAmount) {
-        if (isNaN(price) || isNaN(amount)) return false
-
-        const ms = getMoney()
-        if (!ms) return false
-
-        const mscore = mcl.jsonWGet('darkoak:moneyscore')
-
-        if (player.runCommand(`testfor @s [hasitem={item=${itemToSell},quantity=${amount}..}]`).successCount == 0) return false
-        
-        player.runCommand(`clear @s ${itemToSell} ${amount}`)
-        player.runCommand(`scoreboard players add @s ${ms} ${Math.floor(price * (1 - mscore.tax / 100))}`)
-        if (returnItem) player.runCommand(`give @s ${returnItem} ${returnAmount}`)
-        return true
-    }
 
     /**Gets scoreboard by objective
      * @param {string} objective 
@@ -415,9 +415,10 @@ export class mcl {
      * @param {Player} player 
     */
     static playerEffectsArray(player) {
+        const p = mcl.getPlayer(player)
         let u = []
-        let e = player.getEffects()
-        if (e.length == 0) return 'No Effects Found'
+        let e = p.getEffects()
+        if (e.length == 0) return undefined
         for (let index = 0; index < e.length; index++) {
             u.push(e[index].displayName)
         }
@@ -470,7 +471,9 @@ export class mcl {
      * @returns {boolean}
      */
     static isOp(player) {
-        return player.isOp()
+        if (player.playerPermissionLevel == PlayerPermissionLevel.Operator) {
+            return true
+        } else return false
     }
 
     /**Returns true if the player has the admin tag or if the player is the host
@@ -523,7 +526,7 @@ export class mcl {
      * @param {string} objective 
      * @returns {number}
      */
-    static getScore(player, objective) {
+    static getScoreOld(player, objective) {
         if (!world.scoreboard.getObjective(objective)) return 0
         return world.scoreboard.getObjective(objective).getScore(player) || 0
     }
@@ -757,6 +760,151 @@ export class mcl {
      */
     static stopPlayer(player) {
         const v = player.getVelocity()
-        player.applyKnockback({x: v.x * -1, z: v.z * -1}, v.y * -1)
+        player.applyKnockback({ x: v.x * -1, z: v.z * -1 }, v.y * -1)
+    }
+
+    /**
+     * @param {Player} player 
+     */
+    static getAllItems(player) {
+        let u = []
+        const items = mcl.getItemContainer(player)
+        for (let index = 0; index < items.size; index++) {
+            const item = items.getSlot(index).getItem()
+            if (!item) continue
+            u.push(item)
+        }
+        return u
+    }
+
+    /**
+     * @param {Player} player 
+     * @param {number} amount 
+     */
+    static addScore(player, amount) {
+        mcl.pSet(player, 'darkoak:money', mcl.getScore(player) + parseInt(amount))
+    }
+
+    /**
+     * @param {Player} player 
+     * @param {number} amount 
+     */
+    static removeScore(player, amount) {
+        mcl.pSet(player, 'darkoak:money', mcl.getScore(player) - parseInt(amount))
+    }
+
+    /**
+     * @param {Player} player 
+     * @param {number} amount 
+     */
+    static setScore(player, amount) {
+        mcl.pSet(player, 'darkoak:money', parseInt(amount))
+    }
+
+    /**
+     * @param {Player} player 
+     * @returns {number}
+     */
+    static getScore(player) {
+        return parseInt(mcl.pGet(player, 'darkoak:money')) || 0
+    }
+
+    /**
+     * @param {Player} player Player that is buying
+     * @param {number} price Price to buy the item
+     * @param {string} result Item typeId to buy
+     * @param {number} amount Amount of the item to give on buy
+     * @returns {boolean} Whether the player successfully bought the item
+     */
+    static buy(player, price, result, amount) {
+        if (isNaN(price)) return false
+        if (mcl.getScore(player) < price) return false
+
+        const mscore = mcl.jsonWGet('darkoak:moneyscore')
+        mcl.removeScore(player, Math.floor(price * mscore.tax / 100))
+        player.runCommand(`give @s ${result} ${amount}`)
+        return true
+    }
+
+    /**
+     * @param {Player} player Player selling the item
+     * @param {number} price How much the item is selling for
+     * @param {string} itemToSell The item thats being sold, typeId
+     * @param {number} amount Amount required to sell
+     * @param {string} returnItem Item to return to the player after selling, typeId
+     * @param {number} returnAmount Amount of returnitems to return to the player
+     * @returns {boolean} Whether the player successfully sold the item
+     */
+    static sell(player, price, itemToSell, amount, returnItem = '', returnAmount = 1) {
+        if (isNaN(price) || isNaN(amount)) return false
+        if (player.runCommand(`testfor @s [hasitem={item=${itemToSell},quantity=${amount}..}]`).successCount == 0) return false
+
+        const mscore = mcl.jsonWGet('darkoak:moneyscore')
+        player.runCommand(`clear @s ${itemToSell} ${amount}`)
+        mcl.addScore(player, Math.floor(price * (1 - mscore.tax / 100)))
+
+        if (returnItem) player.runCommand(`give @s ${returnItem} ${returnAmount}`)
+        return true
+    }
+
+    /**Deconstructs a player to data
+     * @param {Player} player 
+     */
+    static playerToData(player) {
+        return {
+            clientSystemInfo: player.clientSystemInfo,
+            dimension: {
+                heightRange: player.dimension.heightRange,
+                id: player.dimension.id
+            },
+            xpEarnedAtCurrentLevel: player.xpEarnedAtCurrentLevel,
+            graphicsMode: player.graphicsMode,
+            id: player.id,
+            inputInfo: {
+                getMovementVector: player.inputInfo.getMovementVector(),
+                lastInputModeUsed: player.inputInfo.lastInputModeUsed,
+                touchOnlyAffectsHotbar: player.inputInfo.touchOnlyAffectsHotbar
+            },
+            isClimbing: player.isClimbing,
+            typeId: player.typeId,
+            totalXpNeededForNextLevel: player.totalXpNeededForNextLevel,
+            getTags: player.getTags(),
+            getAimAssist: player.getAimAssist(),
+            name: player.name,
+            nameTag: player.nameTag,
+            isHost: mcl.isHost(player),
+            getGameMode: player.getGameMode(),
+            location: player.location,
+            playerEffectsArray: mcl.playerEffectsArray(player),
+            getAllItems: mcl.getAllItems(player),
+            pListGetBoth: mcl.pListGetBoth(player)
+        }
+    }
+
+    /**Gets a {id, value} pair from a starter id and a location, (also key)
+     * @param {string} id Id to start with
+     * @param {string} key JSON key that contains the location
+     * @param {{x: number, y: number, z: number}} location Actual location to check, matches keylocation to this location
+     */
+    static getDataByLocation(id = '', key, location) {
+        const dataArray = mcl.listGetBoth(id)
+        for (let index = 0; index < dataArray.length; index++) {
+            const d = JSON.parse(dataArray[index].value)
+            if (d[key] == location) {
+                return dataArray[index]
+            } else continue
+        }
+        return undefined
+    }
+
+    /**Gets a block based on the specified location and dimension
+     * @param {{x: number, y: number, z: number}} location 
+     */
+    static getBlock(location, dimension = 'overworld') {
+        try {
+            return world.getDimension(dimension).getBlock(location)
+        } catch {
+            return undefined
+        }
     }
 }

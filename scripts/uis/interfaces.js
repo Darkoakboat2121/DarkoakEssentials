@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, adminAndPlayerListUI, auctionMain, autoResponseMainUI, banOfflineUI, canineyetiBio, chatGamesSettings, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, floatingTextMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, nokiBio, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio } from "./interfacesTwo"
+import { addGiftcode, addRankUI, adminAndPlayerListUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, floatingTextMainUI, gamblingMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 
 // This file holds all the functions containing UI
@@ -17,27 +17,27 @@ export function mainUI(player) {
     bui.divider(f)
 
     bui.button(f, 'World Settings\n§7Modify World Related Settings', arrays.icons.globe)
-    bui.label(f, 'Interaction Settings, Bind Custom Item, Welcome Message, World Border, Money ID')
+    bui.label(f, 'Interaction Settings, Bind Custom Item, Welcome / Goodbye Messages, World Border, Money ID, Item Settings, Floating Text')
 
     bui.divider(f)
 
     bui.button(f, 'Player Settings\n§7Modify Player Related Settings', arrays.icons.steveAlex)
-    bui.label(f, 'Player Data, Punishments, Player Tracking')
+    bui.label(f, 'Player Data, Punishments, Player Tracking, Giftcodes, Add / Remove Ranks')
 
     bui.divider(f)
 
     bui.button(f, 'Chat Settings\n§7Modify Chat Related Settings', arrays.icons.chatWithArrow)
-    bui.label(f, 'Manage Ranks, Chat Commands, Censor Settings, Other')
+    bui.label(f, 'Manage Ranks, Chat Commands, Censor Settings, Chat Games, Auto-Reply Settings, Other')
 
     bui.divider(f)
 
     bui.button(f, 'UI Settings\n§7Create New UI\'s Or Set The Sidebar / Actionbar', arrays.icons.dialogBackground)
-    bui.label(f, 'Make A Message UI, Make An Action UI, Delete A UI, Set The Actionbar, Set The Sidebar')
+    bui.label(f, 'Make A(n) Message / Action / Modal UI, Delete A UI, Set The Actionbar / Sidebar')
 
     bui.divider(f)
 
     bui.button(f, 'Dashboard\n§7See Important Info Such As Logs And Data', arrays.icons.item('diamond'))
-    bui.label(f, 'Print World Data, Delete Data, Reports, Logs, Docs')
+    bui.label(f, 'Print World Data, Delete Data, Reports, Logs, Docs, Admins And Players, Script Settings / Master Settings')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -77,7 +77,7 @@ export function worldSettingsUI(player) {
     bui.button(f, 'Bind Custom Item\n§7Bind Dummy Items', arrays.icons.goldenPicker)
     bui.button(f, 'Welcome / Goodbye Messages\n§7Set Join / Leave Messages')
     bui.button(f, 'World Border\n§7Set The World Border Size', arrays.icons.block('barrier'))
-    bui.button(f, 'Money ID\n§7Set The Scoreboard ID For Money', arrays.icons.minecoin)
+    bui.button(f, 'Money Settings\n§7Set The Money Settings', arrays.icons.minecoin)
     bui.button(f, 'Item Settings\n§7Settings For Custom Items')
     bui.button(f, 'Floating Text')
 
@@ -118,16 +118,25 @@ export function worldSettingsUI(player) {
 export function worldInteractionSettings(player) {
     let f = new ModalFormData()
     bui.title(f, 'Interaction Settings')
+    const d = mcl.jsonWGet('darkoak:cws')
 
-    bui.slider(f, '\nPlayers Can Break Blocks?\n1 = Yes\n2 = Can\'t Break Item Frames\n3 = Can\'t Break Any Blocks\nValue', 1, 3, mcl.wGet('darkoak:cws:breakblocks'))
+    bui.toggle(f, 'Players Can Break Blocks?\nIf Enabled, Players Can\'t Break Blocks', d?.breakblocks)
+    bui.toggle(f, 'Players Can Break Item Frames?\nIf Enabled, Players Can\'t Break Item Frames', d?.breakitemframes)
+    
+    bui.divider(f)
+
+    bui.toggle(f, 'Players Can Interact With Blocks?\nIf Enabled, Players Can\'t Interact With Blocks', d?.interactwithblocks)
+    bui.toggle(f, 'Players Can Interact With Item Frames?\nIf Enabled, Players Can\'t Interact With Item Frames', d?.interactwithitemframes)
+    bui.toggle(f, 'Players Can Interact With Ender Chests?\nIf Enabled, Players Can\'t Interact With Ender Chests', d?.interactwithenderchests)
+    bui.toggle(f, 'Players Can Interact With Signs?\nIf Enabled, Players Can\'t Interact With Signs', d?.interactwithsigns)
+    bui.toggle(f, 'Players Can Interact With Logs?\nIf Enabled, Players Can\'t Interact With Logs', d?.interactwithlogs, 'Helpful For Making Logs Non-Stripable')
+    bui.toggle(f, 'Players Can Interact With Grass Blocks?\nIf Enabled, Players Can\'t Interact With Grass Blocks', d?.interactwithgrass)
 
     bui.divider(f)
 
-    bui.slider(f, 'Players Can Interact With Blocks?\n1 = Yes\n2 = Can\'t Interact With Item Frames\n3 = Can\'t Interact With Ender Chests\n4 = Can\'t Interact With Ender Chests Or Item Frames\n5 = Can\'t Interact With Any\nValue', 1, 5, mcl.wGet('darkoak:cws:interactwithblocks'))
-
-    bui.divider(f)
-
-    bui.slider(f, 'Players Can Interact With Entities?\n1 = Yes\n2 = ', 1, 3, 0)
+    bui.label(f, 'These Following Settings Don\'t Work Yet')
+    bui.toggle(f, 'Players Can Interact With Entities?\nIf Enabled, Players Can\'t Interact With Entities', d?.interactwithentities)
+    bui.toggle(f, 'Players Can Interact With Villagers?\nIf Enabled, Players Can\'t Interact With Villagers', d?.interactwithvillagers)
 
     bui.divider(f)
 
@@ -137,8 +146,18 @@ export function worldInteractionSettings(player) {
             return
         }
         const e = bui.formValues(evd)
-        mcl.wSet('darkoak:cws:breakblocks', e[0])
-        mcl.wSet('darkoak:cws:interactwithblocks', e[1])
+        mcl.jsonWSet('darkoak:cws', {
+            breakblocks: e[0],
+            breakitemframes: e[1],
+            interactwithblocks: e[2],
+            interactwithitemframes: e[3],
+            interactwithenderchests: e[4],
+            interactwithsigns: e[5],
+            interactwithlogs: e[6],
+            interactwithgrass: e[7],
+            interactwithentities: e[8],
+            interactwithvillagers: e[9],
+        })
     }).catch()
 }
 
@@ -243,7 +262,6 @@ export function moneyUI(player) {
     bui.title(f, 'Money ID')
 
     const ms = mcl.jsonWGet('darkoak:moneyscore')
-    bui.textField(f, '\nScore Name For Money:', 'Example: Money', ms['id'] || '')
     bui.textField(f, 'Tax Percentage:', 'Example: 5', ms['tax'] || '', '0 to 100')
     bui.textField(f, 'Compression Tax:', 'Example: 1', ms['compression'] || '', '0 To 64')
 
@@ -254,9 +272,8 @@ export function moneyUI(player) {
         }
         const e = bui.formValues(evd)
         mcl.jsonWSet('darkoak:moneyscore', {
-            id: e[0].trim(),
-            tax: e[1].trim(),
-            compression: e[2].trim(),
+            tax: e[0].trim(),
+            compression: e[1].trim(),
         })
     }).catch()
 }
@@ -273,6 +290,7 @@ export function playerSettingsUI(player) {
     bui.button(f, 'Giftcodes\n§7Add A Redeemable Giftcode')
     bui.button(f, 'Add Rank To A Player')
     bui.button(f, 'Remove Rank From A Player')
+    bui.button(f, 'Other')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -298,6 +316,9 @@ export function playerSettingsUI(player) {
             case 5:
                 removeRankUI(player)
                 break
+            case 6:
+                otherPlayerSettingsUI(player)
+                break
             default:
                 player.sendMessage('§cError§r')
                 break
@@ -309,7 +330,8 @@ export function playerSettingsUI(player) {
 export function playerDataMainUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Player Data')
-    const u = bui.namePicker(f, undefined, 'Player:')
+    const u = mcl.getPlayerList()
+    bui.dropdown(f, 'Player:', u)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -317,14 +339,22 @@ export function playerDataMainUI(player) {
             return
         }
         const e = bui.formValues(evd)
-        playerDataViewUI(player, u[e[0]])
+        const p = mcl.getPlayer(u[e[0]])
+        if (p) {
+            playerDataViewUI(player, p)
+        } else {
+            playerDataOfflineUI(player, p)
+        }
     }).catch()
 }
 
-// player data viewer
+/**
+ * @param {Player} playerToShow 
+ * @param {Player} playerToView 
+ */
 export function playerDataViewUI(playerToShow, playerToView) {
     let f = new ActionFormData()
-    const player = mcl.getPlayer(playerToView)
+    const player = playerToView
     bui.title(f, `${player.name}`)
 
     bui.label(f, `Name: ${player.name}, Nametag: [${player.nameTag}]`)
@@ -338,10 +368,9 @@ export function playerDataViewUI(playerToShow, playerToView) {
     bui.divider(f)
     bui.label(f, 'Items:')
     // doesnt view armor or offhand, not considered inventory slots??
-    const items = mcl.getItemContainer(player)
+    const items = mcl.getAllItems(player)
     for (let index = 0; index < items.size; index++) {
-        const item = items.getSlot(index).getItem()
-        if (!item) continue
+        const item = items[index]
         bui.label(f, `Type: ${item.typeId}, Amount: ${item.amount}`)
         bui.label(f, `Name: ${item.nameTag || ''}`)
         bui.divider(f)
@@ -365,8 +394,59 @@ export function playerDataViewUI(playerToShow, playerToView) {
     f.show(playerToShow).then((evd) => {
         if (evd.canceled) return
         playerDataViewUI(playerToShow, playerToView)
-    }).catch((evd) => {
-        mcl.adminMessage(`Error Viewing Player: ${player.name}, Message: ${String(evd)}`)
+    }).catch((e) => {
+        mcl.adminMessage(`Error Viewing Player, Message: ${String(e)}`)
+    })
+}
+
+export function playerDataOfflineUI(playerToShow, playerToView) {
+    let f = new ActionFormData()
+    const player = mcl.jsonWGet(`darkoak:playerdata:${playerToView}`)
+    if (!player) {
+        playerToShow.sendMessage('§cError Viewing Player§r')
+        return
+    }
+    bui.title(f, `${player.name}`)
+
+    bui.label(f, `Name: ${player.name}, Nametag: [${player.nameTag}]`)
+    bui.label(f, `ID: ${player.id}, Is Host: ${mcl.isHost(player)}`)
+    bui.label(f, `Gamemode: ${player.getGameMode()}`)
+    bui.label(f, `Location: ${parseInt(player.location.x)} ${parseInt(player.location.y)} ${parseInt(player.location.z)}, Dimension: ${player.dimension.id}`)
+    bui.label(f, `Effects: ${mcl.playerEffectsArray(player)}`)
+    bui.label(f, `Tags: ${mcl.playerTagsArray(player).join(', §r§f')}`)
+
+    bui.button(f, 'Reload')
+    bui.divider(f)
+    bui.label(f, 'Items:')
+    // doesnt view armor or offhand, not considered inventory slots??
+    const items = player.items
+    for (let index = 0; index < items.size; index++) {
+        const item = items[index]
+        bui.label(f, `Type: ${item.typeId}, Amount: ${item.amount}`)
+        bui.label(f, `Name: ${item.nameTag || ''}`)
+        bui.divider(f)
+    }
+
+    bui.button(f, 'Reload')
+
+    bui.divider(f)
+    bui.label(f, 'Player Data:')
+    const data = player.dynamicProperties
+    for (let index = 0; index < data.length; index++) {
+        const d = data[index]
+        bui.label(f, `${d.id} -> ${d.value}`)
+        bui.divider(f)
+    }
+
+    bui.button(f, 'Reload')
+
+    bui.divider(f)
+
+    f.show(playerToShow).then((evd) => {
+        if (evd.canceled) return
+        playerDataOfflineUI(playerToShow, playerToView)
+    }).catch((e) => {
+        mcl.adminMessage(`Error Viewing Player, Message: ${String(e)}`)
     })
 }
 
@@ -379,6 +459,7 @@ export function playerPunishmentsMainUI(player) {
     bui.button(f, 'Ban Offline Player')
     bui.button(f, 'Mute A Player')
     bui.button(f, 'Unmute A Player')
+    bui.button(f, 'Crash A Player')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -398,6 +479,9 @@ export function playerPunishmentsMainUI(player) {
             case 4:
                 unmutePlayerUI(player)
                 break
+            case 5:
+                crashPlayerUI(player)
+                break
             default:
                 player.sendMessage('§cError§r')
                 break
@@ -412,6 +496,7 @@ export function banPlayerUI(player) {
     const names = bui.namePicker(f, undefined, '\nPlayer:')
     bui.textField(f, 'Reason / Ban Message', 'Example: Hacking')
     bui.textField(f, 'Ban Time In Hours (Leave Empty For Forever):', 'Example: 24')
+    bui.toggle(f, 'Crash Instead Of Kick?', false, 'Only Use This If You Really Don\'t Want Them Coming Back')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -421,6 +506,7 @@ export function banPlayerUI(player) {
         const e = bui.formValues(evd)
         if (mcl.isDOBAdmin(mcl.getPlayer(names[e[0]]))) {
             mcl.adminMessage(`${player.name} Tried To Ban ${names[e[0]]}`)
+            return
         }
         let time = e[2]
         if (isNaN(time) || time === '' || parseInt(time) <= 0) {
@@ -429,7 +515,8 @@ export function banPlayerUI(player) {
         mcl.jsonWSet(`darkoak:bans:${mcl.timeUuid()}`, {
             player: names[e[0]],
             message: e[1],
-            time: parseInt(time) * 3600
+            time: parseInt(time) * 3600,
+            crash: e[3]
         })
         mcl.adminMessage(`${names[e[0]]} Has Been Banned!`)
     }).catch()
@@ -1156,15 +1243,12 @@ export function logsUI(player) {
         })
 
         for (let index = 0; index < logs.logs.length; index++) {
-            bui.button(f, `${logs.logs[index]}`)
+            bui.button(f, `${logs.logs[index].message}`)
         }
     }
 
     f.show(player).then((evd) => {
-        if (evd.canceled) {
-            dashboardMainUI(player)
-            return
-        }
+        if (evd.canceled) return
 
         if (evd.selection == 0) {
             messageLogUI(player)
@@ -1177,6 +1261,7 @@ export function docsUI(player) {
     bui.title(f, 'Documentation')
 
     bui.header(f, 'Scriptevents')
+    bui.label(f, 'darkoak:help -> Lists All Script Events')
     bui.label(f, 'darkoak:enchant [event?: number] [action?: number] [power?: number] -> Opens Custom Enchant Menu, Or If The Parameters Are Defined It Enchants Using Said Parameters (? Means Optional)')
     bui.label(f, 'darkoak:spawn [itemtype: string] [amount: number] [x: number] [y: number] [z: number] -> Spawns An Item')
     bui.label(f, 'darkoak:command [Minecraft Command] -> Runs A Command With Replacer Hashtags')
@@ -1184,6 +1269,10 @@ export function docsUI(player) {
     bui.label(f, 'darkoak:if [value: any] [value: any] [Minecraft Command] -> If The Two Values Match It Runs The Command')
     bui.label(f, 'darkoak:variable [name: string] [value: any] -> Sets A Custom Variable Which Can Be Used In Replacer Hashtags')
     bui.label(f, 'darkoak:projectile [type: string] [x: number] [y: number] [z: number] [force: number] -> Shoots A Projectile Of The Specified Type Towards XYZ With The Specified Force')
+    bui.label(f, 'darkoak:openui [ui: string] [args?: any] -> Opens A UI')
+    bui.label(f, 'darkoak:uihelp -> Lists All UI\'s')
+    bui.label(f, 'darkoak:transfer [ip: string] [port: number] -> Transfers The Player To The Specified IP And Port')
+    bui.label(f, 'darkoak:explode [x: number] [y: number] [z: number] [radius: number] [fire?: boolean] [breaksBlocks?: boolean] -> Summons An Explosion At / With The Specified Arguments')
 
     bui.divider(f)
 
@@ -1568,22 +1657,16 @@ export function rtpUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'RTP Settings')
 
-    f.toggle('Enabled?', {
-        defaultValue: mcl.wGet('darkoak:cws:rtp:enabled')
-    })
-    f.textField('Center Co-ord:', 'Example: 0', {
-        defaultValue: mcl.wGet('darkoak:cws:rtp:center')
-    })
-    f.textField('Max Distance:', 'Example: 10000', {
-        defaultValue: mcl.wGet('darkoak:cws:rtp:distance')
-    })
+    bui.toggle(f, 'Enabled?', mcl.wGet('darkoak:cws:rtp:enabled') || false)
+    bui.textField(f, 'Center Co-ord:', 'Example: 0', mcl.wGet('darkoak:cws:rtp:center'))
+    bui.textField(f, 'Max Distance:', 'Example: 10000', mcl.wGet('darkoak:cws:rtp:distance'))
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             warpSettingsUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.wSet('darkoak:cws:rtp:enabled', e[0])
         mcl.wSet('darkoak:cws:rtp:center', e[1])
         mcl.wSet('darkoak:cws:rtp:distance', e[2])
@@ -1642,26 +1725,30 @@ export function shopRemoveUI(player) {
 /**
  * @param {Player} player 
  */
-export function shopAddUI(player, message) {
+export function shopAddUI(player, message = '') {
     let f = new ModalFormData()
     bui.title(f, 'Add Shop Item')
 
-    bui.label(f, message || '')
+    bui.label(f, message)
 
-    f.toggle('Sell?')
-    f.textField('\nItem ID:', 'Example: minecraft:diamond')
-    f.slider('Amount Of Items:', 1, 64)
-    f.textField('Price:', 'Example: 100')
+    bui.toggle(f, 'Sell?')
+    bui.textField(f, '\nItem ID:', 'Example: minecraft:diamond')
+    bui.slider(f, 'Amount Of Items:', 1, 64)
+    bui.textField(f, 'Price:', 'Example: 100')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
-        const data = { sell: e[0], item: e[1], amount: e[2], price: e[3] }
-        if (isNaN(data.price) || data.item == '') {
+        if (isNaN(e[3]) || e[1] == '') {
             shopAddUI(player, '§cPrice Or Item Is Invalid§r')
             return
         }
-        mcl.wSet(`darkoak:shopitem:${mcl.timeUuid()}`, JSON.stringify(data))
+        mcl.jsonWSet(`darkoak:shopitem:${mcl.timeUuid()}`, { 
+            sell: e[0],
+            item: e[1],
+            amount: e[2],
+            price: e[3],
+        })
     }).catch()
 }
 
@@ -1672,43 +1759,37 @@ export function showHideOptionsSettingsUI(player) {
     const en = mcl.jsonWGet('darkoak:communityshowhide')
 
     f.toggle('Show Pay / Shop?', {
-        defaultValue: en.payshop0 || false
+        defaultValue: en?.payshop0 || false
     })
     f.toggle('Show Pay / Shop -> Pay?', {
-        defaultValue: en.payshop1 || false
+        defaultValue: en?.payshop1 || false
     })
     f.toggle('Show Pay / Shop -> Shop?', {
-        defaultValue: en.payshop2 || false
+        defaultValue: en?.payshop2 || false
     })
     f.toggle('Show Pay / Shop -> Auction House?', {
-        defaultValue: en.payshop3 || false
+        defaultValue: en?.payshop3 || false
     })
     f.toggle('Show Warps?', {
-        defaultValue: en.warps || false
+        defaultValue: en?.warps || false
     })
     f.toggle('Show Report?', {
-        defaultValue: en.report || false
+        defaultValue: en?.report || false
     })
-    f.toggle('Show My Profile?', {
-        defaultValue: en.myprofile || false
-    })
-    f.toggle('Show Personal Log?', {
-        defaultValue: en.personallog || false
-    })
-    f.toggle('Show Giftcodes?', {
-        defaultValue: en.giftcodes || false
-    })
-    f.toggle('Show Credits?\nPlease Don\'t Disable This', {
-        defaultValue: en.credits || false
-    })
-    bui.toggle(f, 'Show Pay / Shop -> Compress / Decompress?', en.payshop4)
+    bui.toggle(f, 'Show My Profile?', en?.myprofile)
+    bui.toggle(f, 'Show Personal Log?', en?.personallog)
+    bui.toggle(f, 'Show Giftcodes?', en?.giftcodes)
+    bui.toggle(f, 'Show Credits?\nPlease Don\'t Disable This', en?.credits)
+    bui.toggle(f, 'Show Pay / Shop -> Compress / Decompress?', en?.payshop4)
+    bui.toggle(f, 'Show Pay / Shop -> Gambling?', en?.payshop5)
+    bui.toggle(f, 'Show Pay / Shop -> Bounty?', en?.payshop6)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             communitySettingsUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.jsonWSet('darkoak:communityshowhide', {
             payshop0: e[0],
             payshop1: e[1],
@@ -1721,6 +1802,8 @@ export function showHideOptionsSettingsUI(player) {
             giftcodes: e[8],
             credits: e[9],
             payshop4: e[10],
+            payshop5: e[11],
+            payshop6: e[12],
         })
     }).catch()
 }
@@ -1731,20 +1814,15 @@ export function reportSettingsUI(player) {
     const settings = mcl.jsonWGet('darkoak:reportsettings')
 
     bui.title(f, 'Report Settings')
-    f.textField('Report Rules:', 'Example: No Reporting For Veganism', {
-        defaultValue: settings.rules
-    })
-
-    f.toggle('Enabled?', {
-        defaultValue: settings.enabled
-    })
+    bui.textField(f, 'Report Rules:', 'Example: No Reporting For Veganism', settings?.rules)
+    bui.toggle(f, 'Enabled?', settings?.enabled)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             communitySettingsUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         mcl.jsonWSet('darkoak:reportsettings', {
             enabled: e[1],
             rules: e[0]
@@ -1758,13 +1836,18 @@ export function creditsUI(player) {
     bui.title(f, 'Credits')
 
     bui.header(f, 'Developers')
+
     bui.button(f, 'Darkoakboat2121', 'textures/items/boat_darkoak') // 0
     bui.label(f, 'Hi, I made this addon!')
+
+    bui.button(f, 'Noki5160') // 1
+    bui.label(f, 'Helped Code Some Things Such As The Plug-in System (Seriously, Thanks Noki)')
 
     bui.divider(f)
 
     bui.header(f, 'Inspiration / Ideas')
-    bui.button(f, 'Noki5160') // 1
+
+    bui.label(f, 'Noki5160')
     bui.label(f, 'Inspiration for anticheat')
 
     bui.divider(f)
@@ -1799,9 +1882,6 @@ export function creditsUI(player) {
             case 3:
                 tygerBio(player)
                 break
-            default:
-                player.sendMessage('How The Heck Did You Break The Credits?')
-                break
         }
     }).catch()
 }
@@ -1818,13 +1898,13 @@ export function communityMain(player) {
 
     const en = mcl.jsonWGet('darkoak:communityshowhide')
 
-    if (en.payshop0) bui.button(f, 'Money', arrays.icons.minecoin)
-    if (en.warps) bui.button(f, 'Warps')
-    if (en.report) bui.button(f, 'Report')
-    if (en.myprofile) bui.button(f, 'My Profile', arrays.icons.whitePlayer)
-    if (en.personallog) bui.button(f, 'Personal Log')
-    if (en.giftcodes) bui.button(f, 'Giftcodes')
-    if (en.credits) bui.button(f, 'Credits', arrays.icons.item('boat_dark_oak'))
+    if (en?.payshop0) bui.button(f, 'Money', arrays.icons.minecoin)
+    if (en?.warps) bui.button(f, 'Warps')
+    if (en?.report) bui.button(f, 'Report')
+    if (en?.myprofile) bui.button(f, 'My Profile', arrays.icons.whitePlayer)
+    if (en?.personallog) bui.button(f, 'Personal Log')
+    if (en?.giftcodes) bui.button(f, 'Giftcodes')
+    if (en?.credits) bui.button(f, 'Credits', arrays.icons.item('boat_dark_oak'))
     if (mcl.isDOBAdmin(player)) {
         bui.button(f, 'Community Settings\n(Admins Only)', arrays.icons.fourPlayers)
     }
@@ -1833,31 +1913,31 @@ export function communityMain(player) {
         if (evd.canceled) return
 
         let selectionIndex = 0
-        if (en.payshop0 && evd.selection === selectionIndex++) {
+        if (en?.payshop0 && evd.selection === selectionIndex++) {
             communityMoneyUI(player)
             return
         }
-        if (en.warps && evd.selection === selectionIndex++) {
+        if (en?.warps && evd.selection === selectionIndex++) {
             warpsUI(player)
             return
         }
-        if (en.report && evd.selection === selectionIndex++) {
+        if (en?.report && evd.selection === selectionIndex++) {
             reportPlayerUI(player)
             return
         }
-        if (en.myprofile && evd.selection === selectionIndex++) {
+        if (en?.myprofile && evd.selection === selectionIndex++) {
             myProfile(player)
             return
         }
-        if (en.personallog && evd.selection === selectionIndex++) {
+        if (en?.personallog && evd.selection === selectionIndex++) {
             personalLogUI(player)
             return
         }
-        if (en.giftcodes && evd.selection === selectionIndex++) {
+        if (en?.giftcodes && evd.selection === selectionIndex++) {
             redeemGiftcodeUI(player)
             return
         }
-        if (en.credits && evd.selection === selectionIndex++) {
+        if (en?.credits && evd.selection === selectionIndex++) {
             creditsUI(player)
             return
         }
@@ -1876,10 +1956,12 @@ export function communityMoneyUI(player) {
 
     const en = mcl.jsonWGet('darkoak:communityshowhide')
 
-    if (en.payshop1) bui.button(f, 'Pay')
-    if (en.payshop2) bui.button(f, 'Shop')
-    if (en.payshop3) bui.button(f, 'Auction House')
-    if (en.payshop4) bui.button(f, 'Compress & Decompress')
+    if (en?.payshop1) bui.button(f, 'Pay')
+    if (en?.payshop2) bui.button(f, 'Shop')
+    if (en?.payshop3) bui.button(f, 'Auction House')
+    if (en?.payshop4) bui.button(f, 'Compress & Decompress')
+    if (en?.payshop5) bui.button(f, 'Gambling')
+    if (en?.payshop6) bui.button(f, 'Bountys')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1888,20 +1970,30 @@ export function communityMoneyUI(player) {
         }
 
         let selectionIndex = 0
-        if (en.payshop1 && evd.selection === selectionIndex++) {
+        if (en?.payshop1 && evd.selection === selectionIndex++) {
             payUI(player)
             return
         }
-        if (en.payshop2 && evd.selection === selectionIndex++) {
+        if (en?.payshop2 && evd.selection === selectionIndex++) {
             shopUI(player)
             return
         }
-        if (en.payshop3 && evd.selection === selectionIndex++) {
+        if (en?.payshop3 && evd.selection === selectionIndex++) {
             auctionMain(player)
             return
         }
-        if (en.payshop4 && evd.selection === selectionIndex) {
+        if (en?.payshop4 && evd.selection === selectionIndex++) {
             pressionUI(player)
+            return
+        } 
+        
+        if (en?.payshop5 && evd.selection === selectionIndex++) {
+            gamblingMainUI(player)
+            return
+        } 
+        
+        if (en?.payshop6 && evd.selection === selectionIndex) {
+            bountyMainUI(player)
             return
         } else {
             player.sendMessage('§cError§r')
@@ -1956,7 +2048,8 @@ export function payUI(player) {
     bui.title(f, 'Pay')
 
     const names = bui.namePicker(f, undefined, '\nPlayer:')
-    f.textField('Amount:', 'Example: 100')
+    bui.textField(f, 'Amount:', 'Example: 100')
+    bui.label(f, `Current Amount: ${mcl.getScore(player).toString()}`)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1964,19 +2057,16 @@ export function payUI(player) {
             return
         }
         const e = bui.formValues(evd)
-        const ms = arrays.getMoney()
-        const score = world.scoreboard.getObjective(ms).getScore(player)
         if (isNaN(e[1])) {
             payUI(player)
             return
         }
-        if (score < e[1]) {
+        if (mcl.getScore(player) < parseInt(e[1])) {
             player.sendMessage('§cNot Enough Money§r')
             return
         }
-
-        player.runCommand(`scoreboard players add "${names[e[0]]}" ${ms} ${e[1]}`)
-        player.runCommand(`scoreboard players remove @s ${ms} ${e[1]}`)
+        mcl.addScore(mcl.getPlayer(names[e[0]]), parseInt(e[1]))
+        mcl.removeScore(player, parseInt(e[1]))
     }).catch()
 }
 
@@ -1987,24 +2077,31 @@ export function myProfile(player) {
     let f = new ModalFormData()
     bui.title(f, 'My Profile')
 
-    const parts = mcl.jsonWGet(`darkoak:profile:${player.name}`)
+    const parts = mcl.jsonPGet(player, 'darkoak:profile')
     if (parts === undefined) {
-        const defaultP = { description: '', pronouns: '', age: '' }
-        mcl.jsonWSet(`darkoak:profile:${player.name}`, defaultP)
+        mcl.jsonPSet(player, 'darkoak:profile', { 
+            description: '',
+            pronouns: '',
+            age: ''
+        })
     }
+    console.log(JSON.stringify(parts))
 
-    bui.textField(f, '\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', parts.description)
-    bui.textField(f, 'Pronouns:', 'Example: He / Him', parts.pronouns, 'Good For Other Things Too!')
-    bui.textField(f, 'Age:', 'Example: 17', parts.age, 'Good For Other Things Too!')
+    bui.textField(f, '\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', parts?.description)
+    bui.textField(f, 'Pronouns:', 'Example: He / Him', parts?.pronouns, 'Good For Other Things Too!')
+    bui.textField(f, 'Age:', 'Example: 17', parts?.age, 'Good For Other Things Too!')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             communityMain(player)
             return
         }
-        const e = evd.formValues
-        const profile = { description: e[0], pronouns: e[1], age: e[2] }
-        mcl.jsonPSet(player, 'darkoak:profile', profile)
+        const e = bui.formValues(evd)
+        mcl.jsonPSet(player, 'darkoak:profile', {
+            description: e[0],
+            pronouns: e[1],
+            age: e[2],
+        })
     }).catch()
 }
 
@@ -2024,13 +2121,13 @@ export function viewProfile(playerToShow, playerToView) {
     bui.title(f, `${playerToView.name}'s Profile`)
 
     bui.header(f, playerToView.name)
-    bui.label(f, parts.pronouns)
-    bui.label(f, `Age: ${parts.age}`)
+    bui.label(f, parts?.pronouns)
+    bui.label(f, `Age: ${parts?.age}`)
 
     bui.divider(f)
 
     bui.header(f, 'Description')
-    bui.label(f, parts.description)
+    bui.label(f, parts?.description)
 
     bui.button(f, 'Dismiss')
 
