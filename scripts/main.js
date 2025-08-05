@@ -1,5 +1,5 @@
 // first is minecraft resources
-import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType } from "@minecraft/server"
+import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType, StructureSaveMode } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import { transferPlayer } from "@minecraft/server-admin"
 
@@ -278,6 +278,9 @@ system.runInterval(() => {
         anticheat.cpsTester(player)
         chat.nametag(player, mcl.jsonWGet('darkoak:chat:other'))
         glideFeather(player)
+        playerLister(player)
+        worldProtection.dimensionBan(player)
+        anticheat.dupeIDChecker(player)
     }
 
     // system.sendScriptEvent('darkoak:interval', JSON.stringify({
@@ -389,6 +392,8 @@ function itemOpeners(evd) {
 function communityGiver(evd) {
     const s = mcl.jsonWGet('darkoak:community:general')
 
+    evd.player.runCommand(`function utility/recycler`)
+
     if (s?.giveOnJoin && evd.player.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0) {
         evd.player.runCommand('give @s darkoak:community')
     }
@@ -472,6 +477,17 @@ function uis() {
             player.removeTag(parts.tag)
         }
     }
+
+    let uis4 = mcl.listGetValues('darkoak:ui:modaltext:')
+    for (let index = 0; index < uis4.length; index++) {
+        const parts = JSON.parse(uis4[index])
+        const players = world.getPlayers({ tags: [parts.tag] })
+        for (let index = 0; index < players.length; index++) {
+            const player = players[index]
+            modalTextUIBuilder(player, parts)
+            player.removeTag(parts.tag)
+        }
+    }
 }
 
 // gen system
@@ -526,8 +542,9 @@ function gens() {
         const sign = JSON.parse(signs[index].value)
 
         try {
-
             const block = mcl.getBlock(sign.location, sign.dimension)
+            if (!block) return
+
 
         } catch (e) {
             mcl.adminMessage(`Failed To Use Signs+ On Sign: ${sign.location.x} ${sign.location.y} ${sign.location.z}`)
@@ -569,13 +586,28 @@ function bans() {
         const banned = mcl.getPlayer(data.player)
         if (!banned) continue
         if (!data?.crash) {
-            p.runCommand(`kick "${data.player}" ${data?.message || ''}`)
+            if (data?.soft) {
+                transferPlayer(gp, {
+                    hostname: '127.0.0.0', 
+                    port: 0 
+                })
+            } else {
+                p.runCommand(`kick "${data.player}" ${data?.message || ''}`)
+            }
         } else {
             let o = 0
             while (o++ < 100) {
                 banned.sendMessage(`§a§k`)
                 banned.sendMessage(`§a§k`)
                 banned.sendMessage(`§a§k`)
+                try {
+                    mcl.stopPlayer(banned)
+                    banned.teleport(banned.location)
+                } catch {
+                    banned.sendMessage(`§a§k`)
+                    banned.sendMessage(`§a§k`)
+                    banned.sendMessage(`§a§k`)
+                }
             }
             p.runCommand(`kick "${data.player}" ${data?.message || ''}`)
         }
@@ -590,8 +622,6 @@ function bans() {
         for (let index = 0; index < ps.length; index++) {
             const pl = ps[index]
             if (wlp.includes(pl.name)) continue
-
-            console.log(`kicking ${pl.name}, hes not on whitelist`)
             p.runCommand(`kick "${pl.name}" You Aren\'t On The Whitelist!`)
         }
     }
@@ -600,7 +630,7 @@ function bans() {
 let lcticker = 0
 function landclaimBorders() {
 
-    if (lcticker < 5) {
+    if (lcticker < 10) {
         lcticker++
         return
     } else lcticker = 0
@@ -967,8 +997,8 @@ function actionUIBuilder(playerToShow, title, body, buttons) {
  */
 function messageUIBuilder(playerToShow, title, body, button1, button2, command1, command2) {
     let f = new MessageFormData()
-    f.title(arrays.replacer(playerToShow, title))
-    f.body(arrays.replacer(playerToShow, body))
+    bui.title(f, arrays.replacer(playerToShow, title))
+    bui.body(f, arrays.replacer(playerToShow, body))
     f.button1(arrays.replacer(playerToShow, button1))
     f.button2(arrays.replacer(playerToShow, button2))
 
@@ -982,22 +1012,67 @@ function messageUIBuilder(playerToShow, title, body, button1, button2, command1,
     })
 }
 
-function modalUIBuilder(playerToShow, ui) {
-    let f = new ModalFormData()
-    f.title(ui.title)
+// function modalUIBuilder(playerToShow, ui) {
+//     let f = new ModalFormData()
+//     bui.title(f, arrays.replacer(playerToShow, ui.title))
 
-    for (const el of uiData.elements) {
-        if (el.type === 'textField') {
-            f.textField(el.label, el.placeholder, { defaultValue: el.defaultValue })
-        } else if (el.type === 'toggle') {
-            f.toggle(el.label, { defaultValue: el.defaultValue })
-        } else if (el.type === 'dropdown') {
-            f.dropdown(el.label, el.options, { defaultValue: el.defaultValue })
+//     for (const el of uiData.elements) {
+//         if (el.type === 'textField') {
+//             f.textField(el.label, el.placeholder, { defaultValue: el.defaultValue })
+//         } else if (el.type === 'toggle') {
+//             f.toggle(el.label, { defaultValue: el.defaultValue })
+//         } else if (el.type === 'dropdown') {
+//             f.dropdown(el.label, el.options, { defaultValue: el.defaultValue })
+//         }
+//     }
+
+//     f.show(playerToShow).then((evd) => {
+//         if (evd.canceled) return
+//     })
+// }
+
+/**system for displaying modaltextuis
+ * @param {Player} playerToShow 
+ * @param {{title: string, tag: string, lines: string[]}} ui 
+ */
+function modalTextUIBuilder(playerToShow, ui) {
+    let f = new ModalFormData()
+    bui.title(f, ui.title)
+
+    let commands = []
+
+    for (let index = 0; index < ui.lines.length; index++) {
+        const parts = ui.lines[index].split('|')
+        switch (parts[0]) {
+            case 'toggle':
+                bui.toggle(f, parts[1], parts[2], parts[3])
+                break
+            case 'textfield':
+                bui.textField(f, parts[1], parts[2], parts[3], parts[4])
+                break
+            case 'label':
+                bui.label(f, parts[1])
+                break
+            case 'header':
+                bui.header (f, parts[1])
+                break
+            case 'slider':
+                bui.slider(f, parts[1], parts[2], parts[3], parts[4], parts[5], parts[6])
+                break
+            case 'command':
+                commands.push(parts[1])
+                break
         }
     }
 
     f.show(playerToShow).then((evd) => {
         if (evd.canceled) return
+        const e = bui.formValues(evd)
+        for (let index = 0; index < commands.length; index++) {
+            let command = commands[index]
+            command = command.replace(/\$(\d+)\$/g, (_, n) => e[n - 1])
+            playerToShow.runCommand(command)
+        }
     })
 }
 
@@ -1028,6 +1103,36 @@ function glideFeather(player) {
  */
 function moneySetter(evd) {
     mcl.addScore(evd.player, 0)
+}
+
+/**
+ * @param {Player} player 
+ */
+function playerLister(player) {
+
+    let players = mcl.getPlayerList() || []
+    if (!players.includes(player.name)) {
+        players.push(player.name)
+        mcl.jsonWSet('darkoak:playerlist', players)
+    }
+
+    let admins = mcl.getAdminList() || []
+    if (mcl.isDOBAdmin(player) && !admins.includes(player.name)) {
+        admins.push(player.name)
+        mcl.jsonWSet('darkoak:adminlist', admins)
+    } else if (!mcl.isDOBAdmin(player) && admins.includes(player.name)) {
+        admins = admins.filter(e => e !== player.name)
+        mcl.jsonWSet('darkoak:adminlist', admins)
+    }
+
+    let mods = mcl.getModList() || []
+    if (mcl.isDOBMod(player) && !mods.includes(player.name)) {
+        mods.push(player.name)
+        mcl.jsonWSet('darkoak:modlist', mods)
+    } else if (!mcl.isDOBMod(player) && mods.includes(player.name)) {
+        mods = mods.filter(e => e !== player.name)
+        mcl.jsonWSet('darkoak:modlist', mods)
+    }
 }
 
 /**
@@ -1171,11 +1276,18 @@ function customSlashCommands(evd) {
                 type: CustomCommandParamType.Location,
                 name: 'location'
             }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.String,
+                name: 'name'
+            }
         ]
-    }, (evd, itemType, amount, location) => {
+    }, (evd, itemType, amount, location, name) => {
         system.runTimeout(() => {
             const dimen = evd.initiator?.dimension || evd.sourceBlock?.dimension || evd.sourceEntity?.dimension
             const item = new ItemStack(itemType, amount)
+            item.nameTag = name
             world.getDimension(dimen.id).spawnItem(item, location)
         })
     })
@@ -1414,7 +1526,7 @@ function customSlashCommands(evd) {
         })
     })
 
-    evd.customCommandRegistry.registerEnum('darkoak:debugtypes', ['aclog', 'playerlist', 'bytes', 'bytesize'])
+    evd.customCommandRegistry.registerEnum('darkoak:debugtypes', ['aclog', 'playerlist', 'bytes', 'bytesize', 'what'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:debug',
         description: 'DO NOT USE',
@@ -1429,7 +1541,11 @@ function customSlashCommands(evd) {
                 name: 'darkoak:debugtypes'
             }
         ]
-    }, (evd, player, debugtype) => {
+    }, (evd, play, debugtype) => {
+
+        /**@type {Player} */
+        const player = play[0]
+
         system.runTimeout(() => {
             switch (debugtype) {
                 case 'aclog':
@@ -1441,6 +1557,9 @@ function customSlashCommands(evd) {
                 case 'bytes':
                 case 'bytesize':
                     mcl.adminMessage(world.getDynamicPropertyTotalByteCount().toString())
+                    break
+                case 'what':
+                    mcl.adminMessage(`\nItem: ${mcl.getHeldItem(player)?.typeId}\nBlock: ${player.getBlockFromViewDirection()?.block?.typeId}`)
                     break
             }
         })
@@ -1464,17 +1583,421 @@ function customSlashCommands(evd) {
 
                 /**@type {Player} */
                 const ptc = player[0]
-                const boats = mcl.jsonPGet(ptc, 'darkoak:boats')
+                /**@type {{'darkoakboat': 1, 'birch boat': 1}} */
+                const boats = mcl.jsonPGet(ptc, 'darkoak:boatcatcher')
                 if (!boats) {
                     p.sendMessage(`§c${ptc.name} Has No Boats§r`)
                     return
                 }
                 p.sendMessage(`§a${ptc.name} Has The Following Boats:§r`)
-                for (let index = 0; index < boats.length; index++) {
-                    const b = boats[index]
-
-                    p.sendMessage(`§a${b.type}: ${b.amount}§r`)
+                const boatTypes = Object.keys(boats)
+                for (let index = 0; index < boatTypes.length; index++) {
+                    const key = boatTypes[index]
+                    p.sendMessage(`§u${key}§i: §a${boats[key]}§r`)
                 }
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:delete',
+        description: 'Deletes Entities',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.EntitySelector,
+                name: 'entities'
+            }
+        ]
+    }, (evd, entities) => {
+        system.runTimeout(() => {
+            for (let index = 0; index < entities.length; index++) {
+                /**@type {Entity} */
+                const entity = entities[index]
+                try {
+                    entity.remove()
+                } catch {
+                    mcl.adminMessage(`Could Not Remove Entity: ${entity.typeId} | ${entity.nameTag}`)
+                }
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:nicknametypes', ['set', 'reset', 'toggle'])
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:nick',
+        description: 'Manage Nick Names',
+        permissionLevel: CommandPermissionLevel.Any,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:nicknametypes'
+            }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.String,
+                name: 'nickname'
+            }
+        ]
+    }, (evd, nicktypes, nickname) => {
+        /**@type {Player | undefined} */
+        const player = evd?.sourceEntity
+        if (!player) return
+
+        const enabled = mcl.jsonWGet('darkoak:nicknamesettings')?.enabled
+        if ((nicktypes === 'reset' || nicktypes === 'set') && !enabled) {
+            player.sendMessage('§cNicknames Are Disabled§r')
+            return
+        }
+
+        system.runTimeout(() => {
+            switch (nicktypes) {
+                case 'reset':
+                    player.sendMessage('§aNickname Reset!§r')
+                    mcl.pRemove(player, 'darkoak:nickname')
+                    break
+                case 'set':
+                    player.sendMessage(`§aNickname Set To §r§f${nickname || ''}`)
+                    mcl.jsonPSet(player, 'darkoak:nickname', {
+                        nick: nickname || ''
+                    })
+                    break
+                case 'toggle':
+                    if (mcl.isDOBAdmin(player)) {
+                        mcl.jsonWSet('darkoak:nicknamesettings', {
+                            enabled: !enabled || false
+                        })
+                        player.sendMessage(`§aNicknames Are Now Set To ${!enabled}`)
+                    } else {
+                        player.sendMessage('§cYou Must Be An Admin To Toggle Nicknames§r')
+                    }
+                    break
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:landclaims', ['add', 'remove', 'players'])
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:landclaim',
+        description: 'Landclaims',
+        permissionLevel: CommandPermissionLevel.Any,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:landclaims'
+            }
+        ]
+    }, (evd, landclaimtype) => {
+        /**@type {Player | undefined} */
+        const player = evd?.sourceEntity
+        if (!player) return
+
+        const settings = mcl.jsonWGet('darkoak:community:general')
+        if (!settings?.landclaimsenabled) {
+            player.sendMessage('§cLandclaims Are Disabled§r')
+            return
+        }
+
+        system.runTimeout(() => {
+            switch (landclaimtype) {
+                case 'add':
+                    const loc = player.location
+                    let places = mcl.listGetValues('darkoak:landclaim:')
+
+                    const newClaim = {
+                        p1: { x: loc.x + 16, z: loc.z + 16 },
+                        p2: { x: loc.x - 16, z: loc.z - 16 }
+                    }
+
+                    for (let index = 0; index < places.length; index++) {
+                        const place = JSON.parse(places[index])
+
+                        if (place.p1 && place.p2 && chat.landclaimCheck(newClaim, place)) {
+                            player.sendMessage('§cLand Has Already Been Claimed!§r')
+                            return
+                        }
+                    }
+                    mcl.jsonWSet(`darkoak:landclaim:${player.name}`, {
+                        ...newClaim,
+                        owner: player.name,
+                        players: [player.name]
+                    })
+                    player.sendMessage('§aLand Claimed!§r')
+                    break
+                case 'remove':
+                    if (!mcl.wRemove(`darkoak:landclaim:${player.name}`)) {
+                        player.sendMessage('§cYou Don\'t Own A Landclaim!§r')
+                    } else {
+                        player.sendMessage('§aYou No Longer Own A Landclaim!§r')
+                    }
+                    break
+                case 'players':
+                    interfacesTwo.landclaimMainUI(player)
+                    break
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:inventypes', ['save', 'load'])
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:inventory',
+        description: 'Save And Load Player Inventories',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'players'
+            },
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:inventypes'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'inventory_name'
+            }
+        ]
+    }, (evd, players, inventype, nameInven) => {
+
+        evd?.sourceEntity?.sendMessage('§cCurrently Not Working')
+        return
+
+        const dimen = evd.initiator?.dimension || evd.sourceBlock?.dimension || evd.sourceEntity?.dimension
+
+        system.runTimeout(() => {
+            for (let index = 0; index < players.length; index++) {
+                /**@type {Player} */
+                const player = players[index]
+                
+                switch (inventype) {
+                    case 'save':
+
+                        // entity creation
+
+                        // duping
+
+                        // saving section
+                        world.structureManager.createFromWorld(`darkoak:inventory_${nameInven}`, dimen, player.location, {
+                            x: player.location.x,
+                            y: player.location.y + 1,
+                            z: player.location.z
+                        }, {
+                            includeBlocks: false,
+                            includeEntities: true,
+                            saveMode: StructureSaveMode.World
+                        })
+                        break
+                    case 'load':
+
+                        // loading section
+                        world.structureManager.place(`darkoak:inventory_${nameInven}`, dimen, player.location, {
+                            includeBlocks: false,
+                            includeEntities: true
+                        })
+                        
+                        // clear, copy, and kill
+
+                        break
+                }
+
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:kitstypes', ['add', 'remove', 'export', 'import', 'load', 'list'])
+    // add = string remove = string  export = string  import = string  load = string, players
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:kits',
+        description: 'Modify And Create Kits, Will Modify Your Held Item!',
+        permissionLevel: CommandPermissionLevel.Admin,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:kitstypes'
+            },
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.String,
+                name: 'kitname_or_json'
+            },
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'players'
+            },
+            {
+                type: CustomCommandParamType.Boolean,
+                name: 'check'
+            }
+        ]
+    }, (evd, kittype, kitname, players, check) => {
+
+        evd?.sourceEntity?.sendMessage('§cCurrently Not Working')
+        return
+
+        /**@type {Player} */
+        const runner = evd?.sourceEntity
+        if (!runner) {
+            mcl.adminMessage(`Command darkoak:kits Needs To Run From A Player`)
+            return
+        }
+
+        system.runTimeout(() => {
+
+            /**@type {{items: [{typeId: string, amount: number}, {typeId: string, amount: number}]}} */
+            const kit = mcl.jsonWGet(`darkoak:kits:${kitname}`)
+
+            const heldItemData = mcl.itemToData(mcl.getHeldItem(runner))
+
+            switch (kittype) {
+                case 'add':
+                    if (!kit) {
+                        runner.sendMessage('§aAdded New Kit!')
+                    }
+                    let newItems = kit?.items || []
+                    newItems.push(heldItemData)
+                    mcl.jsonWSet(`darkoak:kits:${kitname}`, {
+                        items: newItems
+                    })
+                    runner.sendMessage('§aAdded New Item!§r')
+                    break
+                case 'remove':
+                    if (!kit || kit.items.length == 0 || check) {
+                        if (mcl.wRemove(`darkoak:kits:${kitname}`)) {
+                            runner.sendMessage('§aKit Has Been Removed§r')
+                        } else {
+                            runner.sendMessage(`§cNo Such Kit Exists§r`)
+                        }
+                        return
+                    }
+
+                    if (kit.items.includes(heldItemData)) {
+                        const filteredItems = kit.items.filter(e => !(item.typeId === heldItemData.typeId && item.amount === heldItemData.amount))
+
+                        mcl.jsonWSet(`darkoak:kits:${kitname}`, {
+                            items: filteredItems
+                        })
+
+                        runner.sendMessage('§aItem Removed')
+                    } else {
+                        runner.sendMessage('§cKit Does\'nt Have That Item. Use Any Player And Set \'check\' To True To Delete This Kit')
+                    }
+
+                    break
+                case 'export':
+
+                    break
+                case 'import':
+
+                    break
+                case 'load':
+
+                    break
+                case 'list':
+                    let itemsMessage = []
+                    const kits = mcl.jsonListGetBoth('darkoak:kits:')
+                    for (let index = 0; index < kits.length; index++) {
+                        const item = JSON.parse(kits[index].value)
+                        itemsMessage.push(`${kits[index].id.slice(13)}`)
+                        for (let index = 0; index < item.items.length; index++) {
+                            const item = item.items[index]
+                            itemsMessage.push(`${item.typeId}: ${item.amount}`)
+                        }
+                    }
+                    runner.sendMessage(itemsMessage.join('\n'))
+                    break
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:loretypes', ['add', 'remove'])
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:lore',
+        description: 'Adds Lore To The Held Item',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'players'
+            },
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:loretypes'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'lore'
+            }
+        ]
+    }, (evd, players, loretype, loreString) => {
+        system.runTimeout(() => {
+            for (let index = 0; index < players.length; index++) {
+                /**@type {Player} */
+                const player = players[index]
+                const item = mcl.getHeldItem(player)
+
+                if (!item || item.isStackable) return
+
+                let lore = item.getLore()
+                let newItem = new ItemStack(item.type, 1)
+                newItem = item
+
+                switch (loretype) {
+                    case 'add':
+                        lore.push(loreString)
+                        newItem.setLore(lore)
+                        mcl.getItemContainer(player).setItem(player.selectedSlotIndex, newItem)
+                        break
+                    case 'remove':
+                        lore = lore.filter(e => e != loreString)
+                        newItem.setLore(lore)
+                        mcl.getItemContainer(player).setItem(player.selectedSlotIndex, newItem)
+                        break
+                }
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:tpatypes', ['to', 'ac', 'toggle'])
+    
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:tpa',
+        description: 'Manage TPA Requests',
+        permissionLevel: CommandPermissionLevel.Any,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:tpatypes'
+            },
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player'
+            }
+        ]
+    }, (evd, type, players) => {
+        /**@type {Player} */
+        const runner = evd?.sourceEntity
+        if (!runner) return
+
+        system.runTimeout(() => {
+            switch (type) {
+                case 'to':
+                    
+                    break
+                case 'ac':
+
+                    break
+                case 'toggle':
+
+                    break
             }
         })
     })

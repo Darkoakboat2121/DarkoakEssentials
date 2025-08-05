@@ -47,33 +47,43 @@ Plots are similar but build structures in a co-ord space. This will get a tutori
 * means todo 
 *? means todo optional, probably planned
 ?? means idk if working
+*& means, sorta working?
 <b>f</b>
 changelog:
     added:
-        all scriptevents now have a /command variant
         save/load inventory commands *? (methods: structure saving with: [chests, entities])
-        nicknames *
         world edit *?
-        signs+ * (spinning signs, rainbow text, bad apple lol, delays, slideshows)
-        catcher game *? (fennec discord cat game)
         leveling system *?
-        whitelist system
+
+        
+        auto-pickup community option *
+        /tpa *
+        /boats leaderboard with @a *
+        crates *
+        signs+ * (spinning signs, rainbow text, bad apple lol, delays, slideshows)
+        anticheat log clearing *
+        kits! *
+        owner system *
+        alt uis *
 
         
     fixed:
-        arrows and pacifist
-        banning admins
-        owner fix *
-        landclaims
         
 
+        owner fix *
+        landclaims * (fix admin issues and mob killing + interactions)
+
+        
     changes:
+        
+
         more stuff to profiles *
         
 
 
 
 hacks to detect:
+Anti .xp: detect if xp level went up real fast (warn users not to use /xp with this module)
 AirJump
 Anti-Void
 Auto-Sneak
@@ -92,6 +102,7 @@ NoClip
 NoFall
 NoSlowDown
 Phase
+Scaffold: not looking at block when placing block
 Speed: 1
 Spider
 Step
@@ -99,10 +110,16 @@ Velocity
 Reach
 Spammer: 1
 NoPacket
-Block Reach
+Block Reach: 1
 Tower
 Entity Fly
 Entity Jesus
 Entity Speed
 HitBox
 Kill Aura: 1
+
+anticheat to fix:
+    antifastplace, fixed?
+    antinuker / fastbreak, fixed?
+    antifly3, notfixed
+    notify admins, idk whats wrong

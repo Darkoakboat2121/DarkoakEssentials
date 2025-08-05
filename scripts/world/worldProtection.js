@@ -145,6 +145,25 @@ export function lockedChestProtection(evd) {
     }
 }
 
+/**
+ * @param {Player} player 
+ */
+export function dimensionBan(player) {
+    if (mcl.isDOBAdmin(player)) return
+    const d = mcl.jsonWGet('darkoak:dimensionbans')
+
+    if ((d?.nether && player.dimension.id == 'minecraft:nether') || (d?.end && player.dimension.id == 'minecraft:the_end')) {
+        try {
+            player.kill()
+        } catch {
+            const loc = player.getSpawnPoint()
+            player.teleport({x: loc.x, y: loc.y, z: loc.z}, {
+                dimension: world.getDimension('minecraft:overworld')
+            })
+        }
+    }
+}
+
 // world.beforeEvents.itemUse.subscribe((evd) => {
 //     if (mcl.isCreating(evd.source)) return
 //     if (!worldProtectionBadItems.includes(evd.itemStack.typeId)) return

@@ -2,8 +2,9 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, adminAndPlayerListUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, floatingTextMainUI, gamblingMainUI, itemSettingsUI, messageLogUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio } from "./interfacesTwo"
+import { addGiftcode, addRankUI, adminAndPlayerListUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, itemSettingsUI, messageLogUI, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
+import { transferPlayer } from "@minecraft/server-admin"
 
 // This file holds all the functions containing UI
 
@@ -80,6 +81,7 @@ export function worldSettingsUI(player) {
     bui.button(f, 'Money Settings\n§7Set The Money Settings', arrays.icons.minecoin)
     bui.button(f, 'Item Settings\n§7Settings For Custom Items')
     bui.button(f, 'Floating Text')
+    bui.button(f, 'Dimension Bans')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -107,6 +109,9 @@ export function worldSettingsUI(player) {
                 break
             case 6:
                 floatingTextMainUI(player)
+                break
+            case 7:
+                dimensionBansUI(player)
                 break
             default:
                 player.sendMessage('§cError§r')
@@ -460,6 +465,7 @@ export function playerPunishmentsMainUI(player) {
     bui.button(f, 'Mute A Player')
     bui.button(f, 'Unmute A Player')
     bui.button(f, 'Crash A Player')
+    bui.button(f, 'Soft-Kick A Player')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -482,11 +488,37 @@ export function playerPunishmentsMainUI(player) {
             case 5:
                 crashPlayerUI(player)
                 break
+            case 6:
+                softkickPlayer(player)
+                break
             default:
                 player.sendMessage('§cError§r')
                 break
         }
     }).catch()
+}
+
+export function softkickPlayer(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Soft-Kick A Player')
+
+    const names = bui.namePicker(f, undefined, '\nPlayer:')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            playerPunishmentsMainUI(player)
+            return
+        }
+
+        const e = bui.formValues(evd)
+        const gp = mcl.getPlayer(names[e[0]])
+        if (mcl.isDOBAdmin(gp) || mcl.isDOBMod(gp)) {
+            mcl.adminMessage(`${player.name} Tried To Ban ${names[e[0]]}`)
+            return
+        }
+
+        transferPlayer(gp, { hostname: '127.0.0.0', port: 0 })
+    })
 }
 
 export function banPlayerUI(player) {
@@ -497,6 +529,7 @@ export function banPlayerUI(player) {
     bui.textField(f, 'Reason / Ban Message', 'Example: Hacking')
     bui.textField(f, 'Ban Time In Hours (Leave Empty For Forever):', 'Example: 24')
     bui.toggle(f, 'Crash Instead Of Kick?', false, 'Only Use This If You Really Don\'t Want Them Coming Back')
+    bui.toggle(f, 'Can Rejoin Immediately After Ban Has Expired?', true)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -504,7 +537,8 @@ export function banPlayerUI(player) {
             return
         }
         const e = bui.formValues(evd)
-        if (mcl.isDOBAdmin(mcl.getPlayer(names[e[0]]))) {
+        const gp = mcl.getPlayer(names[e[0]])
+        if (mcl.isDOBAdmin(gp) || mcl.isDOBMod(gp)) {
             mcl.adminMessage(`${player.name} Tried To Ban ${names[e[0]]}`)
             return
         }
@@ -516,7 +550,8 @@ export function banPlayerUI(player) {
             player: names[e[0]],
             message: e[1],
             time: parseInt(time) * 3600,
-            crash: e[3]
+            crash: e[3],
+            soft: e[4]
         })
         mcl.adminMessage(`${names[e[0]]} Has Been Banned!`)
     }).catch()
@@ -1019,6 +1054,10 @@ export function otherChatSettingsUI(player) {
 
     bui.divider(f)
 
+    bui.toggle(f, 'Nametag Ranks (Displays Ranks Under Nametags)', default1.nametagRanks, '')
+
+    bui.divider(f)
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             chatSettingsUI(player)
@@ -1031,6 +1070,7 @@ export function otherChatSettingsUI(player) {
             chatLogs: e[2],
             healthDisplay: e[3],
             professional: e[4],
+            nametagRanks: e[5]
         })
     }).catch()
 }
@@ -1243,7 +1283,8 @@ export function logsUI(player) {
         })
 
         for (let index = 0; index < logs.logs.length; index++) {
-            bui.button(f, `${logs.logs[index].message}`)
+            bui.label(f, `${logs.logs[index].message}`)
+            bui.divider(f)
         }
     }
 
@@ -1366,7 +1407,7 @@ export function UIMakerUI(player) {
                 actionUIPickerUI(player)
                 break
             case 2:
-                modalUIMakerUI(player)
+                modalTextUIMakerUI(player)
                 break
             case 3:
                 UIDeleterUI(player)
@@ -1603,17 +1644,21 @@ export function communityGeneralUI(player) {
 
     const settings = mcl.jsonWGet('darkoak:community:general')
 
-    bui.toggle(f, 'Give Player Community Item When They Join?', settings.giveOnJoin)
+    bui.toggle(f, 'Give Player Community Item When They Join?', settings?.giveOnJoin)
+    bui.toggle(f, 'Landclaims Are Enabled?', settings?.landclaimsenabled)
+    bui.toggle(f, 'Emojis Are Enabled?', settings?.emojisenabled)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             communitySettingsUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
 
         mcl.jsonWSet('darkoak:community:general', {
-            giveOnJoin: e[0]
+            giveOnJoin: e[0],
+            landclaimsenabled: e[1],
+            emojisenabled: e[2],
         })
     }).catch()
 }
@@ -1853,11 +1898,19 @@ export function creditsUI(player) {
     bui.divider(f)
 
     bui.header(f, 'Miscellaneous')
+
     bui.button(f, 'CanineYeti24175') // 2
     bui.label(f, 'Thank you canine for being cool lol')
+
     bui.label(f)
+
     bui.button(f, 'Tygerklawk', 'textures/blocks/raw_gold_block') // 3
     bui.label(f, 'Thank you for helping me test stuff')
+
+    bui.label(f)
+    
+    bui.button(f, 'Wertwert3612') // 4
+    bui.label(f, 'Thank you for supplying the realm for testing')
 
     bui.divider(f)
 
@@ -1881,6 +1934,9 @@ export function creditsUI(player) {
                 break
             case 3:
                 tygerBio(player)
+                break
+            case 4:
+                wertwertBio(player)
                 break
         }
     }).catch()

@@ -1,7 +1,8 @@
-import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent } from "@minecraft/server"
+import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { logcheck } from "../data/defaults"
+import { badBlocksList, hackedItemsList, hackedItemsVanilla } from "../data/arrays"
 
 
 /**Anti nuker, works by checking the number of blocks broken in a small timeframe
@@ -11,10 +12,12 @@ export function antiNuker(evd) {
     const d = mcl.jsonWGet('darkoak:anticheat')
     const player = evd.player
 
-    if (d?.antinuker) {
-        player.setDynamicProperty('darkoak:ac:blocksbroken', (player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) + 1)
+    const current = mcl.pGet(player, 'darkoak:ac:blocksbroken') || 0
 
-        if ((player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) > 45) {
+    if (d?.antinuker) {
+        player.setDynamicProperty('darkoak:ac:blocksbroken', current + 1)
+
+        if (current > 45) {
             evd.cancel = true
         }
     }
@@ -55,8 +58,8 @@ export function antiFastPlace(evd) {
             Math.pow(bl.y - pl.y, 2) +
             Math.pow(bl.z - pl.z, 2)
         )
-        if (distance > 8) {
-            log(`${player.name} -> anti-block-reach`)
+        if (distance > 8.5) {
+            log(`${player.name} -> anti-block-reach\nDistance: ${distance.toString()}`)
             evd.cancel = true
         }
     }
@@ -119,19 +122,153 @@ export function antiNpc(evd) {
     }
 }
 
+let tickerDupe = 0
+
 // antidupe, every tick applys a unique id to an item, and checks if 2 items have same id, doesnt id items held by admins in c-mode (for allowed duping)
+/**
+ * @param {Player} player 
+ */
 export function antiDupeID(player) {
+    if (tickerDupe < 1) {
+        tickerDupe++
+        return
+    }
+    tickerDupe = 0
+
     const d = mcl.jsonWGet('darkoak:anticheat')
+    if (!d?.antidupe1) return
 
     const item = mcl.getHeldItem(player)
 
-    const lore = item.getLore()
-    for (let index = 0; index < lore.length; index++) {
-        const id = mcl.getStringBetweenChars(lore[index], '[', ']')
-        if (!id) {
-            const ids = mcl.wGet('darkoak:dupeids')
-            item.setLore(lore.push(ids + 1))
-            mcl.wSet('darkoak:dupeids', ids + 1)
+    if (!item || item.isStackable || player.getGameMode() === GameMode.Creative) return
+
+    const idCycle = mcl.wGet('darkoak:idsystem') || 0
+
+    let lore = item.getLore()
+    let hasID = lore.some(line => /\[.*?\]/.test(line))
+
+    if (!hasID) {
+        const newID = `[${idCycle + 1}]`
+        lore.push(newID)
+        let newItem = new ItemStack(item.type, 1)
+        newItem = item
+        newItem.setLore(lore)
+        mcl.getItemContainer(player).setItem(player.selectedSlotIndex, newItem)
+        mcl.wSet('darkoak:idsystem', idCycle + 1)
+        return
+    }
+
+}
+
+/**
+ * @param {Player} player 
+ */
+export function dupeIDChecker(player) {
+    const inventory = mcl.getItemContainer(player)
+    const idLog = new Set()
+
+    const d = mcl.jsonWGet('darkoak:anticheat')
+
+    for (let index = 0; index < inventory.size; index++) {
+        const item = inventory.getItem(index)
+        if (!item) continue
+
+        // anti dupe
+        if (d?.antidupe1) {
+            // anti dupe id adder
+            addID(player, item, inventory, index)
+
+
+            // const content = item.getComponent(ItemComponentTypes.Inventory)
+            // if (content) {
+            //     const contents = content.container
+            //     for (let findex = 0; index < contents.size; index++) {
+            //         const fitem = contents.getItem(findex)
+            //         if (!fitem) continue
+            //         addID(player, fitem, contents, findex)
+            //     }
+            // }
+
+
+
+            // anti dupe checker
+            const lore = item.getLore() || []
+            for (let index2 = 0; index2 < lore.length; index2++) {
+                const match = lore[index2].match(/\[(\d+)\]/)
+
+                if (match) {
+                    const id = match[1]
+                    if (idLog.has(id)) {
+                        log(`${player.name} -> anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
+                        mcl.getItemContainer(player).setItem(index)
+                    } else {
+                        idLog.add(id)
+                    }
+                }
+            }
+        }
+
+        // anti-nbt 1
+        if (d?.antinbt) {
+            const hv = hackedItemsVanilla
+            if (hv.includes(item.typeId)) {
+                log(`${player.name} -> anti-nbt 1: ${item.typeId}`)
+                mcl.getItemContainer(player).setItem(index)
+            }
+        }
+
+        // anti nbt 2
+        if (d?.antinbt2) {
+            const hil = hackedItemsList
+            if (hil.includes(item.nameTag)) {
+                log(`${player.name} -> anti-nbt 2: ${item.nameTag}`)
+                mcl.getItemContainer(player).setItem(index)
+            }
+        }
+
+        // anti admin items
+        if (d?.antiadminitems && !mcl.isOp(player)) {
+            const bbl = badBlocksList
+            if (bbl.includes(item.typeId)) mcl.getItemContainer(player).setItem(index)
+        }
+
+        // anti illegal enchants
+        if (d?.antiillegalenchant) {
+            const en = item.getComponent("minecraft:enchantable")
+            if (en) {
+                const t = en.getEnchantments()
+                for (let index3 = 0; index3 < t.length; index3++) {
+                    if (t[index3].level <= 5) continue
+
+                    log(`${player.name} -> anti-illegal-enchant: ${t[index3].type.id} ${t[index3].level}`)
+                    let item2 = new ItemStack(item.type, item.amount)
+                    item2.setLore(item.getLore())
+                    mcl.getItemContainer(player).setItem(index, item2)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @param {Player} player 
+ * @param {ItemStack} item 
+ * @param {Container} inventory 
+ * @param {number} index 
+ */
+export function addID(player, item, inventory, index) {
+    if (!item.isStackable && player.getGameMode() != GameMode.Creative) {
+        const idCycle = mcl.wGet('darkoak:idsystem') || 0
+        let lore = item.getLore()
+        let hasID = lore.some(line => /\[.*?\]/.test(line))
+        if (!hasID) {
+            const newID = `[${idCycle + 1}]`
+            lore.push(newID)
+            let newItem = new ItemStack(item.type, 1)
+            newItem = item
+            newItem.setLore(lore)
+            inventory.setItem(index, newItem)
+            mcl.wSet('darkoak:idsystem', idCycle + 1)
         }
     }
 }
@@ -147,7 +284,7 @@ export function anticheatMain(player) {
     const gm = player.getGameMode()
     const dot = v.x * vd.x + v.z * vd.z
 
-    if (gm != "creative" && gm != "spectator") {
+    if (gm != "Creative" && gm != "Spectator") {
         // anti fly 1
         if (player.isFlying && d.antifly1) {
             log(`${player.name} -> anti-fly 1`)
@@ -179,32 +316,14 @@ export function anticheatMain(player) {
         log(`${player.name} -> anti-invalid 3`)
     }
 
-    // anti speed 1
-    if ((Math.abs(v.x) >= 3 || Math.abs(v.z) >= 3) && d.antispeed1) {
-        log(`${player.name} -> speed 1`)
-    }
-
     // anti speed 2
     if ((Math.abs(v.x) >= 10 || Math.abs(v.z) >= 10) && d.antispeed1) {
         log(`${player.name} -> speed 2`)
-        player.applyKnockback({ x: v.x * -1, z: v.z * -1 }, 0)
+        mcl.stopPlayer(player)
     }
 
-    // anti illegal enchant
-    const held = mcl.getHeldItem(player)
-    if (!held || !d.antiillegalenchant) return
+    if (d?.antidupe2) {
 
-    /**@type {ItemEnchantableComponent} */
-    const en = held.getComponent("minecraft:enchantable")
-    if (!en) return
-    const t = en.getEnchantments()
-    for (let index = 0; index < t.length; index++) {
-        if (t[index].level <= 5) continue
-
-        log(`${player.nameTag} -> anti-illegal-enchant: ${t[index].type.id} ${t[index].level}`)
-        let item = new ItemStack(held.type, held.amount)
-        item.setLore(held.getLore())
-        mcl.getItemContainer(player).setItem(player.selectedSlotIndex, item)
     }
 }
 
@@ -219,7 +338,7 @@ export function log(mess) {
     if (da.notify) {
         system.runTimeout(() => mcl.adminMessage(`Anticheat: ${mess}`))
     }
-    mcl.wSet(`darkoak:log`, JSON.stringify(data2))
+    mcl.jsonWSet(`darkoak:log`, data2)
 
     const player = mcl.getPlayer(mess.split('->').at(0).trim())
     if (player && da.strike) {

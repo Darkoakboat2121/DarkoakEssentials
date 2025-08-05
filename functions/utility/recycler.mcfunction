@@ -1,0 +1,1 @@
+tp @e[type=item,name="§aCommunity§r"] @s[hasitem={item=darkoak:community,quantity=0}]

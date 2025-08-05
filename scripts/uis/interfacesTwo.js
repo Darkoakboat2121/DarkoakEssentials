@@ -496,6 +496,31 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
+    bui.toggle(f, 'Anti-NBT 1', d?.antinbt)
+    bui.label(f, 'Checks If The Player Has An Item They Shouldn\'t Have At All And Clears It')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Dupe 1', d?.antidupe1)
+    bui.label(f, 'Adds An ID To Each Non-stackable Item And Checks If Two ID\'s Are The Same, Also Removes Duped Items')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-NBT 2', d?.antinbt2)
+    bui.label(f, 'Bans Items That Are Named The Same As Common Hacked Kits And NBT Exploits')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Dupe 2', d?.antidupe2)
+    bui.label(f, 'Does Not Work Yet')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Admin-Items', d?.antiadminitems, 'This Module Does Not Log')
+    bui.label(f, 'Bans Items That Should Only Be Used By Admins, Like Command Blocks')
+
+    bui.divider(f)
+
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
@@ -521,6 +546,11 @@ export function anticheatSettings(player) {
             strike: e[18],
             anticrasher1: e[19],
             antinuker2: e[20],
+            antinbt: e[21],
+            antidupe1: e[22],
+            antinbt2: e[23],
+            antidupe2: e[24],
+            antiadminitems: e[25],
         })
     }).catch()
 }
@@ -902,14 +932,31 @@ export function landclaimAddPlayerUI(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
+        /**@type {{p1: {x: number, z: number}, p2: {x: number, z: number}, owner: string, players: string[]}} */
         let d = mcl.jsonWGet(`darkoak:landclaim:${player.name}`)
-        mcl.jsonWUpdate(`darkoak:landclaim:${player.name}`, 'players', d.players.push(pl[e[0]]))
+
+        let newPlayers = d.players
+        newPlayers.push(pl[e[0]])
+        mcl.jsonWSet(`darkoak:landclaim:${player.name}`, {
+            p1: d.p1,
+            p2: d.p2,
+            owner: d.owner,
+            players: newPlayers
+        })
     }).catch()
 }
 
 export function landclaimRemovePlayerUI(player) {
     let f = new ModalFormData()
+
+    /**@type {{p1: {x: number, z: number}, p2: {x: number, z: number}, owner: string, players: string[]}} */
     let d = mcl.jsonWGet(`darkoak:landclaim:${player.name}`)
+
+    if (!d.players || d.players.length == 0) {
+        player.sendMessage('§cYou Have No Allowed Players§r')
+        return
+    }
+
     bui.title(f, 'Remove Player')
 
     bui.dropdown(f, 'Player:', d.players)
@@ -1598,12 +1645,13 @@ export function adminAndPlayerListUI(player) {
     }
 
     bui.divider(f)
-    bui.header(f, 'All Players:')
+    bui.header(f, `All Players:`)
+    bui.label(f, `${world.getAllPlayers().length.toString()}/${players.length.toString()} Online`)
 
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
         let finalName = [player]
-        if (mcl.isHost(player)) finalName.push('[§gOwner§r]')
+        if (mcl.isHost(player)) finalName.push('[§gHost§r]')
         if (admins && admins.includes(player)) finalName.push('[§mAdmin§r]')
         if (mods && mods.includes(player)) finalName.push('[§uMod§r]')
         if (banned && banned.includes(player)) finalName.push('[§cBanned§r]')
@@ -1740,13 +1788,25 @@ export function crashPlayerUI(player) {
         const p = mcl.getPlayer(u[bui.formValues(evd)[0]])
         if (mcl.isDOBAdmin(p)) {
             mcl.adminMessage(`${player.name} Attempted To Crash Admin: ${p.name}`)
-            return
+            // return
         }
         let o = 0
         while (o++ < 100) {
-            if (p) p.sendMessage(`§a§k`)
-            if (p) p.sendMessage(`§a§k`)
-            if (p) p.sendMessage(`§a§k`)
+            if (p) {
+                p.addEffect('minecraft:instant_health', 10, {
+                    amplifier: 255,
+                    showParticles: true
+                })
+                p.sendMessage(`§a§k`)
+                p.sendMessage(`§a§k`)
+                p.sendMessage(`§a§k`)
+                p.sendMessage(`§a§k`)
+                p.sendMessage(`§a§k`)
+                p.sendMessage(`§a§k`)
+                p.sendMessage(`§a§k`)
+                p.sendMessage(`§a§k`)
+                p.sendMessage(`§a§k`)
+            }
         }
     })
 }
@@ -1886,12 +1946,12 @@ export function signsPlusMainUI(player) {
     const wdr = mcl.getDataByLocation('darkoak:signsplus:', 'location', sign.location)
     let wd = {}
     if (wdr) wd = JSON.parse(wdr.value)
-    
+
     bui.title(f, 'Signs+')
-    
+
     bui.toggle(f, 'Spin?', wd?.spin?.enabled) // 0
     bui.toggle(f, 'Clockwise?', wd?.spin?.clockwise) // 1
-    
+
     bui.divider(f)
     bui.label(f, 'Line 1 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
     bui.textField(f, 'Line 1, Frame 1', 'Example: &-------', wd?.line1?.f1 || lines[0]) // 2
@@ -2005,6 +2065,205 @@ export function whitelistUI(player) {
     })
 }
 
+/**
+ * @param {Player} player 
+ */
+export function dimensionBansUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Dimension Bans')
+    const d = mcl.jsonWGet('darkoak:dimensionbans')
+
+    bui.toggle(f, 'Ban The Nether?', d?.nether)
+    bui.toggle(f, 'Ban The End?', d?.end)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.worldSettingsUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        mcl.jsonWSet('darkoak:dimensionbans', {
+            nether: e[0],
+            end: e[1],
+        })
+    })
+}
+
+export function modalTextUIMakerUI(player) {
+    let f = new ActionFormData()
+
+    bui.title(f, 'Modal UI Maker')
+
+    bui.button(f, 'Add New UI')
+    bui.button(f, 'Modify An UI')
+    bui.button(f, 'Delete An UI')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.UIMakerUI(player)
+            return
+        }
+        switch (evd.selection) {
+            case 0:
+                modalTextAddingUI(player)
+                break
+            case 1:
+                modalTextModifyPickerUI(player)
+                break
+            case 2:
+                modalTextDeleterUI(player)
+                break
+        }
+    })
+}
+
+export function modalTextAddingUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Add New Modal UI')
+
+    bui.textField(f, 'UI Title', 'Example: Apply Knockback')
+    bui.textField(f, 'Tag To Open', 'Example: knockbackui')
+
+    bui.label(f, 'Examples:\nlabel|text here\nheader|text here\ntoggle|text here|true|text here\ntextfield|text here|text here|text here|text here\ndropdown|text here|option 1, option 2, option 3|0|text here\nslider|text here|1|10|1|1|text here\ncommand|text here, uses $number$ to get another ui elements value')
+
+    bui.textField(f, 'UI Text') // 2
+    bui.textField(f, 'UI Text') // 3
+    bui.textField(f, 'UI Text') // 4
+    bui.textField(f, 'UI Text') // 5
+    bui.textField(f, 'UI Text') // 6
+    bui.textField(f, 'UI Text') // 7
+    bui.textField(f, 'UI Text') // 8
+    bui.textField(f, 'UI Text') // 9
+    bui.textField(f, 'UI Text') // 10
+    bui.textField(f, 'UI Text') // 11
+    bui.textField(f, 'UI Text') // 12
+    bui.textField(f, 'UI Text') // 13
+    
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            modalTextUIMakerUI(player)
+            return
+        }
+
+        const e = bui.formValues(evd)
+        mcl.jsonWSet(`darkoak:ui:modaltext:${mcl.timeUuid()}`, {
+            title: e[0],
+            tag: e[1],
+            lines: [
+                e[2],
+                e[3],
+                e[4],
+                e[5],
+                e[6],
+                e[7],
+                e[8],
+                e[9],
+                e[10],
+                e[11],
+                e[12],
+                e[13],
+            ]
+        })
+    })
+}
+
+export function modalTextModifyPickerUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Modify Picker')
+
+    const uis = mcl.jsonListGetBoth('darkoak:ui:modaltext:')
+
+    for (let index = 0; index < uis.length; index++) {
+        const ui = uis[index].value
+        bui.button(f, `${ui.title}\n${ui.tag}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            modalTextUIMakerUI(player)
+            return
+        }
+
+        modalTextModifyUI(player, uis[evd.selection])
+    })
+}
+
+/**
+ * 
+ * @param {Player} player 
+ * @param {{id: string, value: {title: string, tag: string, lines: string[]}}} ui 
+ */
+export function modalTextModifyUI(player, ui) {
+    let f = new ModalFormData()
+    bui.title(f, 'Modify A Modal UI')
+
+    bui.textField(f, 'UI Title', 'Example: Apply Knockback', ui.value.title)
+    bui.textField(f, 'Tag To Open', 'Example: knockbackui', ui.value.tag)
+
+    bui.label(f, 'Examples:\nlabel|text here\nheader|text here\ntoggle|text here|true|text here\ntextfield|text here|text here|text here|text here\ndropdown|text here|option 1, option 2, option 3|0|text here\nslider|text here|1|10|1|1|text here\ncommand|text here, uses $number$ to get another ui elements value')
+
+    bui.textField(f, 'UI Text', '', ui.value.lines[0]) // 2
+    bui.textField(f, 'UI Text', '', ui.value.lines[1]) // 3
+    bui.textField(f, 'UI Text', '', ui.value.lines[2]) // 4
+    bui.textField(f, 'UI Text', '', ui.value.lines[3]) // 5
+    bui.textField(f, 'UI Text', '', ui.value.lines[4]) // 6
+    bui.textField(f, 'UI Text', '', ui.value.lines[5]) // 7
+    bui.textField(f, 'UI Text', '', ui.value.lines[6]) // 8
+    bui.textField(f, 'UI Text', '', ui.value.lines[7]) // 9
+    bui.textField(f, 'UI Text', '', ui.value.lines[8]) // 10
+    bui.textField(f, 'UI Text', '', ui.value.lines[9]) // 11
+    bui.textField(f, 'UI Text', '', ui.value.lines[10]) // 12
+    bui.textField(f, 'UI Text', '', ui.value.lines[11]) // 13
+    
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            modalTextModifyPickerUI(player)
+            return
+        }
+
+        const e = bui.formValues(evd)
+        mcl.jsonWSet(ui.id, {
+            title: e[0],
+            tag: e[1],
+            lines: [
+                e[2],
+                e[3],
+                e[4],
+                e[5],
+                e[6],
+                e[7],
+                e[8],
+                e[9],
+                e[10],
+                e[11],
+                e[12],
+                e[13],
+            ]
+        })
+    })
+}
+
+export function modalTextDeleterUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Modal UI Deleter')
+
+    const uis = mcl.jsonListGetBoth('darkoak:ui:modaltext:')
+
+    for (let index = 0; index < uis.length; index++) {
+        const ui = uis[index].value
+        bui.button(f, `${ui.title}\n${ui.tag}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            modalTextUIMakerUI(player)
+            return
+        }
+
+        mcl.wRemove(uis[evd.selection].id)
+    })
+}
+
 export function darkoakboatBio(player) {
     let f = new ActionFormData()
     bui.title(f, 'Darkoakboat2121')
@@ -2039,6 +2298,27 @@ export function tygerBio(player) {
     bui.title(f, 'Tygerklawk')
 
     bui.label(f, 'Forgot most commands lol')
+
+    bui.show(f, player)
+}
+
+export function wertwertBio(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Wertwert3612')
+
+    bui.label(f, 'Long Live Hex!')
+    bui.divider(f)
+    bui.label(f, `
+Stil testing  the add-on for Minecraft and holy, it's been a wild ride. I mean, I've seen some crazy stuff go down, and I'm not even talking about the exploits yet. Just watching it break in all sorts of ridiculous ways is entertainment enough. Like, I've come up with some new and innovative ways to make it crash, and it's honestly been a blast.
+
+I'm hyped for the thrill of testing, the agony of watching it poop the bed, and the ecstasy of finally finding that one darn exploit that's been hiding in the shadows. It's like a game of cat and mouse, where I'm both the cat and the mouse, and I'm gonna crush it. Who needs a stable add-on when you can have the satisfaction of breaking it in creative, messed-up ways?
+
+I've never been a fan of testing, but I've learned to appreciate the little victories. Like when I finally find that one exploit that's been driving me crazy for hours. Or when I manage to fix a bug that's been causing problems for players. Those moments make all the frustration worth it, and I'm not even gonna lie.
+
+But let's be real, most of the time I'm just throwing my keyboard across the room, screaming at the top of my lungs, and wondering why the heck I even bother. My computer is covered in scratches, my mouse is held together with duct tape, and I'm pretty sure I've lost all feeling in my fingers from smashing them on the desk. It's a miracle I still have a functioning monitor, tbh.
+
+- Wertwert3612
+`)
 
     bui.show(f, player)
 }

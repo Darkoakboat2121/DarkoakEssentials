@@ -2,7 +2,7 @@ import { world, system, Player, ChatSendBeforeEvent, PlayerSpawnAfterEvent } fro
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
-import { boatTypes, crasherSymbol, crasherSymbol2, emojis, professionalism, replacer, version } from "./data/arrays"
+import { boatTypes, crasherSymbol, crasherSymbol2, emojis, professionalism, replacer, specialRanks, version } from "./data/arrays"
 import { landclaimMainUI, queueMessageUI } from "./uis/interfacesTwo"
 import { log } from "./world/anticheat"
 
@@ -28,7 +28,7 @@ export function chatSystem(evd) {
         const msgCmd = message.trim().split(' ', 1)[0]
         const pCmd = p.message.trim().split(' ', 1)[0]
         if (msgCmd !== pCmd) continue
-        
+
         if (!p.tag || player.hasTag(p.tag)) {
             if (p.command.startsWith('#')) {
                 hashtag(p.command, player)
@@ -97,12 +97,10 @@ export function chatSystem(evd) {
     const boat = mcl.wGet('darkoak:boatcatcher:boat')
     if (boat) {
         if (message.trim() == 'CATCH') {
-            const bac = mcl.jsonPGet(player, 'darkoak:boatcatcher')
-            if (!bac) {
-                mcl.jsonPSet(player, 'darkoak:boatcatcher', {
-                    
-                })
-            }
+            let bac = mcl.jsonPGet(player, 'darkoak:boatcatcher') || {}
+
+            bac[boat] = (bac[boat] || 0) + 1
+            mcl.jsonPSet(player, 'darkoak:boatcatcher', bac)
 
             world.sendMessage(`§a${player.name} Caught A(n) ${boat}!`)
             mcl.wRemove('darkoak:boatcatcher:boat')
@@ -138,9 +136,12 @@ export function chatSystem(evd) {
     }
 
     let formattedMessage = message
-    for (let index = 0; index < emojis.length; index++) {
-        const e = emojis[index]
-        formattedMessage = formattedMessage.replaceAll(e.m, e.e)
+
+    if (mcl.jsonWGet('darkoak:community:general').emojisenabled) {
+        for (let index = 0; index < emojis.length; index++) {
+            const e = emojis[index]
+            formattedMessage = formattedMessage.replaceAll(e.m, e.e)
+        }
     }
 
     const ocs = mcl.jsonWGet('darkoak:chat:other')
@@ -158,7 +159,12 @@ export function chatSystem(evd) {
 
     /**@type {Array<string>} */
     const tags = player.getTags()
-    let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => tag.replace('rank:', ''))
+    let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => {
+
+        if (specialRanks[tag]) return `§r${specialRanks[tag]}`
+
+        return tag.replace('rank:', '')
+    })
     let nameColors = tags.filter(tag => tag.startsWith('namecolor:')).map(tag => tag.replace('namecolor:', ''))
     let chatColors = tags.filter(tag => tag.startsWith('chatcolor:')).map(tag => tag.replace('chatcolor:', ''))
 
@@ -176,7 +182,16 @@ export function chatSystem(evd) {
     nameColors = nameColors.length ? nameColors : [``]
     chatColors = chatColors.length ? chatColors : [``]
 
-    const text = `${clanS}${clan}${clanE}${cr.start}${replacer(player, ranks.join(cr.middle))}${cr.end}§r§f${nameColors.join('')}${player.name}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage}`
+    const nnEnabled = mcl.jsonWGet('darkoak:nicknamesettings')?.enabled
+
+    let pName = player.name
+    const nick = mcl.jsonPGet(player, 'darkoak:nickname')
+    if (nick && nnEnabled) {
+        const colorNum = Math.abs(world.getAllPlayers().findIndex(e => e.name === player.name)) % 10
+        pName = `<§${colorNum}${player.name.slice(0, 4)}§f>${nick?.nick}`
+    }
+
+    const text = `${clanS}${clan}${clanE}${cr.start}${replacer(player, ranks.join(cr.middle))}${cr.end}§r§f${nameColors.join('')}${pName}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage}`
 
     if (ocs.proximity) {
         system.runTimeout(() => {
@@ -340,29 +355,35 @@ export function chatGames() {
  * @param {object} ocs 
  */
 export function nametag(p, ocs) {
-    if (ocs.nametag && !ocs.healthDisplay) {
-        system.runTimeout(() => {
-            p.nameTag = `${p.name}\n${mcl.jsonPGet(p, 'darkoak:antispam').message}`
-        })
-    }
-    if (ocs.healthDisplay && !ocs.nametag) {
-        system.runTimeout(() => {
-            p.nameTag = `${p.name}\n§aHealth: ${mcl.healthValue(p)}§r§f`
-        })
-    }
-    if (ocs.healthDisplay && ocs.nametag) {
-        system.runTimeout(() => {
-            p.nameTag = `${p.name}\n§aHealth: ${mcl.healthValue(p)}§r§f\n${mcl.jsonPGet(p, 'darkoak:antispam').message}`
-        })
-    }
-    if (!ocs.healthDisplay && !ocs.nametag) {
-        system.runTimeout(() => {
-            p.nameTag = p.name
-        })
-    }
+
+    let cr = mcl.jsonWGet('darkoak:chatranks')
+
+    const tags = p.getTags()
+
+    let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => {
+        const spRanks = specialRanks
+        for (let index = 0; index < spRanks.length; index++) {
+            if (tag === spRanks[index]) {
+                tag.replace(tag, `§r${spRanks[tag]}`)
+            }
+        }
+        tag.replace('rank:', '')
+    })
+
+    ranks = ranks.length ? ranks : [cr.defaultRank]
+
+    let lines = [p.name]
+
+    if (ocs?.healthDisplay) lines.push(`§aHealth: ${mcl.healthValue(p)}§r§f`)
+    if (ocs?.nametag) lines.push(mcl.jsonPGet(p, 'darkoak:antispam').message)
+    if (ocs?.nametagRanks) lines.push(`${cr.start}${replacer(p, ranks.join(cr.middle))}${cr.end}`)
+
+    system.runTimeout(() => {
+        p.nameTag = lines.join('\n')
+    })
 }
 
-function landclaimCheck(a, b) {
+export function landclaimCheck(a, b) {
     // a and b are objects with p1 and p2, each having x and z
     const aMinX = Math.min(a.p1.x, a.p2.x)
     const aMaxX = Math.max(a.p1.x, a.p2.x)
@@ -384,20 +405,20 @@ function landclaimCheck(a, b) {
 export function messageQueueAndPlayerList(evd) {
     const player = evd.player
 
-    let players = mcl.getPlayerList() || []
-    if (!players.includes(player.name)) {
-        players.push(player.name)
-        mcl.jsonWSet('darkoak:playerlist', players)
-    }
-    
-    let admins = mcl.getAdminList() || []
-    if (mcl.isDOBAdmin(player) && !admins.includes(player.name)) {
-        admins.push(player.name)
-        mcl.jsonWSet('darkoak:adminlist', admins)
-    } else if (!mcl.isDOBAdmin(player) && admins.includes(player.name)) {
-        admins = admins.filter(e => e !== player.name)
-        mcl.jsonWSet('darkoak:adminlist', admins)
-    }
+    // let players = mcl.getPlayerList() || []
+    // if (!players.includes(player.name)) {
+    //     players.push(player.name)
+    //     mcl.jsonWSet('darkoak:playerlist', players)
+    // }
+
+    // let admins = mcl.getAdminList() || []
+    // if (mcl.isDOBAdmin(player) && !admins.includes(player.name)) {
+    //     admins.push(player.name)
+    //     mcl.jsonWSet('darkoak:adminlist', admins)
+    // } else if (!mcl.isDOBAdmin(player) && admins.includes(player.name)) {
+    //     admins = admins.filter(e => e !== player.name)
+    //     mcl.jsonWSet('darkoak:adminlist', admins)
+    // }
 
     const messages = mcl.listGetBoth('darkoak:queuemessage:')
     for (let index = 0; index < messages.length; index++) {

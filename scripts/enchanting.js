@@ -32,7 +32,8 @@ export function enchantOnHit(evd) {
                 break
             case 'Dash':
                 const lk = player.getViewDirection()
-                player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
+                const an = amount / nerf
+                mcl.knockback(player, lk.x * an, lk.z * an, 0)
                 break
             case 'Extinguish':
                 player.extinguishFire(false)
@@ -75,7 +76,8 @@ export function enchantOnDeathKill(evd) {
                     break
                 case 'Dash':
                     const lk = entity.getViewDirection()
-                    entity.applyKnockback(lk.x, lk.z, 0, amount / nerf)
+                    const an = amount / nerf
+                    mcl.knockback(player, lk.x, lk.z, an)
                     break
                 case 'Extinguish':
                     entity.extinguishFire(false)
@@ -108,7 +110,8 @@ export function enchantOnDeathKill(evd) {
                     break
                 case 'Dash':
                     const lk = player.getViewDirection()
-                    player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
+                    const an = amount / nerf
+                    mcl.knockback(player, lk.x * an, lk.z * an, 0)
                     break
                 case 'Extinguish':
                     player.extinguishFire(false)
@@ -143,11 +146,15 @@ export function enchantOnUse(evd) {
                 world.getDimension(player.dimension.id).createExplosion(player.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                 break
             case 'Extra Damage':
-                player.applyDamage(amount)
+                const damaged = player.getEntitiesFromViewDirection({
+                    maxDistance: 6.8
+                })
+                damaged[0]?.entity?.applyDamage(amount)
                 break
             case 'Dash':
                 const lk = player.getViewDirection()
-                player.applyKnockback({x: lk.x * amount, z: lk.z * amount}, lk.y)
+                const an = amount
+                mcl.knockback(player, lk.x * an, lk.z * an, lk.y)
                 break
             case 'Extinguish':
                 player.extinguishFire(false)
@@ -186,7 +193,8 @@ export function enchantOnJump(player) {
                 break
             case 'Dash':
                 const lk = player.getViewDirection()
-                player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
+                const an = amount / nerf
+                mcl.knockback(player, lk.x * an, lk.z * an, 0)
                 break
             case 'Extinguish':
                 player.extinguishFire(false)
@@ -227,7 +235,8 @@ export function enchantOnDamaged(evd) {
                 break
             case 'Dash':
                 const lk = player.getViewDirection()
-                player.applyKnockback(lk.x, lk.z, amount / nerf, 0)
+                const an = amount / nerf
+                mcl.knockback(player, lk.x * an, lk.z * an, 0)
                 break
             case 'Extinguish':
                 player.extinguishFire(false)

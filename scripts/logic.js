@@ -10,9 +10,9 @@ export class mcl {
     }
 
     /**Returns a random number between 0 and the inputted number
-     * @param {number} high
+     * @param {number} high Defaults to 10
     */
-    static randomNumber(high) {
+    static randomNumber(high = 10) {
         return Math.floor(Math.random() * high)
     }
 
@@ -26,12 +26,12 @@ export class mcl {
     }
 
     /**Returns a random string based on the inputted length and whether to include numbers
-     * @param {boolean} num
+     * @param {boolean} numbers Whether to include numbers in the string, defaults to false
      * @param {number} length 
     */
-    static randomString(length, num) {
+    static randomString(length, numbers = false) {
         let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-        if (num === true) {
+        if (numbers === true) {
             characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
         }
         let result = ''
@@ -117,8 +117,9 @@ export class mcl {
         let u = []
         for (let index = 0; index < array.length; index++) {
             const num = array[index]
-            system.runTimeout(() => {
+            let g = system.runTimeout(() => {
                 u.push(num)
+                system.clearRun(g)
             }, num)
         }
         return u
@@ -181,6 +182,19 @@ export class mcl {
     static wRemove(id) {
         try {
             world.setDynamicProperty(id)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /**Removes / Resets a player dynamic property
+     * @param {Player} player 
+     * @param {string} id 
+     */
+    static pRemove(player, id) {
+        try {
+            mcl.pSet(player, id, undefined)
             return true
         } catch {
             return false
@@ -392,23 +406,21 @@ export class mcl {
     }
 
     /**Returns an array of all the online players names
-     * @param {string | undefined} tag If tag is defined, it returns all online players with the inputted tag
+     * @param {string} tag If tag is defined, it returns all online players with the inputted tag
     */
-    static playerNameArray(tag) {
-        if (tag === undefined) {
-            let u = []
-            let players = world.getAllPlayers()
-            for (let index = 0; index < players.length; index++) {
-                u.push(players[index].name)
-            }
-            return u
+    static playerNameArray(tag = undefined) {
+        let players = []
+        if (tag) {
+            players = world.getPlayers({ tags: [tag] })
         } else {
-            let u = []
-            for (const p of world.getPlayers({ tags: [tag] })) {
-                u.push(p.name)
-            }
-            return u
+            players = world.getAllPlayers()
         }
+
+        let u = []
+        for (let index = 0; index < players.length; index++) {
+            u.push(players[index].name)
+        }
+        return u
     }
 
     /**Returns an array of a inputted players effects
@@ -477,10 +489,32 @@ export class mcl {
     }
 
     /**Returns true if the player has the admin tag or if the player is the host
-     * @param {Player} player 
+     * @param {Player | string} player 
      */
     static isDOBAdmin(player) {
-        if (player.hasTag('darkoak:admin') || mcl.isHost(player)) {
+        const p = (typeof player === 'string') ? mcl.getPlayer(player) : player
+        if (!p) return false
+        if (p.hasTag('darkoak:admin') || mcl.isHost(p)) {
+            system.runTimeout(() => {
+                p.addTag('darkoak:admin')
+            })
+            return true
+        } else {
+            return false
+        }
+    }
+
+    /**Returns true if the player has the mod tag or if the player is the host
+     * @param {Player | string} player 
+     * @returns 
+     */
+    static isDOBMod(player) {
+        const p = (typeof player === 'string') ? mcl.getPlayer(player) : player
+        if (!p) return false
+        if (p.hasTag('darkoak:mod') || mcl.isHost(p)) {
+            system.runTimeout(() => {
+                p.addTag('darkoak:mod')
+            })
             return true
         } else {
             return false
@@ -494,12 +528,8 @@ export class mcl {
         if (mcl.isOp(player) === true) {
             if (player.getGameMode() == 'creative') {
                 return true
-            } else {
-                return false
-            }
-        } else {
-            return false
-        }
+            } else return false
+        } else return false
     }
 
     /**Sends a private message to admins
@@ -507,7 +537,6 @@ export class mcl {
      */
     static adminMessage(message) {
         const players = world.getPlayers({ tags: ['darkoak:admin'] })
-        if (players.length == 0) return world.sendMessage(`§cAdmin Message:§r§f ${message}`)
         for (let index = 0; index < players.length; index++) {
             players[index].sendMessage(`§cAdmin Message:§r§f ${message}`)
         }
@@ -527,8 +556,7 @@ export class mcl {
      * @returns {number}
      */
     static getScoreOld(player, objective) {
-        if (!world.scoreboard.getObjective(objective)) return 0
-        return world.scoreboard.getObjective(objective).getScore(player) || 0
+        return world.scoreboard.getObjective(objective)?.getScore(player) || 0
     }
 
     /**Returns the held item
@@ -536,9 +564,7 @@ export class mcl {
      * @returns {ItemStack | undefined}
      */
     static getHeldItem(player) {
-        /**@type {Container} */
-        const container = player.getComponent(EntityComponentTypes.Inventory).container
-        return container.getItem(player.selectedSlotIndex)
+        return player.getComponent(EntityComponentTypes.Inventory).container.getItem(player.selectedSlotIndex)
     }
 
     /**Advanced container inventory
@@ -624,10 +650,11 @@ export class mcl {
     }
 
     /**Converts inputted seconds to tick value
-     * @param {number} seconds 
+     * @param {number} seconds Defaults to 1 second
+     * @example mcl.secondsToTicks(5) // 100
      * @returns {number}
      */
-    static secondsToTicks(seconds) {
+    static secondsToTicks(seconds = 1) {
         return seconds * 20
     }
 
@@ -671,7 +698,7 @@ export class mcl {
      * @param {Dimension} dimension 
      * @returns {Entity[]}
      */
-    static getEntityByTypeId(typeId, dimension) {
+    static getEntityByTypeId(typeId, dimension = { id: 'overworld' }) {
         return world.getDimension(dimension.id).getEntities({ type: typeId })
     }
 
@@ -708,7 +735,7 @@ export class mcl {
      * @param {string} dimension 
      * @param {{name: string, tag: string}} param1 
      */
-    static getEntityFiltered(dimension, { name, tag }) {
+    static getEntityFiltered(dimension = 'overworld', { name, tag }) {
         const entities = world.getDimension(dimension).getEntities()
         for (let index = 0; index < entities.length; index++) {
             const e = entities[index]
@@ -898,7 +925,8 @@ export class mcl {
     }
 
     /**Gets a block based on the specified location and dimension
-     * @param {{x: number, y: number, z: number}} location 
+     * @param {{x: number, y: number, z: number}} location Location of the block
+     * @param {string} [dimension='overworld'] Dimension to get the block from, defaults to 'overworld'
      */
     static getBlock(location, dimension = 'overworld') {
         try {
@@ -906,5 +934,16 @@ export class mcl {
         } catch {
             return undefined
         }
+    }
+
+    /**
+     * 
+     * @param {Player} player 
+     * @param {number} x 
+     * @param {number} z 
+     * @param {number} y 
+     */
+    static knockback(player, x, z, y) {
+        player.applyKnockback({x: x, z: z}, y)
     }
 }

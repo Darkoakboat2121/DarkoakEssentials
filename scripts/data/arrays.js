@@ -38,6 +38,49 @@ export const preBannedList = [
     'xsemgamingYTx', //Basic, op abuse
     'Diamondkid 7231', //Above average
     'Mario X082', //Basic
+    'Th3PlayzAlt', //Racism
+    'DarkLord126936', //Basic / Auto-clicker
+    'ANGELOSO YT', //Involved in backdooring
+    'GunxturnoYT', //Racism
+    'GamerGod9289', //Basic (if you are looking for a place to try them use galaxite)
+    'Ner0TheZer08703', //Basic (How the hell can I use horion for over 5 minutes in hive and not get banned but my friend gets permanent ban for using a client not even for backing)
+    'Chonkysausage62', //Basic (Lifeboats the best Its mad difficult to get banned)
+    'Z100k9281', //Basic (ive been playing lifeboat and the hive with horion)
+    'nuptunia', //Private client dev
+    'Moonlight2010PK', //Basic (Hive works Lifeboat Mineville I don't know about Cubecraft too risky since I always get a 30 day ban)
+    'awskr', //Basic (someone on lifeboat was using a chinese client and ive been dying to try and find it cause it just sounds so funny)
+    'Greenchip5490', //Basic (I used to on lifeboat)
+    'SHR1PMN0S3', //Basic (how did i get banned for fly on cubecraft? and i was using a good pc so how would i get banned? is it because my internet hasnt updated the client?)
+    'LJBATKID', //Basic (i got banned on cubecraft for exploiting)
+    'iQuazum', //Basic (Finna run the cubecraft again . Everytime I check in the 50-100  people leave and move lobby running from me)
+    'Fleeno1997', //Basic
+    'TwentyTwoCps', //Basic (cubecraft autodetects so u cant use it on there | and im perm banned on zeqa and galaxite)
+    'Tyme2012', //Basic (I got baned from galaxite for flying in creativ mode (lol))
+    'DOM4R14N', //Basic (the official ones, like hive, cubecraft, galaxite, lifeboat, i dont care tbh i only go in there to troll people plus i bought multiple microsoft accounts online from china so i have so many names)
+    'brampedgex', //Basic (10y ban instead of perma as if galaxite will exist at all in 10 years)
+    'RoastedCreeper9', //Basic (i got banned from galaxite for 10 years lmao)
+    'UpwindLeaf57868', //Basic (Infiniteaura only works on galaxite and realms)
+    'plopbob420', //Exploits
+    'WardenStar12', //Basic
+    'SpotTooth432794', //Basic
+    'GlowSquid135220', //Basic
+    'Adas7047', //Basic
+    'SquidGlow9460', //Alt
+    'x_II_II_x_hd', //Basic
+    'M Afzal8449', //Basic
+    'Walrus142131', //Basic
+    'Poem4320', //Basic
+    'FishyDev2918', //Basic
+    'Xcreeper129795', //Basic
+    'tokaimaru', //Basic
+    'MansourServer', //Basic
+    'MansourIsTired', //Alt
+    'XMansourPVP', //Alt
+    'MansourAura', //Alt
+    'ItzIceLime', //Alt
+    'Creeper195012', //Basic (aw man, then what hack client is as good as Toolbox? because horion server doesnt play along with lifeboat's anti-cheat)
+    'gervin4450', //Basic (anyone trying to hack on lifeboat w me)
+    'v1qwn9527', //Homophobia, racism, spamming cuss words
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -80,6 +123,8 @@ export const hackedItemsList = [
     '§g§lBucket NPC Command',
     '§g§lMovingBlock Minecart Command',
     '§g§lMovingBlock NPC Command',
+    '§1§l32K Horion Kit',
+    '§2§lOP Legit Horion Kit'
 ]
 
 export const worldProtectionBadItems = [
@@ -106,6 +151,28 @@ export const worldProtectionWater = [
     'minecraft:tropical_fish_bucket',
 ]
 
+export const hackedItemsVanilla = [
+    'minecraft:client_request_placeholder_block',
+    'minecraft:moving_block',
+    'minecraft:unknown'
+]
+
+/**Holds special rank images in F1 glyph */
+export const spranks = {
+    admin: '',
+    member: '',
+    mod: '',
+    helper: '',
+    owner: '',
+    tester: '',
+    idiot: '',
+    builder: '',
+    operate: '',
+    troll: '',
+    hacker: '',
+    donater: '',
+    vip: ''
+}
 
 /**
  * 
@@ -114,7 +181,6 @@ export const worldProtectionWater = [
  * @returns 
  */
 export function replacer(player, string) {
-    const view = player.getViewDirection()
     const loc = player.location
     const velo = player.getVelocity()
 
@@ -147,9 +213,6 @@ export function replacer(player, string) {
         .replaceAll('#t-seconds#', (system.currentTick / 20).toFixed(0))
         .replaceAll('#s-seconds#', mcl.wGet('darkoak:sseconds').toString())
         .replaceAll('#s-minutes#', mcl.wGet('darkoak:sminutes').toString().split('.')[0])
-        .replaceAll('#viewx#', view.x.toFixed(0))
-        .replaceAll('#viewy#', view.y.toFixed(0))
-        .replaceAll('#viewz#', view.z.toFixed(0))
         .replaceAll('#graphics#', player.graphicsMode.toString())
         .replaceAll('#input#', player.inputInfo.lastInputModeUsed.toString())
         .replaceAll('#time1#', `${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`)
@@ -157,6 +220,15 @@ export function replacer(player, string) {
         .replaceAll('#year#', time.getFullYear().toString())
         .replaceAll('#money#', mcl.getScore(player).toString())
 
+    try {
+        const view = player.getViewDirection()
+        formattedString = formattedString
+            .replaceAll('#viewx#', view.x.toFixed(0))
+            .replaceAll('#viewy#', view.y.toFixed(0))
+            .replaceAll('#viewz#', view.z.toFixed(0))
+    } catch {
+
+    }
 
     // emojis
     if (formattedString.includes(':')) {
@@ -508,6 +580,22 @@ export const boatTypes = [
     'Minecart???',
     'Saddle???',
 ]
+
+export const specialRanks = {
+    'rank:sp0': spranks.admin,
+    'rank:sp1': spranks.member,
+    'rank:sp2': spranks.mod,
+    'rank:sp3': spranks.helper,
+    'rank:sp4': spranks.owner,
+    'rank:sp5': spranks.tester,
+    'rank:sp6': spranks.builder,
+    'rank:sp7': spranks.donater,
+    'rank:sp8': spranks.hacker,
+    'rank:sp9': spranks.idiot,
+    'rank:sp10': spranks.operate,
+    'rank:sp11': spranks.troll,
+    'rank:sp12': spranks.vip,
+}
 
 /**
  * @param {Player} player
