@@ -81,6 +81,7 @@ export const preBannedList = [
     'Creeper195012', //Basic (aw man, then what hack client is as good as Toolbox? because horion server doesnt play along with lifeboat's anti-cheat)
     'gervin4450', //Basic (anyone trying to hack on lifeboat w me)
     'v1qwn9527', //Homophobia, racism, spamming cuss words
+    'xGAMEZAx', //Involved in backdooring
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
