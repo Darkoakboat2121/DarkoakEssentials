@@ -12,14 +12,14 @@ import { log } from "./world/anticheat"
 
 /**
  * @param {ChatSendBeforeEvent} evd
+ * @param {string} message 
+ * @param {Player} player 
  */
-export function chatSystem(evd) {
+export function chatSystem(evd = undefined, player, message) {
     const chat = mcl.jsonWGet('darkoak:scriptsettings')
     if (chat.chatmaster === true) return
 
-    evd.cancel = true
-    const player = evd.sender
-    const message = evd.message
+    if (evd) evd.cancel = true
 
     const commands = mcl.listGetValues('darkoak:command:')
     for (let index = 0; index < commands.length; index++) {
@@ -189,6 +189,20 @@ export function chatSystem(evd) {
     if (nick && nnEnabled) {
         const colorNum = Math.abs(world.getAllPlayers().findIndex(e => e.name === player.name)) % 10
         pName = `<§${colorNum}${player.name.slice(0, 4)}§f>${nick?.nick}`
+    }
+
+    if (d?.antistreamermode) {
+        pName = pName
+        .replace('B', 'Β')
+        .replace('A', 'Α')
+        .replace('E', 'Ε')
+        .replace('H', 'ʜ')
+        .replace('H', 'Η')
+        .replace('I', 'ɪ')
+        .replace('Y', 'ʏ')
+        .replace('K', 'Κ')
+        .replace('M', 'Μ')
+        .replace('N', 'Ν')
     }
 
     const text = `${clanS}${clan}${clanE}${cr.start}${replacer(player, ranks.join(cr.middle))}${cr.end}§r§f${nameColors.join('')}${pName}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage}`
@@ -373,6 +387,7 @@ export function nametag(p, ocs) {
     ranks = ranks.length ? ranks : [cr.defaultRank]
 
     let lines = [p.name]
+    if (ocs?.nonametags) lines = []
 
     if (ocs?.healthDisplay) lines.push(`§aHealth: ${mcl.healthValue(p)}§r§f`)
     if (ocs?.nametag) lines.push(mcl.jsonPGet(p, 'darkoak:antispam').message)

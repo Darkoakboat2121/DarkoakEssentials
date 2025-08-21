@@ -1,4 +1,4 @@
-import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes } from "@minecraft/server"
+import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { logcheck } from "../data/defaults"
@@ -50,7 +50,8 @@ export function antiFastPlace(evd) {
         }
     }
 
-    if (d.antiblockreach) {
+    if (d?.antiblockreach) {
+        if (block.typeId === 'minecraft:scaffolding') return
         const bl = block.location
         const pl = player.location
         const distance = Math.sqrt(
@@ -63,30 +64,62 @@ export function antiFastPlace(evd) {
             evd.cancel = true
         }
     }
+
+    if (d?.antiairplace) {
+        if (!block.above() && !block.below() && !block.east() && !block.west() && !block.north() && !block.south()) {
+            log(`${player.name} -> anti-air-place`)
+        }
+    }
 }
 
-// Anti killaura, works by checking the number of clicks in a small timeframe
+/**Anti killaura, works by checking the number of clicks in a small timeframe
+ * @param {EntityHitEntityAfterEvent} evd 
+ */
 export function antiCps(evd) {
     const player = evd.damagingEntity
     const d = mcl.jsonWGet('darkoak:anticheat')
-    if (!(player instanceof Player)) return
+    if (player.typeId != 'minecraft:player') return
+    if (!d?.antikillaura) return
 
-    const currentCPS = player.getDynamicProperty('darkoak:ac:cps') || 0
-    player.setDynamicProperty('darkoak:ac:cps', currentCPS + 1)
+    const currentCPS = mcl.pGet(player, 'darkoak:ac:cps') || 0
+    mcl.pSet(player, 'darkoak:ac:cps', currentCPS + 1)
 
-    if (!d.antikillaura) return
     if (currentCPS > 15) {
         log(`${player.name} -> anti-killaura (${currentCPS})`)
     }
 }
 
-let ticker = 0
+/**Anti reach
+ * @param {EntityHitEntityAfterEvent} evd 
+ */
+export function antiReach(evd) {
+    /**@type {Player} */
+    const player = evd.damagingEntity
+    if (player.typeId != 'minecraft:player') return
+    const hit = evd.hitEntity
+
+    const d = mcl.jsonWGet('darkoak:anticheat')
+    if(!d?.antireach) return
+
+    const bl = hit.location
+    const pl = player.location
+    const distance = Math.sqrt(
+        Math.pow(bl.x - pl.x, 2) +
+        Math.pow(bl.y - pl.y, 2) +
+        Math.pow(bl.z - pl.z, 2)
+    )
+    if (distance > 5.2) {
+        log(`${player.name} -> anti-reach\nDistance: ${distance.toString()}`)
+    }
+}
+
+let ticker4 = 0
 /**
  * @param {Player} player 
  */
 export function cpsTester(player) {
-    if (ticker <= 20) {
-        ticker += 1
+    if (ticker4 <= 20) {
+        ticker4 += 1
         return
     }
     mcl.pSet(player, 'darkoak:ac:cps', 0)
@@ -100,7 +133,7 @@ export function cpsTester(player) {
         log(`${player.name} -> anti-nuker`)
     }
     player.setDynamicProperty('darkoak:ac:blocksbroken', 0)
-    ticker = 0
+    ticker4 = 0
 }
 
 /**
@@ -140,7 +173,7 @@ export function antiDupeID(player) {
 
     const item = mcl.getHeldItem(player)
 
-    if (!item || item.isStackable || player.getGameMode() === GameMode.Creative) return
+    if (!item || item.isStackable || player.getGameMode() === GameMode.Creative || item.typeId === '') return
 
     const idCycle = mcl.wGet('darkoak:idsystem') || 0
 
@@ -284,7 +317,12 @@ export function anticheatMain(player) {
     const gm = player.getGameMode()
     const dot = v.x * vd.x + v.z * vd.z
 
-    if (gm != "Creative" && gm != "Spectator") {
+    const ppl = mcl.jsonWGet('darkoak:fired') || []
+    if (ppl.includes(player.name)) {
+        player.setOnFire(10, false)
+    }
+
+    if (gm != GameMode.Creative && gm != GameMode.Creative) {
         // anti fly 1
         if (player.isFlying && d.antifly1) {
             log(`${player.name} -> anti-fly 1`)
@@ -302,7 +340,7 @@ export function anticheatMain(player) {
     }
 
     // anti invalid movements 1
-    if (d.antiinvalid1 && player.isSneaking && player.isSprinting && !player.isFlying) {
+    if (d.antiinvalid1 && player.isSneaking && player.isSprinting && !player.isFlying && !player.isInWater) {
         log(`${player.name} -> anti-invalid 1`)
     }
 
@@ -344,7 +382,7 @@ export function log(mess) {
     if (player && da.strike) {
         const current = mcl.pGet(player, 'darkoak:strikes') || 0
         mcl.pSet(player, 'darkoak:strikes', current + 1)
-        if (current >= 3) {
+        if (current >= da?.strikeamount) {
             mcl.pSet(player, 'darkoak:strikes', 0)
             system.runTimeout(() => {
                 try {

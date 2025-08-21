@@ -1,5 +1,5 @@
 // first is minecraft resources
-import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType, StructureSaveMode } from "@minecraft/server"
+import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType, StructureSaveMode, EntityComponentTypes, CustomCommandStatus, CustomCommandError } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import { transferPlayer } from "@minecraft/server-admin"
 
@@ -121,7 +121,7 @@ world.afterEvents.entityDie.subscribe((evd) => {
 
 // Player Chat send
 world.beforeEvents.chatSend.subscribe((evd) => {
-    chat.chatSystem(evd)
+    chat.chatSystem(evd, evd.sender, evd.message)
 
     // system.runTimeout(() => {
     //     system.sendScriptEvent('darkoak:beforechatsend', JSON.stringify({
@@ -281,6 +281,7 @@ system.runInterval(() => {
         playerLister(player)
         worldProtection.dimensionBan(player)
         anticheat.dupeIDChecker(player)
+        worldSettings.verify(player)
     }
 
     // system.sendScriptEvent('darkoak:interval', JSON.stringify({
@@ -436,8 +437,93 @@ function dataEditor(evd) {
 function dataEditorBlock(evd) {
     if (evd.itemStack && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin') && evd.isFirstEvent) {
         evd.cancel = true
+        const bl = evd.block
+        const bi = bl.typeId
+        const perm = bl.permutation
         system.runTimeout(() => {
-            interfacesTwo.dataEditorBlockUI(evd.player, evd.block)
+
+            if (evd.player.isSneaking) {
+                if (bi.endsWith('stairs')) {
+
+                    let num = (perm.getState('weirdo_direction') + 1) % 5
+
+                    if (num === 4) {
+                        bl.setPermutation(perm.withState('upside_down_bit', !perm.getState('upside_down_bit')))
+                        bl.setPermutation(perm.withState('weirdo_direction', 0))
+                    } else {
+                        bl.setPermutation(perm.withState('weirdo_direction', num))
+                    }
+
+                } else if (bi.endsWith('slab')) {
+
+                    let tog = 'bottom'
+                    if (perm.getState('minecraft:vertical_half') === 'bottom') tog = 'top'
+                    bl.setPermutation(perm.withState('minecraft:vertical_half', tog))
+
+                } else if (
+                    bi.endsWith('command_block') || 
+                    bi.endsWith('piston') || 
+                    bi === 'minecraft:end_rod' || 
+                    bi === 'minecraft:lightning_rod' ||
+                    bi === 'minecraft:hopper' ||
+                    bi.endsWith('_head') ||
+                    bi.endsWith('_skull') ||
+                    bi === 'minecraft:dispenser' ||
+                    bi === 'minecraft:dropper' ||
+                    bi === 'minecraft:barrel'
+                ) {
+
+                    let num = (perm.getState('facing_direction') + 1) % 6
+                    bl.setPermutation(perm.withState('facing_direction', num))
+
+                } else if (bi.endsWith('button')) {
+
+                    bl.setPermutation(perm.withState('button_pressed_bit', !perm.getState('button_pressed_bit')))
+
+                } else if (bi.endsWith('standing_sign')) {
+
+                    let num = (perm.getState('ground_sign_direction') + 1) % 16
+                    bl.setPermutation(perm.withState('ground_sign_direction', num))
+
+                } else if (
+                    bi.endsWith('chest') || 
+                    bi.endsWith('furnace') || 
+                    bi === 'minecraft:end_portal_frame' || 
+                    bi.endsWith('powered_comparator') ||
+                    bi.endsWith('powered_repeater') ||
+                    bi.endsWith('anvil')
+                ) {
+
+                    let states = ['north', 'east', 'south', 'west']
+                    let current = perm.getState('minecraft:cardinal_direction')
+                    let idx = states.findIndex(dir => dir === current)
+                    let next = states[(idx + 1) % states.length]
+                    bl.setPermutation(perm.withState('minecraft:cardinal_direction', next))
+
+                } else if (bi === 'minecraft:bamboo') {
+
+                    let states = ['thick', 'thin']
+                    let current = perm.getState('bamboo_stalk_thickness')
+                    let idx = states.findIndex(dir => dir === current)
+                    let next = states[(idx + 1) % states.length]
+                    bl.setPermutation(perm.withState('bamboo_stalk_thickness', next))
+
+                } else if (
+                    bi === 'minecraft:bed' ||
+                    bi === 'minecraft:grindstone'
+                ) {
+
+                    let num = (perm.getState('direction') + 1) % 4
+                    bl.setPermutation(perm.withState('direction', num))
+
+                } else if (bi === 'minecraft:cauldron') {
+                    let num = (perm.getState('fill_level') + 1) % 7
+                    bl.setPermutation(perm.withState('fill_level', num))
+                }
+
+            } else {
+                interfacesTwo.dataEditorBlockUI(evd.player, bl)
+            }
         })
     }
 }
@@ -555,7 +641,7 @@ function gens() {
 let ticker = 0
 /**Ban system */
 function bans() {
-    if (ticker < 200) {
+    if (ticker < 100) {
         ticker++
         return
     }
@@ -563,12 +649,17 @@ function bans() {
     const p = world.getAllPlayers()[0]
     const d = mcl.jsonWGet('darkoak:anticheat')
 
-    if (d.prebans) {
+    if (d?.prebans) {
         const prebans = arrays.preBannedList
         for (let index = 0; index < prebans.length; index++) {
             const preban = prebans[index]
-            if (!mcl.getPlayer(preban)) continue
-            p.runCommand(`kick "${preban}"`)
+            const prep = mcl.getPlayer(preban)
+            if (!prep) continue
+            p.runCommand(`kick "${preban}" "You\'ve Been Prebanned From This Server, Apply To Be Removed From The List Here: https://discord.gg/cE8cYYeFFx"`)
+            transferPlayer(prep, { hostname: '127.0.0.0', port: 0 })
+            prep.sendMessage(`§a§k`)
+            prep.sendMessage(`§a§k`)
+            prep.sendMessage(`§a§k`)
         }
     }
 
@@ -588,8 +679,8 @@ function bans() {
         if (!data?.crash) {
             if (data?.soft) {
                 transferPlayer(gp, {
-                    hostname: '127.0.0.0', 
-                    port: 0 
+                    hostname: '127.0.0.0',
+                    port: 0
                 })
             } else {
                 p.runCommand(`kick "${data.player}" ${data?.message || ''}`)
@@ -1054,10 +1145,19 @@ function modalTextUIBuilder(playerToShow, ui) {
                 bui.label(f, parts[1])
                 break
             case 'header':
-                bui.header (f, parts[1])
+                bui.header(f, parts[1])
                 break
             case 'slider':
                 bui.slider(f, parts[1], parts[2], parts[3], parts[4], parts[5], parts[6])
+                break
+            case 'divider':
+                bui.divider(f)
+                break
+            case 'dropdown':
+                bui.dropdown(f, parts[1], parts[2].split(','), parts[3], parts[4])
+                break
+            case 'submit':
+                bui.submitButton(f, parts[1])
                 break
             case 'command':
                 commands.push(parts[1])
@@ -1141,8 +1241,9 @@ function playerLister(player) {
 function customSlashCommands(evd) {
 
     evd.customCommandRegistry.registerEnum('darkoak:dimensions', ['overworld', 'nether', 'end'])
+    evd.customCommandRegistry.registerEnum('darkoak:compare', ['==', '!=', '<', '>', '=<', '>='])
 
-    evd.customCommandRegistry.registerEnum('darkoak:moneyfunctions', ['add', 'remove', 'set'])
+    evd.customCommandRegistry.registerEnum('darkoak:moneyfunctions', ['add', 'remove', 'set', 'test'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:money',
         description: 'Command For Accessing The Money System',
@@ -1160,8 +1261,15 @@ function customSlashCommands(evd) {
                 type: CustomCommandParamType.Integer,
                 name: 'amount'
             }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:compare'
+            }
         ]
-    }, (evd, player, moneyfunctions, amount) => {
+    }, (evd, player, moneyfunctions, amount, compare) => {
+        let result = true
         system.runTimeout(() => {
             switch (moneyfunctions) {
                 case 'add':
@@ -1173,9 +1281,22 @@ function customSlashCommands(evd) {
                 case 'set':
                     mcl.setScore(player[0], amount)
                     break
+                case 'test':
+                    result = Boolean(Function(`return ${amount} ${compare} ${mcl.getScore(player[0])}`))
+                    break
             }
-            evd?.sourceEntity.sendMessage(`§a${player[0].name} Now Has $${mcl.getScore(player[0]).toString()}§r`)
         })
+        if (result) {
+            return {
+                status: CustomCommandStatus.Success,
+                message: `§a${player[0].name} Now Has $${mcl.getScore(player[0]).toString()}§r`
+            }
+        } else {
+            return {
+                status: CustomCommandStatus.Failure,
+                message: `Player: ${player[0].name}, Type: ${moneyfunctions}, Amount: ${amount}, Compare: ${compare}, Has: ${mcl.getScore(player[0])}, Result: ${result}`
+            }
+        }
     })
 
     evd.customCommandRegistry.registerCommand({
@@ -1772,7 +1893,7 @@ function customSlashCommands(evd) {
             for (let index = 0; index < players.length; index++) {
                 /**@type {Player} */
                 const player = players[index]
-                
+
                 switch (inventype) {
                     case 'save':
 
@@ -1798,7 +1919,7 @@ function customSlashCommands(evd) {
                             includeBlocks: false,
                             includeEntities: true
                         })
-                        
+
                         // clear, copy, and kill
 
                         break
@@ -1964,8 +2085,8 @@ function customSlashCommands(evd) {
         })
     })
 
-    evd.customCommandRegistry.registerEnum('darkoak:tpatypes', ['to', 'ac', 'toggle'])
-    
+    evd.customCommandRegistry.registerEnum('darkoak:tpatypes', ['to', 'ac'])
+
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:tpa',
         description: 'Manage TPA Requests',
@@ -1975,8 +2096,6 @@ function customSlashCommands(evd) {
                 type: CustomCommandParamType.Enum,
                 name: 'darkoak:tpatypes'
             },
-        ],
-        optionalParameters: [
             {
                 type: CustomCommandParamType.PlayerSelector,
                 name: 'player'
@@ -1987,18 +2106,82 @@ function customSlashCommands(evd) {
         const runner = evd?.sourceEntity
         if (!runner) return
 
+        /**@type {Player} */
+        const tpto = players[0]
+
+        const d = mcl.jsonWGet('darkoak:tpa')
+        if (!d?.enabled) {
+            runner.sendMessage('§cTPA Is Disabled§r')
+            return
+        }
+
         system.runTimeout(() => {
             switch (type) {
                 case 'to':
-                    
+                    mcl.pSet(tpto, 'darkoak:tpr', runner.name)
+                    tpto.sendMessage(`§a${runner.name} Wants To Tp To You! Use "/tpa ac" To Accept`)
                     break
                 case 'ac':
-
-                    break
-                case 'toggle':
-
+                    const player = mcl.getPlayer(mcl.pGet(runner, 'darkoak:tpr'))
+                    if (player && player.name === tpto.name) {
+                        player.teleport(runner.location)
+                        player.sendMessage('§aYour TPA Request Was Accepted!§r')
+                    }
                     break
             }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:m',
+        description: 'Send A Message In Chat',
+        permissionLevel: CommandPermissionLevel.Any,
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.String,
+                name: 'message_or_nothing'
+            }
+        ]
+    }, (evd, message) => {
+        system.runTimeout(() => {
+            if (!evd?.sourceEntity) return
+            if (message) {
+                chat.chatSystem(undefined, evd?.sourceEntity, message)
+            } else {
+                interfacesTwo.messageSender(evd?.sourceEntity)
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:swap',
+        description: 'Swaps Two Players Inventory Slots',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player1'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'slot1'
+            },
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'player2'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'slot2'
+            },
+        ]
+    }, (evd, player1, slot1, player2, slot2) => {
+        system.runTimeout(() => {
+            /**@type {Player} */
+            const p1 = player1[0]
+            /**@type {Player} */
+            const p2 = player2[0]
+            p1.getComponent(EntityComponentTypes.Inventory).container.swapItems(slot1, slot2, p2.getComponent(EntityComponentTypes.Inventory).container)
         })
     })
 }

@@ -1,7 +1,9 @@
 import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent } from "@minecraft/server"
-import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
+import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
+import { bui } from "../uis/baseplateUI"
+import { transferPlayer } from "@minecraft/server-admin"
 
 // This file holds world settings and player tracking
 
@@ -113,7 +115,11 @@ export function interactCommandBlock(evd) {
         const p = JSON.parse(defaults[index])
         if (p.coords.x === loc.x && p.coords.y === loc.y && p.coords.z === loc.z) {
             system.runTimeout(() => {
-                evd.player.runCommand(p.command)
+                try {
+                    evd.player.runCommand(arrays.replacer(evd.player, p.command))
+                } catch {
+                    
+                }
             })
             return
         }
@@ -187,7 +193,7 @@ function tracking(player, d) {
     for (let index = 0; index < objectKeys.length; index++) {
         const oKey = objectKeys[index]
         const pKey = playerKeys[index]
-        
+
         if (d[oKey] && player[pKey]) {
             player.addTag(`darkoak:${oKey}`)
             if (d[`${oKey}C`]) player.runCommand(arrays.replacer(player, d[`${oKey}C`]))
@@ -220,4 +226,42 @@ export function bindedItems(evd) {
             evd.source.runCommand(arrays.replacer(evd.source, item.command1))
         })
     }
+}
+
+let ticker2 = 0
+/**
+ * @param {Player} player 
+ */
+export function verify(player, old = '') {
+    if (ticker2 <= 2) {
+        ticker2 += 1
+        return
+    }
+    ticker2 = 0
+
+    const d = mcl.jsonWGet('darkoak:whitelist')
+    if (player.hasTag('darkoak:verified') || !d?.venabled) return
+    if (mcl.isDOBAdmin(player)) {
+        player.addTag('darkoak:verified')
+        return
+    }
+
+    let f = new ModalFormData()
+    bui.title(f, 'Verify')
+
+    bui.label(f, 'You Must Verify To Join This Server')
+    bui.label(f, `Hint: ${d?.vhint}`)
+
+    bui.textField(f, 'Code:', 'Example: password', old)
+    bui.toggle(f, 'Leave?', false)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = bui.formValues(evd)
+        if (e[0] === arrays.replacer(player, d?.vcode)) {
+            player.addTag('darkoak:verified')
+            uiManager.closeAllForms(player)
+        }
+        if (e[1]) transferPlayer(player, { hostname: '127.0.0.0', port: 0 })
+    }).catch()
 }

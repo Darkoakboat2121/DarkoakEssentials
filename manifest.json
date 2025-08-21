@@ -6,24 +6,24 @@
 		]
 	},
 	"header": {
-		"name": "§aDarkoak §9Essentials §aV2.3.0§r§f",
+		"name": "§aDarkoak §9Essentials §aV2.3.2§r§f",
 		"description": "§uAn essentials addon made to be §asimple§u. Made by Darkoakboat2121§r§f",
 		"min_engine_version": [
 			1,
 			21,
 			80
 		],
-		"uuid": "5571c81e-a743-4b4b-ad0e-312b2e3f3c64",
+		"uuid": "ee032771-87b3-4f11-bdad-edc19ba94fb7",
 		"version": [
 			2,
 			3,
-			0
+			2
 		]
 	},
 	"modules": [
 		{
 			"type": "data",
-			"uuid": "0798031e-f1bb-4005-9cef-060d099eab2a",
+			"uuid": "a9b98475-863c-43dd-815c-ee148d52d557",
 			"version": [
 				1,
 				0,
@@ -33,7 +33,7 @@
 		{
 			"type": "script",
 			"language": "javascript",
-			"uuid": "d0263c98-b451-4b4c-9d01-c0146831ecbc",
+			"uuid": "8116c200-87c9-4243-a2aa-6dd22c229976",
 			"entry": "scripts/main.js",
 			"version": [
 				1,

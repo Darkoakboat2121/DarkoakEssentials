@@ -4,7 +4,7 @@
 import { mcl } from "../logic"
 import { EntityComponentTypes, Player, PlayerJoinAfterEvent, PlayerLeaveBeforeEvent, system, world } from "@minecraft/server"
 
-/**List of usernames to ban automatically if prebans is set to true*/
+/**List of usernames to ban automatically if prebans is set to true (proof) [notes]*/
 export const preBannedList = [
     'K4leonidas', //Racism
     'HackerBase74', //Basic
@@ -82,6 +82,28 @@ export const preBannedList = [
     'gervin4450', //Basic (anyone trying to hack on lifeboat w me)
     'v1qwn9527', //Homophobia, racism, spamming cuss words
     'xGAMEZAx', //Involved in backdooring
+    'watona 47', //Basic
+    'GOGOMAYJJP', //Basic
+    'DarthManis', //Basic
+    'jousloong', //Basic
+    'BIG Dawg7846', //Basic
+    'NuggetMac2709', //Basic
+    'The Luis K1ng 1', //Basic
+    'HackerDR258', //Basic
+    'BuckedZulu58245', //Basic
+    'MagicGold757', //Basic (i got banned on galaxty for 10 years ones and theres still nine mere)
+    'Ancientbooks1', //Doxxing (one month only, remove after 9/10/25)
+    'Von Leia', //Basic (I can literally fly around mineville and cubecraft with that client)
+    'LostVyperx', //Spamming inappropriate things
+    'AsteroidCorn320', //Basic
+    'CANDEROO8', //Basic (F**k got banned on The Hive)
+    'notok49', //Basic (But it keeps on kicking me from the hive whan I use it)
+    'DaRealNCross', //Basic (how do i autoclick on hive without getting the error message)
+    'LSAT OP', //Basic (on lifeboat mainly but i did on hive and was fine for atleast an hour | then i got banned for pressing f aswell lol)
+    'RektByLauch', //Basic
+    'Lokannnn', //Basic (It's very useful and works perfectly, just like borion's experimental "Hide and seek" option that works perfectly in "Hive")
+    'AntiRodris', //Basic (Guys, does anyone know why he takes me Hive when I get kill aura and jump, he kicks me, is there a way to set it up?) [SYSTEM]
+    'Legisox', //Alt
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -184,6 +206,8 @@ export const spranks = {
 export function replacer(player, string) {
     const loc = player.location
     const velo = player.getVelocity()
+    const vd = player.getViewDirection()
+    const dot = velo.x * vd.x + velo.z * vd.z
 
     const time = new Date()
     // let block = undefined
@@ -204,6 +228,7 @@ export function replacer(player, string) {
         .replaceAll('#velocityx#', `${(velo.x).toFixed(1)}`)
         .replaceAll('#velocityy#', `${(velo.y).toFixed(1)}`)
         .replaceAll('#velocityz#', `${(velo.z).toFixed(1)}`)
+        .replaceAll('#dot#', `${dot.toFixed(1)}`)
         .replaceAll('#cps#', `${(player.getDynamicProperty('darkoak:ac:cps') || '0').toString()}`)
         .replaceAll('#effects#', mcl.playerEffectsArray(player))
         .replaceAll('#tags#', mcl.playerTagsArray(player))
@@ -346,6 +371,7 @@ export const hashtags = [
     '#time1# -> Current Time In HH:MM:SS Format',
     '#time2# -> Current Time In HH:MM Format',
     '#year# -> Current Year',
+    '#dot# -> Positive If Player Is Going Forward',
 ].join('\n')
 
 export const hashtagKeys = [
@@ -604,6 +630,19 @@ export const specialRanks = {
 export function storePlayerData(player) {
     mcl.jsonWSet(`darkoak:playerdata:${player.name}`, mcl.playerToData(player))
 }
+
+
+export const modalTextTypes = [
+    'label|text here',
+    'header|text here',
+    'toggle|text here|true|text here',
+    'textfield|text here|text here|text here|text here',
+    'dropdown|text here|option 1, option 2, option 3|0|text here',
+    'slider|text here|1|10|1|1|text here',
+    'command|text here, uses $number$ to get another ui elements value',
+    'submit|text here',
+    'divider',
+].join('\n')
 
 
 // dynamic propertys can hold 32767 characters

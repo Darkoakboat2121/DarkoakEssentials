@@ -127,7 +127,7 @@ export function worldInteractionSettings(player) {
 
     bui.toggle(f, 'Players Can Break Blocks?\nIf Enabled, Players Can\'t Break Blocks', d?.breakblocks)
     bui.toggle(f, 'Players Can Break Item Frames?\nIf Enabled, Players Can\'t Break Item Frames', d?.breakitemframes)
-    
+
     bui.divider(f)
 
     bui.toggle(f, 'Players Can Interact With Blocks?\nIf Enabled, Players Can\'t Interact With Blocks', d?.interactwithblocks)
@@ -466,6 +466,7 @@ export function playerPunishmentsMainUI(player) {
     bui.button(f, 'Unmute A Player')
     bui.button(f, 'Crash A Player')
     bui.button(f, 'Soft-Kick A Player')
+    bui.button(f, '"You\'re Fired!" A Player')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -490,6 +491,9 @@ export function playerPunishmentsMainUI(player) {
                 break
             case 6:
                 softkickPlayer(player)
+                break
+            case 7:
+                firePunishUI(player)
                 break
             default:
                 player.sendMessage('§cError§r')
@@ -518,6 +522,38 @@ export function softkickPlayer(player) {
         }
 
         transferPlayer(gp, { hostname: '127.0.0.0', port: 0 })
+    })
+}
+
+export function firePunishUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Fire A Player')
+
+    let names = bui.namePicker(f, undefined, 'Player:', true)
+
+    /**@type {string[]} */
+    let ppl = mcl.jsonWGet('darkoak:fired') || []
+    for (let index = 0; index < ppl.length; index++) {
+        const p = ppl[index]
+        bui.toggle(f, `Remove Fire For: ${p}?`, false)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            playerPunishmentsMainUI(player)
+            return
+        }
+
+        const e = bui.formValues(evd)
+        if (e[0]) {
+            ppl.push(names[e[0]])
+            mcl.jsonWSet('darkoak:fired', ppl)
+        } else {
+            for (let index = 1; index < e.length; index++) {
+                if (e[index] == true) ppl.splice(index - 1, 1)
+                mcl.jsonWSet('darkoak:fired', ppl)
+            }
+        }
     })
 }
 
@@ -1058,19 +1094,25 @@ export function otherChatSettingsUI(player) {
 
     bui.divider(f)
 
+    bui.toggle(f, 'Disable Nametags', default1?.nonametags, 'Removes The Players Username From Their Nametag')
+
+    bui.divider(f)
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             chatSettingsUI(player)
             return
         }
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:chat:other', {
-            proximity: e[0],
-            nametag: e[1],
-            chatLogs: e[2],
-            healthDisplay: e[3],
-            professional: e[4],
-            nametagRanks: e[5]
+            proximity: e[i++],
+            nametag: e[i++],
+            chatLogs: e[i++],
+            healthDisplay: e[i++],
+            professional: e[i++],
+            nametagRanks: e[i++],
+            nonametags: e[i++]
         })
     }).catch()
 }
@@ -1387,9 +1429,9 @@ export function UIMakerUI(player) {
 
     bui.button(f, 'Make A Message UI\n§7Two Buttons (With Commands) With Title And Text')
     bui.button(f, 'Make An Action UI\n§7Ten Different Buttons (With Commands) With Title And Text')
-    bui.button(f, 'Make A Modal UI')
+    bui.button(f, 'Make / Delete / Edit A Modal UI')
     bui.button(f, 'Delete A UI\n§7Delete Action Or Message UI\'s')
-    bui.button(f, 'Edit A UI\n§7Modify Existing Custom UI\'s')
+    bui.button(f, 'Edit A Message Or Action UI\n§7Modify Existing Custom UI\'s')
     bui.button(f, 'Set The Actionbar\n§7Modify The Actionbar')
     bui.button(f, 'Set the Sidebar\n§7Modify The Sidebar')
 
@@ -1788,7 +1830,7 @@ export function shopAddUI(player, message = '') {
             shopAddUI(player, '§cPrice Or Item Is Invalid§r')
             return
         }
-        mcl.jsonWSet(`darkoak:shopitem:${mcl.timeUuid()}`, { 
+        mcl.jsonWSet(`darkoak:shopitem:${mcl.timeUuid()}`, {
             sell: e[0],
             item: e[1],
             amount: e[2],
@@ -1908,7 +1950,7 @@ export function creditsUI(player) {
     bui.label(f, 'Thank you for helping me test stuff')
 
     bui.label(f)
-    
+
     bui.button(f, 'Wertwert3612') // 4
     bui.label(f, 'Thank you for supplying the realm for testing')
 
@@ -2041,13 +2083,13 @@ export function communityMoneyUI(player) {
         if (en?.payshop4 && evd.selection === selectionIndex++) {
             pressionUI(player)
             return
-        } 
-        
+        }
+
         if (en?.payshop5 && evd.selection === selectionIndex++) {
             gamblingMainUI(player)
             return
-        } 
-        
+        }
+
         if (en?.payshop6 && evd.selection === selectionIndex) {
             bountyMainUI(player)
             return
@@ -2135,7 +2177,7 @@ export function myProfile(player) {
 
     const parts = mcl.jsonPGet(player, 'darkoak:profile')
     if (parts === undefined) {
-        mcl.jsonPSet(player, 'darkoak:profile', { 
+        mcl.jsonPSet(player, 'darkoak:profile', {
             description: '',
             pronouns: '',
             age: ''
@@ -2262,4 +2304,4 @@ export function shopUI(player) {
         }
     }).catch()
 }
-// 2085 lines in one file
+// 2265 lines in one file

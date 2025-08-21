@@ -3,9 +3,10 @@ import { ActionFormData, MessageFormData, ModalFormData, uiManager, UIManager } 
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
 import { customEnchantActions, customEnchantEvents } from "../enchanting"
-import { hashtags, preBannedList, icons, compress, decompress, replacer, crasherSymbol } from "../data/arrays"
+import { hashtags, preBannedList, icons, compress, decompress, replacer, crasherSymbol, modalTextTypes } from "../data/arrays"
 import { bui } from "./baseplateUI"
 import * as modal from "./modalUI"
+import { chatSystem } from "../chat"
 
 
 /**UI for data editor item
@@ -230,12 +231,8 @@ export function tpaSettings(player) {
 
     const d = mcl.jsonWGet('darkoak:tpa')
 
-    f.toggle('Enabled?', {
-        defaultValue: d.enabled
-    })
-    f.toggle('Can TP To Admins In Creative?', {
-        defaultValue: d.adminTp
-    })
+    bui.toggle(f, 'Enabled?', d?.enabled)
+    bui.toggle(f, 'Can TP To Admins In Creative?', d?.adminTp)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -251,8 +248,8 @@ export function createWarpUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Create Warp')
 
-    f.textField('Warp Name:', 'Example: Spawn')
-    f.textField('Co-ords To TP:', 'Example: 0 1 0')
+    bui.textField(f, 'Warp Name:', 'Example: Spawn')
+    bui.textField(f, 'Co-ords To TP:', 'Example: 0 1 0')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -481,8 +478,10 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
-    bui.toggle(f, 'Three Strike Action', d?.strike)
-    bui.label(f, 'If This Is On And If A Player Triggers Three Anticheat Measures, The Player Gets Killed')
+    bui.toggle(f, 'Strike Action', d?.strike)
+    bui.label(f, 'If This Is On And If A Player Triggers Anticheat Measures, The Player Gets Killed')
+
+    bui.slider(f, 'How Many Should Trigger', 3, 15, d?.strikeamount, 1)
 
     bui.divider(f)
 
@@ -521,36 +520,59 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
+    bui.toggle(f, 'Anti-Reach', d?.antireach)
+    bui.label(f, 'Checks How Far Away Two Players Are When One Hits Another')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-air-place', d?.antiairplace)
+    bui.label(f, 'Checks If A Player Places A Block Without Support')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-streamer-mode', d?.antistreamermode)
+    bui.label(f, 'Replaces Certain Characters With Mostly Identical Characters\nUsed To Bypass Streamer Mode, A Hack Used To Hide The Hackers Username So They Can Stream Without Worry')
+    bui.label(f, '§cMay Make Chat Look Weird!§r')
+
+    bui.divider(f)
+
+    bui.divider(f)
+
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:anticheat', {
-            prebans: e[0],
-            antinuker: e[1],
-            antifastplace: e[2],
-            antifly1: e[3],
-            antispeed1: e[4],
-            antispam: e[5],
-            antiillegalenchant: e[6],
-            antikillaura: e[7],
-            antigamemode: e[8],
-            npcdetect: e[9],
-            antifly2: e[10],
-            antifly3: e[11],
-            antiinvalid1: e[12],
-            antiinvalid2: e[13],
-            antiinvalid3: e[14],
-            antispeed2: e[15],
-            antiblockreach: e[16],
-            notify: e[17],
-            strike: e[18],
-            anticrasher1: e[19],
-            antinuker2: e[20],
-            antinbt: e[21],
-            antidupe1: e[22],
-            antinbt2: e[23],
-            antidupe2: e[24],
-            antiadminitems: e[25],
+            prebans: e[i++],
+            antinuker: e[i++],
+            antifastplace: e[i++],
+            antifly1: e[i++],
+            antispeed1: e[i++],
+            antispam: e[i++],
+            antiillegalenchant: e[i++],
+            antikillaura: e[i++],
+            antigamemode: e[i++],
+            npcdetect: e[i++],
+            antifly2: e[i++],
+            antifly3: e[i++],
+            antiinvalid1: e[i++],
+            antiinvalid2: e[i++],
+            antiinvalid3: e[i++],
+            antispeed2: e[i++],
+            antiblockreach: e[i++],
+            notify: e[i++],
+            strike: e[i++],
+            strikeamount: e[i++],
+            anticrasher1: e[i++],
+            antinuker2: e[i++],
+            antinbt: e[i++],
+            antidupe1: e[i++],
+            antinbt2: e[i++],
+            antidupe2: e[i++],
+            antiadminitems: e[i++],
+            antireach: e[i++],
+            antiairplace: e[i++],
+            antistreamermode: e[i++],
         })
     }).catch()
 }
@@ -1071,8 +1093,10 @@ export function CUIEditPicker(player) {
         if (evd.canceled) return
         if (uis[evd.selection].id.split(':')[2] == 'action') {
             CUIEditUI(player, true, uis[evd.selection].id)
-        } else {
+        } else if (uis[evd.selection].id.split(':')[2] == 'message') {
             CUIEditUI(player, false, uis[evd.selection].id)
+        } else {
+            modalUIEditUI(player, uis[evd.selection].id)
         }
     }).catch()
 }
@@ -1129,6 +1153,10 @@ export function CUIEditUI(player, action, id) {
             mcl.jsonWSet(id, ui)
         }).catch()
     }
+}
+
+export function modalUIEditUI(player, id) {
+
 }
 
 export function actionUIEditUI(player, amount, id) {
@@ -1581,7 +1609,8 @@ export function banOfflineUI(player) {
     bui.title(f, 'Ban Player')
 
     const playerList = mcl.getPlayerList()
-    bui.dropdown(f, 'Player:', playerList)
+    bui.dropdown(f, 'Player:', playerList, 0)
+    bui.textField(f, 'This Text Overrides The Dropdown!\nPlayer:', 'Example: Darkoakboat2121')
     bui.textField(f, 'Reason / Ban Message', 'Example: Hacking')
     bui.textField(f, 'Ban Time In Hours (Leave Empty For Forever):', 'Example: 24')
 
@@ -1591,7 +1620,10 @@ export function banOfflineUI(player) {
             return
         }
         const e = bui.formValues(evd)
-        const selected = playerList[e[0]]
+        let selected = ''
+        if (e[1]) {
+            selected = e[1]
+        } else selected = playerList[e[0]]
         const admins = mcl.getAdminList()
         if (admins.includes(selected)) {
             mcl.adminMessage(`${player.name} Tried To Ban ${selected}`)
@@ -1816,7 +1848,7 @@ export function otherPlayerSettingsUI(player) {
     bui.title(f, 'Other Player Settings')
 
     bui.button(f, 'Bounty Settings')
-    bui.button(f, 'Whitelist')
+    bui.button(f, 'Whitelist / Verfication')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2045,12 +2077,20 @@ export function signsPlusMainUI(player) {
 
 export function whitelistUI(player) {
     let f = new ModalFormData()
-    bui.title(f, 'Whitelist')
+    bui.title(f, 'Whitelist / Verification')
 
     const d = mcl.jsonWGet('darkoak:whitelist')
 
+    bui.label(f, 'Whitelist Settings:')
     bui.toggle(f, 'Enabled?', d?.enabled)
     bui.textField(f, 'Whitelist:', 'Example: Darko, Noki, CanineYeti', d?.whitelist)
+
+    bui.divider(f)
+
+    bui.label(f, 'Verification Settings:')
+    bui.toggle(f, 'Enabled?', d?.venabled)
+    bui.textField(f, 'Code:', 'Example: password', d?.vcode, 'Users Must Use This Code To Play The World. It Also Supports The Hashtag Replacer System')
+    bui.textField(f, 'Hint:', 'Example: It Rhymes With "tassword"', d?.vhint)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2061,6 +2101,9 @@ export function whitelistUI(player) {
         mcl.jsonWSet('darkoak:whitelist', {
             enabled: e[0],
             whitelist: e[1],
+            venabled: e[2],
+            vcode: e[3],
+            vhint: e[4],
         })
     })
 }
@@ -2124,7 +2167,7 @@ export function modalTextAddingUI(player) {
     bui.textField(f, 'UI Title', 'Example: Apply Knockback')
     bui.textField(f, 'Tag To Open', 'Example: knockbackui')
 
-    bui.label(f, 'Examples:\nlabel|text here\nheader|text here\ntoggle|text here|true|text here\ntextfield|text here|text here|text here|text here\ndropdown|text here|option 1, option 2, option 3|0|text here\nslider|text here|1|10|1|1|text here\ncommand|text here, uses $number$ to get another ui elements value')
+    bui.label(f, `Examples:\n${modalTextTypes}`)
 
     bui.textField(f, 'UI Text') // 2
     bui.textField(f, 'UI Text') // 3
@@ -2200,7 +2243,7 @@ export function modalTextModifyUI(player, ui) {
     bui.textField(f, 'UI Title', 'Example: Apply Knockback', ui.value.title)
     bui.textField(f, 'Tag To Open', 'Example: knockbackui', ui.value.tag)
 
-    bui.label(f, 'Examples:\nlabel|text here\nheader|text here\ntoggle|text here|true|text here\ntextfield|text here|text here|text here|text here\ndropdown|text here|option 1, option 2, option 3|0|text here\nslider|text here|1|10|1|1|text here\ncommand|text here, uses $number$ to get another ui elements value')
+    bui.label(f, `Examples:\n${modalTextTypes}`)
 
     bui.textField(f, 'UI Text', '', ui.value.lines[0]) // 2
     bui.textField(f, 'UI Text', '', ui.value.lines[1]) // 3
@@ -2261,6 +2304,19 @@ export function modalTextDeleterUI(player) {
         }
 
         mcl.wRemove(uis[evd.selection].id)
+    })
+}
+
+export function messageSender(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Send A Message')
+
+    bui.textField(f, 'Message:')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = bui.formValues(evd)
+        chatSystem(undefined, player, e[0])
     })
 }
 

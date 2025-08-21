@@ -56,8 +56,8 @@ changelog:
         leveling system *?
 
         
+        
         auto-pickup community option *
-        /tpa *
         /boats leaderboard with @a *
         crates *
         signs+ * (spinning signs, rainbow text, bad apple lol, delays, slideshows)
@@ -80,6 +80,7 @@ changelog:
         more stuff to profiles *
         
 
+IDEA NOTE: for the array things, use a var and a ++ iterator so you can just copy them for long settings
 
 
 hacks to detect:
@@ -123,3 +124,4 @@ anticheat to fix:
     antinuker / fastbreak, fixed?
     antifly3, notfixed
     notify admins, idk whats wrong
+

@@ -1,4 +1,4 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel } from "@minecraft/server"
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode } from "@minecraft/server"
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting API*/
 export class mcl {
@@ -526,7 +526,7 @@ export class mcl {
      */
     static isCreating(player) {
         if (mcl.isOp(player) === true) {
-            if (player.getGameMode() == 'creative') {
+            if (player.getGameMode() == GameMode.Creative) {
                 return true
             } else return false
         } else return false
