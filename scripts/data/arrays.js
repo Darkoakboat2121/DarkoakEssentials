@@ -245,6 +245,10 @@ export function replacer(player, string) {
         .replaceAll('#time2#', `${time.getHours()}:${time.getMinutes()}`)
         .replaceAll('#year#', time.getFullYear().toString())
         .replaceAll('#money#', mcl.getScore(player).toString())
+        .replaceAll('#perm#', player.commandPermissionLevel.toString())
+
+        .replaceAll('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
+        
 
     try {
         const view = player.getViewDirection()
@@ -280,7 +284,7 @@ export function replacer(player, string) {
     if (formattedString.includes('#[') && formattedString.includes(']#')) {
         let score = mcl.getStringBetweenChars(formattedString, '#[', ']#')
         formattedString = formattedString
-            .replaceAll(score, mcl.getScore(player, score).toString())
+            .replaceAll(score, mcl.getScoreOld(player, score).toString())
             .replaceAll('#[', '')
             .replaceAll(']#', '')
     }
@@ -372,6 +376,8 @@ export const hashtags = [
     '#time2# -> Current Time In HH:MM Format',
     '#year# -> Current Year',
     '#dot# -> Positive If Player Is Going Forward',
+    '#perm# -> Permission Level',
+    '#device# -> Device Type'
 ].join('\n')
 
 export const hashtagKeys = [
@@ -437,6 +443,41 @@ export class icons {
     }
 }
 
+export const colorCodes = [
+    '§1',
+    '§2',
+    '§3',
+    '§4',
+    '§5',
+    '§6',
+    '§7',
+    '§8',
+    '§9',
+    '§0',
+    '§q',
+    '§e',
+    '§r',
+    '§t',
+    '§u',
+    '§i',
+    '§o',
+    '§p',
+    '§a',
+    '§s',
+    '§d',
+    '§f',
+    '§g',
+    '§h',
+    '§j',
+    '§k',
+    '§l',
+    '§c',
+    '§v',
+    '§b',
+    '§n',
+    '§m',
+]
+
 export const emojis = [
     { m: ':dark_oak_boat:', e: '' },
     { m: ':elytra:', e: '' },
@@ -461,6 +502,7 @@ export const emojis = [
     { m: ':cat2:', e: '/ᐠ｡ꞈ｡ᐟ\\' },
     { m: ':nerd:', e: '(⌐■_■)' },
     { m: ':nerd2:', e: '(⌐◕‿◕)' },
+    { m: ':format:', e: '§' },
 ]
 
 // this is a list of common abbreviations and their expanded forms for professionalism in chat

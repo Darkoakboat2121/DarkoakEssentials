@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, adminAndPlayerListUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, itemSettingsUI, messageLogUI, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
+import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, itemGiverUI, itemSettingsUI, messageLogUI, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 import { transferPlayer } from "@minecraft/server-admin"
 
@@ -374,7 +374,7 @@ export function playerDataViewUI(playerToShow, playerToView) {
     bui.label(f, 'Items:')
     // doesnt view armor or offhand, not considered inventory slots??
     const items = mcl.getAllItems(player)
-    for (let index = 0; index < items.size; index++) {
+    for (let index = 0; index < items.length; index++) {
         const item = items[index]
         bui.label(f, `Type: ${item.typeId}, Amount: ${item.amount}`)
         bui.label(f, `Name: ${item.nameTag || ''}`)
@@ -1098,6 +1098,9 @@ export function otherChatSettingsUI(player) {
 
     bui.divider(f)
 
+    bui.toggle(f, 'AFK Notifier', default1?.afknotif, 'If Enabled, Shows "AFK" Under A Players Nametag If They\'re AFK')
+    bui.slider(f, 'How Long Until AFK', 1, 10, default1?.afktime, 1, 'In Minutes')
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             chatSettingsUI(player)
@@ -1112,7 +1115,9 @@ export function otherChatSettingsUI(player) {
             healthDisplay: e[i++],
             professional: e[i++],
             nametagRanks: e[i++],
-            nonametags: e[i++]
+            nonametags: e[i++],
+            afknotif: e[i++],
+            afktime: e[i++],
         })
     }).catch()
 }
@@ -1140,7 +1145,7 @@ export function chestLockUI(player, loc) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
 
-        const e = evd.formValues
+        const e = bui.formValues(evd)
         if (e[0] == 0) {
             for (let index = 1; index < e.length; index++) {
                 if (e[index] == true) mcl.wRemove(p[index - 1].id)
@@ -1168,6 +1173,7 @@ export function dashboardMainUI(player) {
     bui.button(f, 'Logs')
     bui.button(f, 'Docs')
     bui.button(f, 'Admins And Players')
+    bui.button(f, 'Item Giver')
     bui.button(f, 'Script Settings / Master Settings\n§cExperimental§r')
 
     f.show(player).then((evd) => {
@@ -1205,6 +1211,9 @@ export function dashboardMainUI(player) {
                 adminAndPlayerListUI(player)
                 break
             case 6:
+                itemGiverUI(player)
+                break
+            case 7:
                 scriptSettings(player)
                 break
             default:
@@ -1313,6 +1322,7 @@ export function logsUI(player) {
     bui.title(f, 'Logs')
 
     bui.button(f, 'Message Logs')
+    bui.button(f, 'Clear Log')
 
     bui.label(f, 'Sorted By Latest First')
 
@@ -1333,8 +1343,13 @@ export function logsUI(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
 
-        if (evd.selection == 0) {
-            messageLogUI(player)
+        switch (evd.selection) {
+            case 0:
+                messageLogUI(player)
+                break
+            case 1:
+                mcl.wRemove('darkoak:log')
+                break
         }
     }).catch()
 }
@@ -1430,6 +1445,7 @@ export function UIMakerUI(player) {
     bui.button(f, 'Make A Message UI\n§7Two Buttons (With Commands) With Title And Text')
     bui.button(f, 'Make An Action UI\n§7Ten Different Buttons (With Commands) With Title And Text')
     bui.button(f, 'Make / Delete / Edit A Modal UI')
+    bui.button(f, 'Make An Animated Action UI')
     bui.button(f, 'Delete A UI\n§7Delete Action Or Message UI\'s')
     bui.button(f, 'Edit A Message Or Action UI\n§7Modify Existing Custom UI\'s')
     bui.button(f, 'Set The Actionbar\n§7Modify The Actionbar')
@@ -1441,26 +1457,30 @@ export function UIMakerUI(player) {
             return
         }
 
+        let i = 0
         switch (evd.selection) {
-            case 0:
+            case i++:
                 messageUIMakerUI(player)
                 break
-            case 1:
-                actionUIPickerUI(player)
+            case i++:
+                actionUIMakerUI(player)
                 break
-            case 2:
+            case i++:
                 modalTextUIMakerUI(player)
                 break
-            case 3:
+            case i++:
+                animatedActionUIMakerUI(player)
+                break
+            case i++:
                 UIDeleterUI(player)
                 break
-            case 4:
+            case i++:
                 CUIEditPicker(player)
                 break
-            case 5:
+            case i++:
                 actionBarUI(player)
                 break
-            case 6:
+            case i++:
                 sidebarUI(player)
                 break
             default:
@@ -1473,25 +1493,7 @@ export function UIMakerUI(player) {
 /**
  * @param {Player} player 
  */
-export function actionUIPickerUI(player) {
-    let f = new ModalFormData()
-
-    bui.slider(f, 'Amount Of Buttons', 1, 10, 1, 1)
-
-    f.show(player).then((evd) => {
-        if (evd.canceled) {
-            UIMakerUI(player)
-            return
-        }
-        actionUIMakerUI(player, evd.formValues[0])
-    }).catch()
-}
-
-/**
- * @param {Player} player 
- * @param {number} amount 
- */
-export function actionUIMakerUI(player, amount) {
+export function actionUIMakerUI(player) {
     let f = new ModalFormData()
 
     bui.label(f, arrays.hashtags)
@@ -1500,7 +1502,7 @@ export function actionUIMakerUI(player, amount) {
     bui.textField(f, 'Body:', 'Example: Click A Button To TP')
     bui.textField(f, 'Tag To Open:', 'Example: warpmenu')
 
-    for (let index = 1; index <= amount; index++) {
+    for (let index = 1; index <= 15; index++) {
         bui.textField(f, `Button ${index}:`, '')
         bui.textField(f, `Command ${index}:`, '')
     }
@@ -1556,13 +1558,13 @@ export function messageUIMakerUI(player) {
 
     bui.label(f, arrays.hashtags)
 
-    f.textField('UI Title:', 'Example: Welcome!')
-    f.textField('UI Body Text:', 'Example: Hello there!')
-    f.textField('Tag To Open:', 'Example: welcomemessage')
-    f.textField('UI Button 1:', 'Example: Hi!')
-    f.textField('UI Button 2:', 'Example: Hello!')
-    f.textField('Button1 Command:', 'Example: tp @s 0 0 0')
-    f.textField('Button2 Command:', 'Example: tp @s 6 2 7')
+    bui.textField(f, 'UI Title:', 'Example: Welcome!')
+    bui.textField(f, 'UI Body Text:', 'Example: Hello there!')
+    bui.textField(f, 'Tag To Open:', 'Example: welcomemessage')
+    bui.textField(f, 'UI Button 1:', 'Example: Hi!')
+    bui.textField(f, 'UI Button 2:', 'Example: Hello!')
+    bui.textField(f, 'Button1 Command:', 'Example: tp @s 0 0 0')
+    bui.textField(f, 'Button2 Command:', 'Example: tp @s 6 2 7')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1570,8 +1572,15 @@ export function messageUIMakerUI(player) {
             return
         }
         const e = bui.formValues(evd)
-        const ui = { title: e[0], body: e[1], tag: e[2], button1: e[3], command1: e[5], button2: e[4], command2: e[6] }
-        mcl.jsonWSet(`darkoak:ui:message:${mcl.timeUuid()}`, ui)
+        mcl.jsonWSet(`darkoak:ui:message:${mcl.timeUuid()}`, {
+            title: e[0],
+            body: e[1],
+            tag: e[2],
+            button1: e[3],
+            command1: e[5],
+            button2: e[4],
+            command2: e[6]
+        })
     }).catch()
 }
 
@@ -1579,16 +1588,39 @@ export function actionBarUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Action Bar')
 
-    f.textField(`${arrays.hashtags}\nAction Bar:`, 'Example: #name#: #location#', {
-        defaultValue: mcl.wGet('darkoak:actionbar')
-    })
+    const d = mcl.jsonWGet('darkoak:actionbar:v2')
+    bui.label(f, arrays.hashtags)
+
+    for (let index = 0; index < 12; index++) {
+        bui.textField(f, `Frame ${index + 1}:`, 'Example: #name#: #location#', d?.lines[index])
+    }
+    
+    bui.slider(f, 'Ticks Between Frames', 1, 100, d?.ticks, 1)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             UIMakerUI(player)
             return
         }
-        mcl.wSet('darkoak:actionbar', evd.formValues[0])
+        const e = bui.formValues(evd)
+        let i = 0
+        mcl.jsonWSet('darkoak:actionbar:v2', {
+            lines: [
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+            ],
+            ticks: e[i++]
+        })
     }).catch()
 }
 
@@ -1601,13 +1633,9 @@ export function sidebarUI(player) {
 
     const d = mcl.jsonWGet('darkoak:sidebar') || def
 
-    f.textField(`\n${arrays.hashtags}\n\nLine 1:`, '', {
-        defaultValue: d.lines[0]
-    })
+    bui.textField(f, `\n${arrays.hashtags}\n\nLine 1:`, '', d.lines[0])
     for (let index = 2; index < 13; index++) {
-        f.textField(`Line ${index}:`, '', {
-            defaultValue: d.lines[index - 1]
-        })
+        bui.textField(f, `Line ${index}:`, '', d.lines[index - 1])
     }
 
     f.show(player).then((evd) => {
@@ -1615,21 +1643,22 @@ export function sidebarUI(player) {
             UIMakerUI(player)
             return
         }
-        const e = evd.formValues
+        const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:sidebar', {
             lines: [
-                e[0],
-                e[1],
-                e[2],
-                e[3],
-                e[4],
-                e[5],
-                e[6],
-                e[7],
-                e[8],
-                e[9],
-                e[10],
-                e[11],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
+                e[i++],
             ]
         })
     }).catch()
@@ -1688,7 +1717,10 @@ export function communityGeneralUI(player) {
 
     bui.toggle(f, 'Give Player Community Item When They Join?', settings?.giveOnJoin)
     bui.toggle(f, 'Landclaims Are Enabled?', settings?.landclaimsenabled)
+    bui.toggle(f, 'Use Landclaim Border View?', settings?.landclaimsborder, '§cCan Be Very Laggy§r')
+    bui.slider(f, 'Landclaim Size', 8, 32, settings?.landclaimSize || 16, 4)
     bui.toggle(f, 'Emojis Are Enabled?', settings?.emojisenabled)
+    bui.toggle(f, 'Players Auto-Pickup Blocks They Break?', settings?.autopickup)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1697,10 +1729,14 @@ export function communityGeneralUI(player) {
         }
         const e = bui.formValues(evd)
 
+        let i = 0
         mcl.jsonWSet('darkoak:community:general', {
-            giveOnJoin: e[0],
-            landclaimsenabled: e[1],
-            emojisenabled: e[2],
+            giveOnJoin: e[i++],
+            landclaimsenabled: e[i++],
+            landclaimsborder: e[i++],
+            landclaimSize: e[i++],
+            emojisenabled: e[i++],
+            autopickup: e[i++],
         })
     }).catch()
 }
@@ -1845,24 +1881,12 @@ export function showHideOptionsSettingsUI(player) {
 
     const en = mcl.jsonWGet('darkoak:communityshowhide')
 
-    f.toggle('Show Pay / Shop?', {
-        defaultValue: en?.payshop0 || false
-    })
-    f.toggle('Show Pay / Shop -> Pay?', {
-        defaultValue: en?.payshop1 || false
-    })
-    f.toggle('Show Pay / Shop -> Shop?', {
-        defaultValue: en?.payshop2 || false
-    })
-    f.toggle('Show Pay / Shop -> Auction House?', {
-        defaultValue: en?.payshop3 || false
-    })
-    f.toggle('Show Warps?', {
-        defaultValue: en?.warps || false
-    })
-    f.toggle('Show Report?', {
-        defaultValue: en?.report || false
-    })
+    bui.toggle(f, 'Show Pay / Shop?', en?.payshop0)
+    bui.toggle(f, 'Show Pay / Shop -> Pay?', en?.payshop1)
+    bui.toggle(f, 'Show Pay / Shop -> Shop?', en?.payshop2)
+    bui.toggle(f, 'Show Pay / Shop -> Auction House?', en?.payshop3)
+    bui.toggle(f, 'Show Warps?', en?.warps)
+    bui.toggle(f, 'Show Report?', en?.report)
     bui.toggle(f, 'Show My Profile?', en?.myprofile)
     bui.toggle(f, 'Show Personal Log?', en?.personallog)
     bui.toggle(f, 'Show Giftcodes?', en?.giftcodes)
@@ -1877,20 +1901,21 @@ export function showHideOptionsSettingsUI(player) {
             return
         }
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:communityshowhide', {
-            payshop0: e[0],
-            payshop1: e[1],
-            payshop2: e[2],
-            payshop3: e[3],
-            warps: e[4],
-            report: e[5],
-            myprofile: e[6],
-            personallog: e[7],
-            giftcodes: e[8],
-            credits: e[9],
-            payshop4: e[10],
-            payshop5: e[11],
-            payshop6: e[12],
+            payshop0: e[i++],
+            payshop1: e[i++],
+            payshop2: e[i++],
+            payshop3: e[i++],
+            warps: e[i++],
+            report: e[i++],
+            myprofile: e[i++],
+            personallog: e[i++],
+            giftcodes: e[i++],
+            credits: e[i++],
+            payshop4: e[i++],
+            payshop5: e[i++],
+            payshop6: e[i++],
         })
     }).catch()
 }
@@ -1924,7 +1949,7 @@ export function creditsUI(player) {
 
     bui.header(f, 'Developers')
 
-    bui.button(f, 'Darkoakboat2121', 'textures/items/boat_darkoak') // 0
+    bui.button(f, 'Darkoakboat2121', arrays.icons.item('boat_darkoak')) // 0
     bui.label(f, 'Hi, I made this addon!')
 
     bui.button(f, 'Noki5160') // 1
@@ -1946,7 +1971,7 @@ export function creditsUI(player) {
 
     bui.label(f)
 
-    bui.button(f, 'Tygerklawk', 'textures/blocks/raw_gold_block') // 3
+    bui.button(f, 'Tygerklawk', arrays.icons.block('raw_gold_block')) // 3
     bui.label(f, 'Thank you for helping me test stuff')
 
     bui.label(f)
@@ -1960,7 +1985,7 @@ export function creditsUI(player) {
     bui.label(f, 'Discord: cE8cYYeFFx')
     bui.label(f, 'Website: https://darkoakaddons.rf.gd/')
 
-    bui.button(f, 'Dismiss', 'textures/items/boat_darkoak')
+    bui.button(f, 'Dismiss', arrays.icons.item('boat_darkoak'))
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -2187,7 +2212,7 @@ export function myProfile(player) {
 
     bui.textField(f, '\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', parts?.description)
     bui.textField(f, 'Pronouns:', 'Example: He / Him', parts?.pronouns, 'Good For Other Things Too!')
-    bui.textField(f, 'Age:', 'Example: 17', parts?.age, 'Good For Other Things Too!')
+    bui.textField(f, 'Age:', 'Example: 18', parts?.age, 'Good For Other Things Too!')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2248,7 +2273,7 @@ export function reportPlayerUI(player) {
     bui.label(f, `Rules:\n${settings.rules}`)
 
     const names = bui.namePicker(f, undefined, '\nPlayer:')
-    f.textField('Reason:', 'Example: He Was Hacking')
+    bui.textField(f, 'Reason:', 'Example: He Was Hacking')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {

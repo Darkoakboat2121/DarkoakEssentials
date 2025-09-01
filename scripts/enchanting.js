@@ -14,9 +14,8 @@ export function enchantOnHit(evd) {
 
 
     const i = mcl.getHeldItem(player)
-    if (i === undefined) return
+    if (!i) return
     const item = i.getLore()
-    if (item === undefined) return
 
     for (let index = 0; index < item.length; index++) {
         const parts = item[index].split('-')
@@ -219,7 +218,6 @@ export function enchantOnDamaged(evd) {
     const i = mcl.getHeldItem(player)
     if (i === undefined) return
     const item = i.getLore()
-    if (item === undefined) return
 
     for (let index = 0; index < item.length; index++) {
         const parts = item[index].split('-')

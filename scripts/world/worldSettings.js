@@ -1,4 +1,4 @@
-import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent, EntityHitEntityAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
@@ -264,4 +264,25 @@ export function verify(player, old = '') {
         }
         if (e[1]) transferPlayer(player, { hostname: '127.0.0.0', port: 0 })
     }).catch()
+}
+
+/**
+ * @param {PlayerBreakBlockAfterEvent} evd 
+ */
+export function autoPickup(evd) {
+    const d = mcl.jsonWGet('darkoak:community:general')
+    if (!d?.autopickup) return
+
+    const l = evd.block.location
+    evd.player.runCommand(`tp @e [type=item,x=${l.x},y=${l.y},z=${l.z},dx=0,dy=0,dz=0] ~ ~ ~`)
+}
+
+/**
+ * @param {EntityHitEntityAfterEvent} evd 
+ */
+export function smiteDataEditor(evd) {
+    const player = evd.damagingEntity
+    if (player.typeId === 'minecraft:player' && mcl.getHeldItem(player)?.typeId === 'darkoak:data_editor') {
+        evd.hitEntity.kill()
+    }
 }

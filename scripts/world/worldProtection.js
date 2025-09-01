@@ -48,6 +48,7 @@ export function placeBreakLandclaim(evd) {
          * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }, owner: "dark", players: ["", ""]}}
          */
         const area = JSON.parse(places[index])
+        if (evd.player.name === area.owner || area.players.includes(evd.player.name)) continue
 
         const block = evd.block
 
@@ -60,10 +61,6 @@ export function placeBreakLandclaim(evd) {
         const maxZ = Math.max(area.p1.z, area.p2.z)
 
         if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
-            for (let index = 0; index < area.players.length; index++) {
-                if (evd.player.name === area.players[index]) return
-            }
-            if (evd.player.name === area.owner) return
             evd.cancel = true
             evd.player.sendMessage(`§cThis Land Is Owned By ${area.owner}§r`)
             return

@@ -56,6 +56,10 @@ export class bui {
 
     /**Generic textfield
      * @param {ModalFormData} f 
+     * @param {string} [label=''] Text it shows above the textfield
+     * @param {string} [placeholder=''] Translucent text that shows in the box as an example
+     * @param {string} [defaultText=''] Text thats already put in the box by default
+     * @param {string} [tooltip=''] Text that appears in the tooltip icon
      */
     static textField(f, label = '', placeholder = '', defaultText = '', tooltip = '') {
         return f.textField(label.toString() || '', placeholder.toString() || '', {

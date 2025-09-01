@@ -2,7 +2,7 @@ import { world, system, Player, ChatSendBeforeEvent, PlayerSpawnAfterEvent } fro
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
-import { boatTypes, crasherSymbol, crasherSymbol2, emojis, professionalism, replacer, specialRanks, version } from "./data/arrays"
+import { boatTypes, colorCodes, crasherSymbol, crasherSymbol2, emojis, professionalism, replacer, specialRanks, version } from "./data/arrays"
 import { landclaimMainUI, queueMessageUI } from "./uis/interfacesTwo"
 import { log } from "./world/anticheat"
 
@@ -50,8 +50,9 @@ export function chatSystem(evd = undefined, player, message) {
     if (player.hasTag('darkoak:muted')) return
 
     // censoring
-    let censor = mcl.listGetValues('darkoak:censor:')
-    if (censor && censor.length != 0) {
+    /**@type {string[]} */
+    let censor = mcl.jsonWGet('darkoak:censor')
+    if (censor && censor.length != 0 && !mcl.isDOBAdmin(player)) {
         for (let index = 0; index < censor.length; index++) {
             if (mcl.deleteFormatting(message).toLowerCase().includes(censor[index].toLowerCase())) return
         }
@@ -61,13 +62,24 @@ export function chatSystem(evd = undefined, player, message) {
     const d = mcl.jsonWGet('darkoak:anticheat')
     const h = mcl.jsonPGet(player, 'darkoak:antispam')
 
-    if (d.antispam) {
-        if (h.message == message.trim() && !mcl.isOp(player) && !player.hasTag('darkoak:admin')) return
+    if (d?.antispam) {
+        if (h.message == message.trim() && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return
         if (
             message.trim().includes('Horion - the best minecraft bedrock utility mod - horion.download') ||
             message.trim().includes('horion.download')
         ) {
             log(`${player.name} -> hack client message`)
+            return
+        }
+        if (d?.antispam2) {
+            if (message.trim().split('|')[1].trim().length === 8) {
+                return
+            }
+        }
+    }
+    if (d?.antispamactive) {
+        if (player.isJumping || player.isSprinting) {
+            log(`${player.name} -> anti-spam-active`)
             return
         }
     }
@@ -129,6 +141,7 @@ export function chatSystem(evd = undefined, player, message) {
                 logs2.shift()
             }
         }
+        // hi n! you could try adding messages by the same person that was sent after each other to the same log line, connect with a \n :)
         logs2.push(`${player.name} -> ${message}`)
         mcl.jsonWSet('darkoak:messagelogs', {
             log: logs2
@@ -142,6 +155,10 @@ export function chatSystem(evd = undefined, player, message) {
             const e = emojis[index]
             formattedMessage = formattedMessage.replaceAll(e.m, e.e)
         }
+        formattedMessage = formattedMessage
+            .replace('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
+            .replace('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
+            .replace('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
     }
 
     const ocs = mcl.jsonWGet('darkoak:chat:other')
@@ -152,8 +169,7 @@ export function chatSystem(evd = undefined, player, message) {
             const pro = professionalism[index]
             formattedMessage = formattedMessage.replaceAll((' ' + pro.m + ' '), (' ' + pro.e + ' '))
         }
-        formattedMessage = formattedMessage.trimStart()
-        formattedMessage = mcl.uppercaseFirstLetter(formattedMessage)
+        formattedMessage = mcl.uppercaseFirstLetter(formattedMessage.trimStart())
     }
 
 
@@ -193,16 +209,16 @@ export function chatSystem(evd = undefined, player, message) {
 
     if (d?.antistreamermode) {
         pName = pName
-        .replace('B', 'Β')
-        .replace('A', 'Α')
-        .replace('E', 'Ε')
-        .replace('H', 'ʜ')
-        .replace('H', 'Η')
-        .replace('I', 'ɪ')
-        .replace('Y', 'ʏ')
-        .replace('K', 'Κ')
-        .replace('M', 'Μ')
-        .replace('N', 'Ν')
+            .replace('B', 'Β')
+            .replace('A', 'Α')
+            .replace('E', 'Ε')
+            .replace('H', 'ʜ')
+            .replace('H', 'Η')
+            .replace('I', 'ɪ')
+            .replace('Y', 'ʏ')
+            .replace('K', 'Κ')
+            .replace('M', 'Μ')
+            .replace('N', 'Ν')
     }
 
     const text = `${clanS}${clan}${clanE}${cr.start}${replacer(player, ranks.join(cr.middle))}${cr.end}§r§f${nameColors.join('')}${pName}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage}`
@@ -375,13 +391,10 @@ export function nametag(p, ocs) {
     const tags = p.getTags()
 
     let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => {
-        const spRanks = specialRanks
-        for (let index = 0; index < spRanks.length; index++) {
-            if (tag === spRanks[index]) {
-                tag.replace(tag, `§r${spRanks[tag]}`)
-            }
-        }
-        tag.replace('rank:', '')
+
+        if (specialRanks[tag]) return `§r${specialRanks[tag]}`
+
+        return tag.replace('rank:', '')
     })
 
     ranks = ranks.length ? ranks : [cr.defaultRank]

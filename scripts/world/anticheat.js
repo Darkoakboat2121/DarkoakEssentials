@@ -1,4 +1,4 @@
-import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent } from "@minecraft/server"
+import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { logcheck } from "../data/defaults"
@@ -25,7 +25,7 @@ export function antiNuker(evd) {
     if (d?.antinuker2) {
         const b = player.getBlockFromViewDirection()
         const l = evd.block.location
-        if (b && (b.block.location.x != l.x && b.block.location.y != l.y && b.block.location.z != l.z)) {
+        if (b && b.block.isSolid && (b.block.location.x != l.x && b.block.location.y != l.y && b.block.location.z != l.z)) {
             evd.cancel = true
             log(`${player.name} -> anti-nuker 2`)
         }
@@ -70,6 +70,11 @@ export function antiFastPlace(evd) {
             log(`${player.name} -> anti-air-place`)
         }
     }
+
+    if (d?.antiscaffold && block.location.y <= player.location.y && player.getViewDirection().y > 0) {
+        log(`${player.name} -> anti-scaffold`)
+        evd.cancel = true
+    }
 }
 
 /**Anti killaura, works by checking the number of clicks in a small timeframe
@@ -78,8 +83,7 @@ export function antiFastPlace(evd) {
 export function antiCps(evd) {
     const player = evd.damagingEntity
     const d = mcl.jsonWGet('darkoak:anticheat')
-    if (player.typeId != 'minecraft:player') return
-    if (!d?.antikillaura) return
+    if (player.typeId != 'minecraft:player' || !d?.antikillaura) return
 
     const currentCPS = mcl.pGet(player, 'darkoak:ac:cps') || 0
     mcl.pSet(player, 'darkoak:ac:cps', currentCPS + 1)
@@ -99,7 +103,7 @@ export function antiReach(evd) {
     const hit = evd.hitEntity
 
     const d = mcl.jsonWGet('darkoak:anticheat')
-    if(!d?.antireach) return
+    if (!d?.antireach) return
 
     const bl = hit.location
     const pl = player.location
@@ -119,7 +123,7 @@ let ticker4 = 0
  */
 export function cpsTester(player) {
     if (ticker4 <= 20) {
-        ticker4 += 1
+        ticker4++
         return
     }
     mcl.pSet(player, 'darkoak:ac:cps', 0)
@@ -363,6 +367,45 @@ export function anticheatMain(player) {
     if (d?.antidupe2) {
 
     }
+
+    const mil = 1000000
+    if (d?.anticrasher2 && (Math.abs(player.location.x) > mil || Math.abs(player.location.z) > mil || Math.abs(player.location.y) > mil)) {
+        const sl = player.getSpawnPoint()
+        if (!player.kill()) player.teleport({
+            x: sl.x,
+            y: sl.y,
+            z: sl.z
+        })
+        log(`${player.name} -> anti-crasher 2`)
+    }
+
+    if (d?.antiinvalid4 && (player.selectedSlotIndex > 8 || player.selectedSlotIndex < 0)) {
+        player.selectedSlotIndex = 0
+    }
+
+    if (d?.antiphase) {
+        const block = player.dimension.getBlock(player.location)
+        if (!block.isSolid) return
+        log(`${player.name} -> anti-phase`)
+        mcl.knockback(player, v.x * -3, v.z * -3, 0)
+    }
+}
+
+let bowSpam = new Map()
+/**
+ * @param {ItemReleaseUseAfterEvent} evd 
+ */
+export function antiBowSpam(evd) {
+    const d = mcl.jsonWGet('darkoak:anticheat')
+    if (evd?.itemStack?.typeId != 'minecraft:bow' || !d?.antibowspam) return
+    const now = Date.now()
+
+    const delay = now - (bowSpam.get(evd.source.name) || 0)
+
+    if (delay < 200) {
+        log(`${evd.source.name} -> anti-bowspam`)
+    }
+    bowSpam.set(evd.source.name, now)
 }
 
 /**
@@ -395,3 +438,4 @@ export function log(mess) {
     }
     logcheck()
 }
+

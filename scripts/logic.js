@@ -70,7 +70,7 @@ export class mcl {
             if (string.charAt(index - 1) == '§' && index > 0) {
                 continue
             }
-            newMessage += message.charAt(index)
+            newMessage += string.charAt(index)
         }
 
         newMessage = newMessage
@@ -937,13 +937,34 @@ export class mcl {
     }
 
     /**
-     * 
      * @param {Player} player 
      * @param {number} x 
      * @param {number} z 
      * @param {number} y 
      */
     static knockback(player, x, z, y) {
-        player.applyKnockback({x: x, z: z}, y)
+        player.applyKnockback({ x: x, z: z }, y)
+    }
+
+    /**
+     * @param {(evd: {player: Player}) => {}} callback 
+     */
+    static callbackExample(callback) {
+
+    }
+
+    /**Finds how many instances of 'match' is in 'string'
+     * @param {string} string 
+     * @param {string} match 
+     */
+    static findMatchingAmount(string, match) {
+        if (!string || !match) return 0
+        let count = 0
+        let pos = string.indexOf(match)
+        while (pos !== -1) {
+            count++
+            pos = string.indexOf(match, pos + match.length)
+        }
+        return count
     }
 }

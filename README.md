@@ -54,14 +54,23 @@ changelog:
         save/load inventory commands *? (methods: structure saving with: [chests, entities])
         world edit *?
         leveling system *?
+        active action uis (5 buttons) *?
 
+
+        trivia chat game ***
+        animated action forms ***
         
-        
-        auto-pickup community option *
+        anticheat log clearing
+
+
+        extra ui to community ui, has creatable buttons with commands *
+        decay option *
+        uis should have references to uis that it came from, allows all uis to have back buttons with only one length *
+        hole filler *
+        afk timer *
         /boats leaderboard with @a *
         crates *
         signs+ * (spinning signs, rainbow text, bad apple lol, delays, slideshows)
-        anticheat log clearing *
         kits! *
         owner system *
         alt uis *
@@ -71,17 +80,20 @@ changelog:
         
 
         owner fix *
-        landclaims * (fix admin issues and mob killing + interactions)
+        landclaims * (interactions with entities)
 
         
     changes:
         
 
         more stuff to profiles *
+
+    experimental:
+        http requests *
         
 
 IDEA NOTE: for the array things, use a var and a ++ iterator so you can just copy them for long settings
-
+naman1141
 
 hacks to detect:
 Anti .xp: detect if xp level went up real fast (warn users not to use /xp with this module)
@@ -125,3 +137,7 @@ anticheat to fix:
     antifly3, notfixed
     notify admins, idk whats wrong
 
+
+UIS:
+    darko - server transfer ui
+    
