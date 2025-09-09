@@ -171,6 +171,7 @@ world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
     worldProtection.placeBreakProtection(evd)
     worldProtection.placeBreakLandclaim(evd)
     anticheat.antiFastPlace(evd)
+    worldSettings.worldSettingsBuild(evd)
 
     // system.sendScriptEvent('darkoak:beforeplayerplaceblock', JSON.stringify({
     //     block: evd.block,
@@ -440,7 +441,7 @@ function dataEditor(evd) {
  * @param {PlayerInteractWithBlockBeforeEvent} evd 
  */
 function dataEditorBlock(evd) {
-    if (evd.itemStack && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin') && evd.isFirstEvent) {
+    if (evd.itemStack && evd.itemStack.typeId === 'darkoak:data_editor' && evd.player.hasTag('darkoak:admin') && (system.currentTick % 15 == 0 || evd.isFirstEvent)) {
         evd.cancel = true
         const bl = evd.block
         const bi = bl.typeId
@@ -450,11 +451,10 @@ function dataEditorBlock(evd) {
             if (evd.player.isSneaking) {
                 if (bi.endsWith('stairs')) {
 
-                    let num = (perm.getState('weirdo_direction') + 1) % 5
+                    let num = perm.getState('weirdo_direction') + 1
 
-                    if (num === 4) {
-                        bl.setPermutation(perm.withState('upside_down_bit', !perm.getState('upside_down_bit')))
-                        bl.setPermutation(perm.withState('weirdo_direction', 0))
+                    if (num > 3) {
+                        bl.setPermutation(perm.withState('weirdo_direction', 0).withState('upside_down_bit', !perm.getState('upside_down_bit')))
                     } else {
                         bl.setPermutation(perm.withState('weirdo_direction', num))
                     }
@@ -642,13 +642,9 @@ function gens() {
     }
 }
 
-let ticker = 0
 /**Ban system */
 function bans() {
-    if (ticker < 100) {
-        ticker++
-        return
-    }
+    if (system.currentTick < 100) return
 
     const p = world.getAllPlayers()[0]
     const d = mcl.jsonWGet('darkoak:anticheat')
@@ -726,13 +722,8 @@ function bans() {
     }
 }
 
-let lcticker = 0
 function landclaimBorders() {
-
-    if (lcticker < 10) {
-        lcticker++
-        return
-    } else lcticker = 0
+    if (system.currentTick % 10 != 0) return
 
     const lcs = mcl.listGetBoth('darkoak:landclaim:')
     const players = world.getAllPlayers()
@@ -1697,7 +1688,8 @@ function customSlashCommands(evd) {
         })
     })
 
-    evd.customCommandRegistry.registerEnum('darkoak:debugtypes', ['aclog', 'playerlist', 'bytes', 'bytesize', 'what', 'http', 'uis', 'clipboard'])
+    evd.customCommandRegistry.registerEnum('darkoak:debugtypes', ['aclog', 'playerlist', 'bytes', 'bytesize', 'what', 'http', 'uis', 'clipboard', 'fakeplayer'])
+    evd.customCommandRegistry.registerEnum('darkoak:fakeplayer', ['chat'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:debug',
         description: 'DO NOT USE',
@@ -1711,8 +1703,14 @@ function customSlashCommands(evd) {
                 type: CustomCommandParamType.Enum,
                 name: 'darkoak:debugtypes'
             }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:fakeplayer'
+            }
         ]
-    }, (evd, play, debugtype) => {
+    }, (evd, play, debugtype, fakeplayer) => {
 
         /**@type {Player} */
         const player = play[0]
@@ -1736,10 +1734,19 @@ function customSlashCommands(evd) {
 
                     break
                 case 'uis':
-
+                    let messageToSend = []
+                    const u = mcl.jsonListGetBoth('darkoak:ui:')
+                    for (let index = 0; index < u.length; index++) {
+                        const ui = u[index]
+                        messageToSend.push(`§uID:§r ${ui.id}\n§uValue:§r ${JSON.stringify(ui.value)}§r`)
+                    }
+                    player.sendMessage('-----------------\n' + messageToSend.join('\n') + '\n-----------------')
                     break
                 case 'clipboard':
 
+                    break
+                case 'fakeplayer':
+                    
                     break
             }
         })

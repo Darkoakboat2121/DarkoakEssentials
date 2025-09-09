@@ -54,17 +54,17 @@ changelog:
         save/load inventory commands *? (methods: structure saving with: [chests, entities])
         world edit *?
         leveling system *?
-        active action uis (5 buttons) *?
 
 
         trivia chat game ***
         animated action forms ***
-        
+
         anticheat log clearing
+        decay / regen interaction settings option
 
 
+        spawn protection settings *
         extra ui to community ui, has creatable buttons with commands *
-        decay option *
         uis should have references to uis that it came from, allows all uis to have back buttons with only one length *
         hole filler *
         afk timer *
@@ -77,14 +77,17 @@ changelog:
 
         
     fixed:
-        
+        anti phase
+        anti spam 2
 
         owner fix *
         landclaims * (interactions with entities)
 
         
     changes:
-        
+        message log now stacks messages, allowing for more messages to be logged
+        anti phase no longer logs and now has a sensitivity slider
+        the main ui items texture has changed to a darkoakboat
 
         more stuff to profiles *
 
@@ -130,12 +133,8 @@ Entity Jesus
 Entity Speed
 HitBox
 Kill Aura: 1
+.give: yeah idk, maybe check for nearby items? (that method wouldnt work with /give)
 
-anticheat to fix:
-    antifastplace, fixed?
-    antinuker / fastbreak, fixed?
-    antifly3, notfixed
-    notify admins, idk whats wrong
 
 
 UIS:

@@ -1,4 +1,4 @@
-import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent, EntityHitEntityAfterEvent } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent, EntityHitEntityAfterEvent, PlayerPlaceBlockBeforeEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
@@ -21,6 +21,17 @@ export function worldSettingsBreak(evd) {
             evd.cancel = true
             return
         }
+        if (d?.breakregen) {
+            const cType = evd.block.type
+            system.runTimeout(() => {
+                evd.block.setType(cType)
+                const pl = evd.player.location
+                const bl = evd.block.location
+                if (Math.floor(pl.x) === Math.floor(bl.x) && Math.floor(pl.y) === Math.floor(bl.y) && Math.floor(pl.z) === Math.floor(bl.z)) {
+                    evd.player.runCommand('tp @s ~ ~1 ~')
+                }
+            }, d?.breakregenrate * 20)
+        }
     }
     if (evd.player.getGameMode() != "creative") {
         let blocks = mcl.listGetValues('darkoak:cws:unbreakableBlocks')
@@ -29,6 +40,21 @@ export function worldSettingsBreak(evd) {
                 evd.cancel
                 return
             }
+        }
+    }
+}
+
+/**
+ * @param {PlayerPlaceBlockBeforeEvent} evd 
+ */
+export function worldSettingsBuild(evd) {
+    const d = mcl.jsonWGet('darkoak:cws')
+    if (!mcl.isCreating(evd.player)) {
+        if (d?.builddecay) {
+            system.runTimeout(() => {
+                if (d?.buildreturn) evd.player.runCommand(`give @s ${evd.block.typeId} 1`)
+                evd.block.setType('minecraft:air')
+            }, d?.builddecayrate * 20)
         }
     }
 }
@@ -166,15 +192,15 @@ export function borderAndTracking(player) {
     if (worldBorder != 0) {
 
         if (Math.abs(x) > worldBorder) {
-            player.applyDamage(1, { cause: EntityDamageCause.magic })
             const k = (x / worldBorder - 1) * -1
+            player.applyDamage(Math.abs(k) * 1.5, { cause: EntityDamageCause.magic })
             // player.applyKnockback(k, 0, Math.abs(k) * 2, 0)
             player.applyKnockback({ x: k * Math.abs(k / 2.5), z: 0 }, 0)
         }
 
         if (Math.abs(z) > worldBorder) {
-            player.applyDamage(1, { cause: EntityDamageCause.magic })
             const k = (z / worldBorder - 1) * -1
+            player.applyDamage(Math.abs(k) * 1.5, { cause: EntityDamageCause.magic })
             // player.applyKnockback(0, k, Math.abs(k) * 2, 0)
             player.applyKnockback({ x: 0, z: k * Math.abs(k / 2.5) }, 0)
         }

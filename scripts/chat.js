@@ -72,7 +72,7 @@ export function chatSystem(evd = undefined, player, message) {
             return
         }
         if (d?.antispam2) {
-            if (message.trim().split('|')[1].trim().length === 8) {
+            if (message.trim().split('|')[1]?.trim().length === 8) {
                 return
             }
         }
@@ -134,15 +134,18 @@ export function chatSystem(evd = undefined, player, message) {
 
     // message logs
     if (mcl.jsonWGet('darkoak:chat:other')) {
-        /**@type {Array<string>} */
+        /**@type {string[]} */
         let logs2 = mcl.jsonWGet('darkoak:messagelogs').log || []
         if (logs2.length > 250) {
             while (logs2.length > 250) {
                 logs2.shift()
             }
         }
-        // hi n! you could try adding messages by the same person that was sent after each other to the same log line, connect with a \n :)
-        logs2.push(`${player.name} -> ${message}`)
+        if (logs2[logs2.length - 1].split('->')[0].trim() === player.name) {
+            logs2[logs2.length - 1] += `\n${message}`
+        } else {
+            logs2.push(`${player.name} -> ${message}`)
+        }
         mcl.jsonWSet('darkoak:messagelogs', {
             log: logs2
         })
@@ -155,10 +158,10 @@ export function chatSystem(evd = undefined, player, message) {
             const e = emojis[index]
             formattedMessage = formattedMessage.replaceAll(e.m, e.e)
         }
-        formattedMessage = formattedMessage
-            .replace('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
-            .replace('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
-            .replace('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
+        const matchAmount = mcl.findMatchingAmount(formattedMessage, '§?')
+        for (let index = 0; index < matchAmount; index++) {
+            formattedMessage = formattedMessage.replace('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
+        }
     }
 
     const ocs = mcl.jsonWGet('darkoak:chat:other')

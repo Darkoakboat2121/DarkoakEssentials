@@ -326,7 +326,7 @@ export function anticheatMain(player) {
         player.setOnFire(10, false)
     }
 
-    if (gm != GameMode.Creative && gm != GameMode.Creative) {
+    if (gm != GameMode.Creative && gm != GameMode.Spectator) {
         // anti fly 1
         if (player.isFlying && d.antifly1) {
             log(`${player.name} -> anti-fly 1`)
@@ -375,6 +375,8 @@ export function anticheatMain(player) {
             x: sl.x,
             y: sl.y,
             z: sl.z
+        }, {
+            dimension: sl.dimension
         })
         log(`${player.name} -> anti-crasher 2`)
     }
@@ -383,11 +385,10 @@ export function anticheatMain(player) {
         player.selectedSlotIndex = 0
     }
 
-    if (d?.antiphase) {
+    if (d?.antiphase && system.currentTick % (d?.antiphasesense || 10) === 0) {
         const block = player.dimension.getBlock(player.location)
-        if (!block.isSolid) return
-        log(`${player.name} -> anti-phase`)
-        mcl.knockback(player, v.x * -3, v.z * -3, 0)
+        if (!block.isSolid || player.getGameMode() === GameMode.Spectator) return
+        mcl.knockback(player, v.x * -3, v.z * -3, v.y * -1)
     }
 }
 

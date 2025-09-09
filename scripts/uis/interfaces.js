@@ -139,9 +139,20 @@ export function worldInteractionSettings(player) {
 
     bui.divider(f)
 
-    bui.label(f, 'These Following Settings Don\'t Work Yet')
+    bui.label(f, 'These Two Settings Don\'t Work Yet')
     bui.toggle(f, 'Players Can Interact With Entities?\nIf Enabled, Players Can\'t Interact With Entities', d?.interactwithentities)
     bui.toggle(f, 'Players Can Interact With Villagers?\nIf Enabled, Players Can\'t Interact With Villagers', d?.interactwithvillagers)
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Build Decay?', d?.builddecay)
+    bui.slider(f, 'Seconds Until Decay', 1, 30, d?.builddecayrate, 1)
+    bui.toggle(f, 'Give Decayed Block Back?', d?.buildreturn)
+
+    bui.label(f)
+
+    bui.toggle(f, 'Break Regen?', d?.breakregen, '§cWarning: Does Not Remove Dropped Items From The Block§r')
+    bui.slider(f, 'Seconds Until Regen', 1, 30, d?.breakregenrate, 1)
 
     bui.divider(f)
 
@@ -151,17 +162,23 @@ export function worldInteractionSettings(player) {
             return
         }
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:cws', {
-            breakblocks: e[0],
-            breakitemframes: e[1],
-            interactwithblocks: e[2],
-            interactwithitemframes: e[3],
-            interactwithenderchests: e[4],
-            interactwithsigns: e[5],
-            interactwithlogs: e[6],
-            interactwithgrass: e[7],
-            interactwithentities: e[8],
-            interactwithvillagers: e[9],
+            breakblocks: e[i++],
+            breakitemframes: e[i++],
+            interactwithblocks: e[i++],
+            interactwithitemframes: e[i++],
+            interactwithenderchests: e[i++],
+            interactwithsigns: e[i++],
+            interactwithlogs: e[i++],
+            interactwithgrass: e[i++],
+            interactwithentities: e[i++],
+            interactwithvillagers: e[i++],
+            builddecay: e[i++],
+            builddecayrate: e[i++],
+            buildreturn: e[i++],
+            breakregen: e[i++],
+            breakregenrate: e[i++],
         })
     }).catch()
 }
@@ -1572,14 +1589,15 @@ export function messageUIMakerUI(player) {
             return
         }
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet(`darkoak:ui:message:${mcl.timeUuid()}`, {
-            title: e[0],
-            body: e[1],
-            tag: e[2],
-            button1: e[3],
-            command1: e[5],
-            button2: e[4],
-            command2: e[6]
+            title: e[i++],
+            body: e[i++],
+            tag: e[i++],
+            button1: e[i++],
+            button2: e[i++],
+            command1: e[i++],
+            command2: e[i++],
         })
     }).catch()
 }

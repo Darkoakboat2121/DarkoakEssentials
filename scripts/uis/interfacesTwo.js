@@ -549,7 +549,9 @@ export function anticheatSettings(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Anti-Phase', d?.antiphase)
-    bui.label(f, 'Checks If The Player Is Inside A Solid Block')
+    bui.label(f, 'Checks If The Player Is Inside A Solid Block. Does Not Log')
+
+    bui.slider(f, 'Sensitivity (Most Sensitive Is 0)', 0, 20, d?.antiphasesense, 1)
 
     bui.divider(f)
 
@@ -603,6 +605,7 @@ export function anticheatSettings(player) {
             antiinvalid4: e[i++],
             antispamactive: e[i++],
             antiphase: e[i++],
+            antiphasesense: e[i++],
             antiscaffold: e[i++],
             antibowspam: e[i++],
         })

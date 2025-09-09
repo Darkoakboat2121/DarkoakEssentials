@@ -153,7 +153,12 @@ export class mcl {
      * @param {any | undefined} setTo 
     */
     static wSet(id, setTo) {
-        world.setDynamicProperty(id, setTo)
+        try {
+            world.setDynamicProperty(id, setTo)
+            return true
+        } catch {
+            return false
+        }
     }
 
     /**Gets a global dynamic property
