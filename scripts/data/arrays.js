@@ -4,7 +4,7 @@
 import { mcl } from "../logic"
 import { EntityComponentTypes, Player, PlayerJoinAfterEvent, PlayerLeaveBeforeEvent, system, world } from "@minecraft/server"
 
-/**List of usernames to ban automatically if prebans is set to true (proof) [notes]*/
+/**List of usernames to ban automatically if prebans is set to true (proof) [notes], prebanable: [discrimination, hacking, backdooring]*/
 export const preBannedList = [
     'K4leonidas', //Racism
     'HackerBase74', //Basic
@@ -104,6 +104,10 @@ export const preBannedList = [
     'Lokannnn', //Basic (It's very useful and works perfectly, just like borion's experimental "Hide and seek" option that works perfectly in "Hive")
     'AntiRodris', //Basic (Guys, does anyone know why he takes me Hive when I get kill aura and jump, he kicks me, is there a way to set it up?) [SYSTEM]
     'Legisox', //Alt
+    'DitchFish6084', //Hacking, (and spamming advertisements but technically thats not bannable)
+    'W1sley', //Alt
+    'BorealJam397537', //Op exploit? Invisible account? Really powerful hacks
+    'GamerBoi1234113', //Homophobia, general hate towards LGBTQ stuff
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -208,6 +212,7 @@ export function replacer(player, string) {
     const velo = player.getVelocity()
     const vd = player.getViewDirection()
     const dot = velo.x * vd.x + velo.z * vd.z
+    const ap = world.getAllPlayers()
 
     const time = new Date()
     // let block = undefined
@@ -232,7 +237,8 @@ export function replacer(player, string) {
         .replaceAll('#cps#', `${(player.getDynamicProperty('darkoak:ac:cps') || '0').toString()}`)
         .replaceAll('#effects#', mcl.playerEffectsArray(player))
         .replaceAll('#tags#', mcl.playerTagsArray(player))
-        .replaceAll('#players#', world.getAllPlayers().length.toString())
+        .replaceAll('#players#', ap.length.toString())
+        .replaceAll('#playerlist#', ap.map(e => e.name).join())
         .replaceAll('#dimension#', player.dimension.id)
         .replaceAll('#device#', player.clientSystemInfo.platformType.toString())
         .replaceAll('#tps#', mcl.wGet('darkoak:tps').toString())
@@ -360,6 +366,7 @@ export const hashtags = [
     '#effects# -> Players Effects',
     '#tags# -> Players Tags',
     '#players# -> Amount Of Online Players',
+    '#playerlist# -> List Of Online Player Names',
     '#dimension# -> Dimension The Player Is In',
     '#=min-max=# -> Random Number Between "min" And "max", Format: #=1-10=#',
     '#tps# -> Ticks Per Second',
@@ -377,7 +384,8 @@ export const hashtags = [
     '#year# -> Current Year',
     '#dot# -> Positive If Player Is Going Forward',
     '#perm# -> Permission Level',
-    '#device# -> Device Type'
+    '#device# -> Device Type',
+    '#money# -> Money Amount'
 ].join('\n')
 
 export const hashtagKeys = [
@@ -684,6 +692,7 @@ export const modalTextTypes = [
     'command|text here, uses $number$ to get another ui elements value',
     'submit|text here',
     'divider',
+    'Remember To Use "|" To Seperate Things, Not ":"'
 ].join('\n')
 
 

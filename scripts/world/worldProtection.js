@@ -130,7 +130,7 @@ export function lockedChestProtection(evd) {
     for (let index = 0; index < locks.length; index++) {
         const parts = JSON.parse(locks[index].value)
         const loc = evd.block.location
-        if (loc.x.toString() === parts.x && loc.y.toString() === parts.y && loc.z.toString() === parts.z) {
+        if (mcl.compareLocations(loc, {x: parts.x, y: parts.y, z: parts.z})) {
             if (evd.player.name != parts.player) {
                 evd.cancel = true
                 return
@@ -150,13 +150,13 @@ export function dimensionBan(player) {
     const d = mcl.jsonWGet('darkoak:dimensionbans')
 
     if ((d?.nether && player.dimension.id == 'minecraft:nether') || (d?.end && player.dimension.id == 'minecraft:the_end')) {
-        try {
-            player.kill()
-        } catch {
+        if (d?.tp) {
             const loc = player.getSpawnPoint()
             player.teleport({x: loc.x, y: loc.y, z: loc.z}, {
                 dimension: world.getDimension('minecraft:overworld')
             })
+        } else {
+            player.kill()
         }
     }
 }
@@ -194,27 +194,20 @@ export function dimensionBan(player) {
 /**
  * @param {Player} player 
  */
-export function worldProtectionOther(player) {
+export function worldProtectionOther(player, d) {
     if (mcl.isCreating(player)) return
-    const d = mcl.jsonWGet('darkoak:worldprotection')
     const item = mcl.getHeldItem(player)
-    if (d.water) {
+    if (d?.water && item) {
         const wpw = worldProtectionWater
-        for (let index = 0; index < wpw.length; index++) {
-            if (!item) continue
-            if (item.typeId === wpw[index]) {
-                mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
-                continue
-            }
-        }
+        if (wpw.includes(item.typeId)) mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
     }
 
-    if (d.pearls && item && item.typeId === 'minecraft:ender_pearl') {
+    if (d?.pearls && item && item.typeId === 'minecraft:ender_pearl') {
         mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
     }
 
-    if (d.boats) {
-        const boats = mcl.getEntityByTypeId('minecraft:boat', player.dimension)
+    if (d?.boats) {
+        let boats = mcl.getEntityByTypeId('minecraft:boat', player.dimension).concat(mcl.getEntityByTypeId('minecraft:chest_boat', player.dimension))
         for (let index = 0; index < boats.length; index++) {
             boats[index].kill()
         }

@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, itemGiverUI, itemSettingsUI, messageLogUI, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
+import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, itemGiverUI, itemSettingsUI, messageLogUI, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, rolesMainUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 import { transferPlayer } from "@minecraft/server-admin"
 
@@ -473,6 +473,12 @@ export function playerDataOfflineUI(playerToShow, playerToView) {
 }
 
 export function playerPunishmentsMainUI(player) {
+
+    if (!mcl.roleCheck(player)?.punishmentsUI && !mcl.isDOBAdmin(player)) {
+        player.sendMessage('§cYour Role Doesn\'t Allow You To Use The Punishments UI!§r')
+        return
+    }
+
     let f = new ActionFormData()
     bui.title(f, 'Player Punishments')
 
@@ -484,6 +490,7 @@ export function playerPunishmentsMainUI(player) {
     bui.button(f, 'Crash A Player')
     bui.button(f, 'Soft-Kick A Player')
     bui.button(f, '"You\'re Fired!" A Player')
+    bui.button(f, 'Reports')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -511,6 +518,13 @@ export function playerPunishmentsMainUI(player) {
                 break
             case 7:
                 firePunishUI(player)
+                break
+            case 8:
+                if (mcl.listGet('darkoak:report:').length === 0) {
+                    player.sendMessage('§cNo Reports Found§r')
+                    return
+                }
+                reportsUI(player)
                 break
             default:
                 player.sendMessage('§cError§r')
@@ -795,29 +809,29 @@ export function rankSettingsUI(player) {
     const p = mcl.jsonWGet('darkoak:chatranks')
 
     bui.label(f, '\nRanks:')
-    bui.textField(f, '\nRank Start:', 'Example: [', p.start)
+    bui.textField(f, '\nRank Start:', 'Example: [', p?.start)
     bui.divider(f)
 
-    bui.textField(f, 'Rank Middle:', 'Example: ][', p.middle)
+    bui.textField(f, 'Rank Middle:', 'Example: ][', p?.middle)
     bui.divider(f)
 
-    bui.textField(f, 'Rank End:', 'Example: ]', p.end)
+    bui.textField(f, 'Rank End:', 'Example: ]', p?.end)
     bui.divider(f)
 
-    bui.textField(f, 'Rank Bridge:', 'Example: ->', p.bridge)
+    bui.textField(f, 'Rank Bridge:', 'Example: ->', p?.bridge)
     bui.divider(f)
 
-    bui.textField(f, 'Default Rank:', 'Example: Member', p.defaultRank)
+    bui.textField(f, 'Default Rank:', 'Example: Member', p?.defaultRank)
     bui.divider(f)
 
     bui.label(f, 'Look In The Documentaion For How To Add Ranks And Clans')
     bui.divider(f)
     bui.label(f, 'Clans:')
 
-    bui.textField(f, 'Clan Start:', 'Example: (', p.cStart)
+    bui.textField(f, 'Clan Start:', 'Example: (', p?.cStart)
     bui.divider(f)
 
-    bui.textField(f, 'Clan End:', 'Example: )', p.cEnd)
+    bui.textField(f, 'Clan End:', 'Example: )', p?.cEnd)
     bui.divider(f)
 
     f.show(player).then((evd) => {
@@ -1118,6 +1132,10 @@ export function otherChatSettingsUI(player) {
     bui.toggle(f, 'AFK Notifier', default1?.afknotif, 'If Enabled, Shows "AFK" Under A Players Nametag If They\'re AFK')
     bui.slider(f, 'How Long Until AFK', 1, 10, default1?.afktime, 1, 'In Minutes')
 
+    bui.divider(f)
+
+    bui.toggle(f, 'Discord Style Messages', default1?.discordstyle, '')
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             chatSettingsUI(player)
@@ -1135,6 +1153,7 @@ export function otherChatSettingsUI(player) {
             nonametags: e[i++],
             afknotif: e[i++],
             afktime: e[i++],
+            discordstyle: e[i++],
         })
     }).catch()
 }
@@ -1183,10 +1202,11 @@ export function chestLockUI(player, loc) {
  */
 export function dashboardMainUI(player) {
     let f = new ActionFormData()
+    bui.title(f, 'Dashboard')
 
     bui.button(f, 'Print World Data')
     bui.button(f, 'Delete Data')
-    bui.button(f, 'Reports')
+    bui.button(f, 'Roles')
     bui.button(f, 'Logs')
     bui.button(f, 'Docs')
     bui.button(f, 'Admins And Players')
@@ -1212,11 +1232,7 @@ export function dashboardMainUI(player) {
                 dataDeleterUI(player)
                 break
             case 2:
-                if (mcl.listGet('darkoak:report:').length === 0) {
-                    player.sendMessage('§cNo Reports Found§r')
-                    return
-                }
-                reportsUI(player)
+                rolesMainUI(player)
                 break
             case 3:
                 logsUI(player)
@@ -1612,7 +1628,7 @@ export function actionBarUI(player) {
     for (let index = 0; index < 12; index++) {
         bui.textField(f, `Frame ${index + 1}:`, 'Example: #name#: #location#', d?.lines[index])
     }
-    
+
     bui.slider(f, 'Ticks Between Frames', 1, 100, d?.ticks, 1)
 
     f.show(player).then((evd) => {
@@ -1798,9 +1814,12 @@ export function rtpUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'RTP Settings')
 
-    bui.toggle(f, 'Enabled?', mcl.wGet('darkoak:cws:rtp:enabled') || false)
-    bui.textField(f, 'Center Co-ord:', 'Example: 0', mcl.wGet('darkoak:cws:rtp:center'))
-    bui.textField(f, 'Max Distance:', 'Example: 10000', mcl.wGet('darkoak:cws:rtp:distance'))
+    const d = mcl.jsonWGet('darkoak:cws:rtp')
+
+    bui.toggle(f, 'Enabled?', d?.enabled)
+    bui.textField(f, 'Center Co-ord X:', 'Example: 0', d?.centerx)
+    bui.textField(f, 'Center Co-ord Z:', 'Example: 0', d?.centerz)
+    bui.textField(f, 'Max Distance:', 'Example: 10000', d?.distance)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1808,9 +1827,13 @@ export function rtpUI(player) {
             return
         }
         const e = bui.formValues(evd)
-        mcl.wSet('darkoak:cws:rtp:enabled', e[0])
-        mcl.wSet('darkoak:cws:rtp:center', e[1])
-        mcl.wSet('darkoak:cws:rtp:distance', e[2])
+        let i = 0
+        mcl.jsonWSet('darkoak:cws:rtp', {
+            enabled: e[i++],
+            centerx: e[i++],
+            centerz: e[i++],
+            distance: e[i++],
+        })
     }).catch()
 }
 
@@ -2037,7 +2060,17 @@ export function communityMain(player) {
     bui.title(f, 'Community')
     bui.body(f, 'Use This Item While Crouching And Looking At A Player To View Their Profile')
 
-    const en = mcl.jsonWGet('darkoak:communityshowhide')
+    const en = mcl.jsonWGet('darkoak:communityshowhide') || {
+        payshop0: true,
+        payshop1: true,
+        payshop2: true,
+        payshop3: true,
+        warps: true,
+        report: true,
+        myprofile: true,
+        personallog: true,
+        credits: true,
+    }
 
     if (en?.payshop0) bui.button(f, 'Money', arrays.icons.minecoin)
     if (en?.warps) bui.button(f, 'Warps')
@@ -2095,7 +2128,17 @@ export function communityMoneyUI(player) {
     let f = new ActionFormData()
     bui.title(f, 'Money')
 
-    const en = mcl.jsonWGet('darkoak:communityshowhide')
+    const en = mcl.jsonWGet('darkoak:communityshowhide') || {
+        payshop0: true,
+        payshop1: true,
+        payshop2: true,
+        payshop3: true,
+        warps: true,
+        report: true,
+        myprofile: true,
+        personallog: true,
+        credits: true,
+    }
 
     if (en?.payshop1) bui.button(f, 'Pay')
     if (en?.payshop2) bui.button(f, 'Shop')
@@ -2307,10 +2350,9 @@ export function reportPlayerUI(player) {
  * @param {Player} player 
  */
 export function rtp(player) {
-    if (mcl.wGet('darkoak:cws:rtp:enabled') === true) {
-        const center = mcl.wGet('darkoak:cws:rtp:center')
-        const distance = mcl.wGet('darkoak:cws:rtp:distance')
-        player.runCommand(`spreadplayers ${center} ${center} 1 ${distance} "${player.name}"`)
+    const d = mcl.jsonWGet('darkoak:cws:rtp')
+    if (d?.enabled) {
+        player.runCommand(`spreadplayers ${d?.centerx || 0} ${d?.centerz || 0} 1 ${d?.distance || 0} "${player.name}"`)
     } else player.sendMessage('§cRTP Is Disabled§r')
 }
 

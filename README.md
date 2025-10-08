@@ -52,15 +52,21 @@ Plots are similar but build structures in a co-ord space. This will get a tutori
 changelog:
     added:
         save/load inventory commands *? (methods: structure saving with: [chests, entities])
-        world edit *?
         leveling system *?
 
 
         trivia chat game ***
         animated action forms ***
 
-        anticheat log clearing
-        decay / regen interaction settings option
+        more feature toggles **
+
+        arrow border killer *
+        plots *
+        
+        roles system
+        #playerlist#
+
+        we circle maker /wecircle *
 
 
         spawn protection settings *
@@ -75,19 +81,22 @@ changelog:
         owner system *
         alt uis *
 
-        
-    fixed:
-        anti phase
-        anti spam 2
 
+    fixed:
+        anti-spam, anti-nuker, and anti-fast-place is now more performant
+        anti-gamemode
+        anti-nuker and anti-fast-place
+        #cps#
+        #commands
+        boat world protection now kills chest boats
+
+        anti-velocity *
         owner fix *
         landclaims * (interactions with entities)
 
         
     changes:
-        message log now stacks messages, allowing for more messages to be logged
-        anti phase no longer logs and now has a sensitivity slider
-        the main ui items texture has changed to a darkoakboat
+        
 
         more stuff to profiles *
 
@@ -97,6 +106,8 @@ changelog:
 
 IDEA NOTE: for the array things, use a var and a ++ iterator so you can just copy them for long settings
 naman1141
+
+IDEA NOTE: for things that constantly get data, delay each by 20 ticks for retrieval
 
 hacks to detect:
 Anti .xp: detect if xp level went up real fast (warn users not to use /xp with this module)

@@ -78,6 +78,21 @@ export class bui {
         })
     }
 
+    /**
+     * @param {ModalFormData} f 
+     * @param {Player} player 
+     */
+    static inventoryPicker(f, player, label = '', defaultIndex = 0, tooltip = '') {
+        const inventory = mcl.getInventory(player).container
+        let inven = []
+        for (let index = 0; index < inventory.size; index++) {
+            const i = inventory.getSlot(index).getItem()
+            if (i) inven.push(`${i.nameTag || i.typeId} x${i.amount}`)
+        }
+        bui.dropdown(f, label, inven, defaultIndex, tooltip)
+        return inventory
+    }
+
     /**Generic slider
      * @param {ModalFormData} f 
      */

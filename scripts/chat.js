@@ -10,6 +10,9 @@ import { log } from "./world/anticheat"
 // This file handles all chat interactions such as:
 // Custom commands, ranks, censoring, antispam
 
+let messageMap = new Map()
+let lastSender = ''
+
 /**
  * @param {ChatSendBeforeEvent} evd
  * @param {string} message 
@@ -47,7 +50,7 @@ export function chatSystem(evd = undefined, player, message) {
     }
 
     // mutes
-    if (player.hasTag('darkoak:muted')) return
+    if (player.hasTag('darkoak:muted') || !mcl.roleCheck(player)?.chat) return
 
     // censoring
     /**@type {string[]} */
@@ -60,10 +63,9 @@ export function chatSystem(evd = undefined, player, message) {
 
     // anti spam
     const d = mcl.jsonWGet('darkoak:anticheat')
-    const h = mcl.jsonPGet(player, 'darkoak:antispam')
 
     if (d?.antispam) {
-        if (h.message == message.trim() && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return
+        if ((messageMap.get(player.name) || '') == message.trim() && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return
         if (
             message.trim().includes('Horion - the best minecraft bedrock utility mod - horion.download') ||
             message.trim().includes('horion.download')
@@ -84,12 +86,10 @@ export function chatSystem(evd = undefined, player, message) {
         }
     }
 
-    mcl.jsonPSet(player, 'darkoak:antispam', {
-        message: message.trim()
-    })
+    messageMap.set(player.name, message.trim())
 
     // anti crasher 1
-    if (d.anticrasher1 && (message.includes(crasherSymbol) || message.includes(crasherSymbol2))) return
+    if (d?.anticrasher1 && (message.includes(crasherSymbol) || message.includes(crasherSymbol2))) return
 
     // chat games
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string}} */
@@ -135,13 +135,13 @@ export function chatSystem(evd = undefined, player, message) {
     // message logs
     if (mcl.jsonWGet('darkoak:chat:other')) {
         /**@type {string[]} */
-        let logs2 = mcl.jsonWGet('darkoak:messagelogs').log || []
+        let logs2 = mcl.jsonWGet('darkoak:messagelogs')?.log || ['Default -> Default']
         if (logs2.length > 250) {
             while (logs2.length > 250) {
                 logs2.shift()
             }
         }
-        if (logs2[logs2.length - 1].split('->')[0].trim() === player.name) {
+        if (logs2.length > 0 && logs2[logs2.length - 1].split('->')[0].trim() === player.name) {
             logs2[logs2.length - 1] += `\n${message}`
         } else {
             logs2.push(`${player.name} -> ${message}`)
@@ -187,10 +187,18 @@ export function chatSystem(evd = undefined, player, message) {
     let nameColors = tags.filter(tag => tag.startsWith('namecolor:')).map(tag => tag.replace('namecolor:', ''))
     let chatColors = tags.filter(tag => tag.startsWith('chatcolor:')).map(tag => tag.replace('chatcolor:', ''))
 
-    let cr = mcl.jsonWGet('darkoak:chatranks')
+    let cr = mcl.jsonWGet('darkoak:chatranks') || {
+        start: '[',
+        middle: '][',
+        end: ']',
+        bridge: '->',
+        defaultRank: 'New',
+        cStart: '(',
+        cEnd: ')',
+    }
 
-    let clanS = cr.cStart || '['
-    let clanE = cr.cEnd || ']'
+    let clanS = cr.cStart
+    let clanE = cr.cEnd
     let clan = tags.find(tag => tag.startsWith('clan:'))?.replace('clan:', '') || ''
     if (clan.length == 0) {
         clanS = ''
@@ -201,12 +209,11 @@ export function chatSystem(evd = undefined, player, message) {
     nameColors = nameColors.length ? nameColors : [``]
     chatColors = chatColors.length ? chatColors : [``]
 
-    const nnEnabled = mcl.jsonWGet('darkoak:nicknamesettings')?.enabled
-
     let pName = player.name
     const nick = mcl.jsonPGet(player, 'darkoak:nickname')
-    if (nick && nnEnabled) {
-        const colorNum = Math.abs(world.getAllPlayers().findIndex(e => e.name === player.name)) % 10
+    if (nick && mcl.jsonWGet('darkoak:nicknamesettings')?.enabled) {
+        // const colorNum = Math.abs(world.getAllPlayers().findIndex(e => e.name === player.name)) % 10
+        const colorNum = (mcl.stringToNumber(player.name) % 9) + 1
         pName = `<§${colorNum}${player.name.slice(0, 4)}§f>${nick?.nick}`
     }
 
@@ -231,8 +238,18 @@ export function chatSystem(evd = undefined, player, message) {
             player.runCommand(`tellraw @a [r=15] {"rawtext": [{"text":"${text}"}]}`)
         }, 1)
     } else {
-        world.sendMessage({ rawtext: [{ text: text }] })
+        if (ocs.discordstyle) {
+            if (lastSender === player.name) {
+                world.sendMessage({ rawtext: [{ text: `§r§f${chatColors.join('')}${formattedMessage}` }] })
+            } else {
+                world.sendMessage({ rawtext: [{ text: text }] })
+            }
+        } else {
+            world.sendMessage({ rawtext: [{ text: text }] })
+        }
     }
+
+    lastSender = player.name
 }
 
 /**
@@ -243,12 +260,14 @@ function hashtag(hashtagKey, sender) {
     try {
         switch (hashtagKey.replaceAll('#', '')) {
             case 'commands':
-                sender.sendMessage('----------------------------------')
-                for (const c of mcl.listGetValues('darkoak:command:')) {
-                    const p = JSON.parse(c)
-                    sender.sendMessage(`${p.message} | ${p.tag || 'No Tag'} -> ${p.command}`)
+                let cMessage = ['------------------------------------------------------------']
+                const c = mcl.listGetValues('darkoak:command:')
+                for (let index = 0; index < c.length; index++) {
+                    const p = JSON.parse(c[index])
+                    cMessage.push(`${p?.message} | ${p?.tag || 'No Tag'} -> ${p?.command}`)
                 }
-                sender.sendMessage('----------------------------------')
+                cMessage.push('------------------------------------------------------------')
+                sender.sendMessage(cMessage.join('\n'))
                 break
             case 'noob':
                 sender.sendMessage('ALL HAIL THE NOOBSLAYER')
@@ -282,43 +301,6 @@ function hashtag(hashtagKey, sender) {
                     sender.sendMessage(`${emoji.m} -> ${emoji.e}`)
                 }
                 break
-            case 'landclaim add':
-                const loc = sender.location
-                let places = mcl.listGetValues('darkoak:landclaim:')
-
-                const newClaim = {
-                    p1: { x: loc.x + 16, z: loc.z + 16 },
-                    p2: { x: loc.x - 16, z: loc.z - 16 }
-                }
-
-                for (let index = 0; index < places.length; index++) {
-                    const place = JSON.parse(places[index])
-
-                    if (place.p1 && place.p2 && landclaimCheck(newClaim, place)) {
-                        sender.sendMessage('§cLand Has Already Been Claimed!§r')
-                        return
-                    }
-                }
-                mcl.jsonWSet(`darkoak:landclaim:${sender.name}`, {
-                    ...newClaim,
-                    owner: sender.name,
-                    players: [""]
-                })
-                sender.sendMessage('§aLand Claimed!§r')
-                break
-            case 'landclaim remove':
-                if (!mcl.wRemove(`darkoak:landclaim:${sender.name}`)) {
-                    sender.sendMessage('§cYou Don\'t Own A Landclaim!§r')
-                } else {
-                    sender.sendMessage('§cYou No Longer Own A Landclaim!§r')
-                }
-                break
-            case 'landclaim players':
-                sender.sendMessage('Close Chat!')
-                system.runTimeout(() => {
-                    landclaimMainUI(sender)
-                }, 20)
-                break
             case 'bind':
                 sender.sendMessage('Close Chat!')
                 system.runTimeout(() => {
@@ -336,7 +318,7 @@ function hashtag(hashtagKey, sender) {
                 break
         }
     } catch (e) {
-        mcl.adminMessage(`A Custom Command That Uses A Hashtag-Key Is Having An Error: ${hashtagKey} from ${sender.name}`)
+        mcl.adminMessage(`A Custom Command That Uses A Hashtag-Key Is Having An Error: ${hashtagKey} From ${sender.name}`)
         console.log(`DEBUG CHATCOMMANDS: ${String(e)}`)
     }
 }
@@ -347,7 +329,7 @@ let time2 = 205
 /**Chat games handler */
 export function chatGames() {
     const chat = mcl.jsonWGet('darkoak:scriptsettings')
-    if (chat.chatmaster === true) return
+    if (chat?.chatmaster === true) return
 
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string, catcherEnabled: boolean, catcherInterval: number}} */
     const d = mcl.jsonWGet('darkoak:chatgames')
@@ -389,7 +371,15 @@ export function chatGames() {
  */
 export function nametag(p, ocs) {
 
-    let cr = mcl.jsonWGet('darkoak:chatranks')
+    let cr = mcl.jsonWGet('darkoak:chatranks') || {
+        start: '[',
+        middle: '][',
+        end: ']',
+        bridge: '->',
+        defaultRank: 'New',
+        cStart: '(',
+        cEnd: ')',
+    }
 
     const tags = p.getTags()
 
@@ -407,6 +397,7 @@ export function nametag(p, ocs) {
 
     if (ocs?.healthDisplay) lines.push(`§aHealth: ${mcl.healthValue(p)}§r§f`)
     if (ocs?.nametag) lines.push(mcl.jsonPGet(p, 'darkoak:antispam').message)
+    if (ocs?.nametag) lines.push((messageMap.get(p.name) || ''))
     if (ocs?.nametagRanks) lines.push(`${cr.start}${replacer(p, ranks.join(cr.middle))}${cr.end}`)
 
     system.runTimeout(() => {

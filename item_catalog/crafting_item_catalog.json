@@ -54,7 +54,8 @@
                             "darkoak:anticheat",
                             "darkoak:generators",
                             "darkoak:data_editor",
-                            "darkoak:community"
+                            "darkoak:community",
+                            "darkoak:world_edit"
                         ]
                     },
                     {

@@ -1,9 +1,12 @@
-import { world, system, Player, ItemUseAfterEvent, EntityHurtAfterEvent, EntityDieAfterEvent } from "@minecraft/server"
+import { world, system, Player, ItemUseAfterEvent, EntityHurtAfterEvent, EntityDieAfterEvent, EntityHitEntityAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "./logic"
 
 const nerf = 4
 
+/**
+ * @param {EntityHitEntityAfterEvent} evd 
+ */
 export function enchantOnHit(evd) {
     if (evd.damagingEntity.typeId != 'minecraft:player') return
     const d = mcl.jsonWGet('darkoak:scriptsettings')
@@ -133,7 +136,7 @@ export function enchantOnUse(evd) {
     if (i === undefined) return
 
     const item = i.getLore()
-    if (item === undefined) return
+    if (item.length == 0) return
 
     for (let index = 0; index < item.length; index++) {
         const parts = item[index].split('-')
@@ -163,20 +166,21 @@ export function enchantOnUse(evd) {
     }
 }
 
+let jumpMap = new Map()
+
 /**
  * @param {Player} player 
  */
-export function enchantOnJump(player) {
-    const d = mcl.jsonWGet('darkoak:scriptsettings')
-    if (d.enchantsmaster) return
-    if (player.isOnGround) mcl.pSet(player, 'darkoak:enchant:jumping', false)
-    if (!player.isJumping || mcl.pGet(player, 'darkoak:enchant:jumping') === true) return
-    mcl.pSet(player, 'darkoak:enchant:jumping', true)
+export function enchantOnJump(player, d) {
+    if (d?.enchantsmaster) return
+    if (player.isOnGround) jumpMap.set(player.name, false)
+    if (!player.isJumping || jumpMap.get(player.name) === true) return
+    jumpMap.set(player.name, true)
 
     const i = mcl.getHeldItem(player)
-    if (i === undefined) return
+    if (!i) return
     const item = i.getLore()
-    if (item === undefined) return
+    if (item.length == 0) return
 
     for (let index = 0; index < item.length; index++) {
         const parts = item[index].split('-')

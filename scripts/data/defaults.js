@@ -1,4 +1,4 @@
-import { world, system } from "@minecraft/server"
+import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 
@@ -13,19 +13,6 @@ export function logcheck() {
     }
 
     mcl.jsonWSet('darkoak:log', log)
-}
-
-let ticker = 0
-/**Checks the byte count for massive sizes (mb) */
-export function byteChecker() {
-    if (ticker <= 6000) {
-        ticker += 1
-        return
-    }
-    const byte = world.getDynamicPropertyTotalByteCount()
-    if (byte > 1048576) {
-        mcl.adminMessage(`Possibly Dangerous Property Count: ${byte.toString()}, Please Print The World Data`)
-    }
 }
 
 
@@ -49,109 +36,12 @@ export function timers() {
     }
 }
 
+
 export function defaultData() {
-    const players = world.getAllPlayers()
-    for (let index = 0; index < players.length; index++) {
-        const player = players[index]
-        if (mcl.pGet(player, 'darkoak:ac:blocksbroken') == undefined) {
-            mcl.pSet(player, 'darkoak:ac:blocksbroken', 0)
-        }
-
-        if (mcl.pGet(player, 'darkoak:ac:blocksplaced') == undefined) {
-            mcl.pSet(player, 'darkoak:ac:blocksplaced', 0)
-        }
-
-        if (mcl.pGet(player, 'darkoak:antispam') == undefined) {
-            mcl.jsonPSet(player, 'darkoak:antispam', {
-                message: ''
-            })
-        }
-    }
-
-    if (mcl.wGet('darkoak:chatranks') === undefined) {
-        mcl.jsonWSet('darkoak:chatranks', {
-            defaultRank: 'New',
-            bridge: '->',
-            middle: '][',
-            start: '[',
-            end: ']'
-        })
-    }
-
-    if (mcl.wGet('darkoak:messagelogs') === undefined) {
-        mcl.jsonWSet('darkoak:messagelogs', {
-            log: ['', '']
-        })
-    }
-
-    if (mcl.wGet('darkoak:anticheat') === undefined) {
-        mcl.jsonWSet('darkoak:anticheat', {
-            prebans: false
-        })
-    }
-
-    if (mcl.wGet('darkoak:tracking') === undefined) {
-        mcl.jsonWSet('darkoak:tracking', {
-            flying: false,
-            gliding: false,
-            climbing: false,
-            emoting: false,
-            falling: false,
-            inwater: false,
-            jumping: false,
-            onground: false
-        })
-    }
-
-    if (mcl.wGet('darkoak:cws:rtp:enabled') === undefined) {
-        mcl.wSet('darkoak:cws:rtp:enabled', false)
-    }
-    if (mcl.wGet('darkoak:cws:rtp:center') === undefined) {
-        mcl.wSet('darkoak:cws:rtp:center', '0')
-    }
-    if (mcl.wGet('darkoak:cws:rtp:distance') === undefined) {
-        mcl.wSet('darkoak:cws:rtp:distance', '100')
-    }
-
-    if (mcl.wGet('darkoak:communityshowhide') === undefined) {
-        mcl.jsonWSet('darkoak:communityshowhide', {
-            payshop0: true,
-            payshop1: true,
-            payshop2: true,
-            payshop3: true,
-            warps: true,
-            report: true,
-            myprofile: true,
-            personallog: true,
-            credits: true,
-        })
-    }
-
-    if (mcl.wGet('darkoak:chatgames') === undefined) {
-        mcl.jsonWSet('darkoak:chatgames', {
-            unscrambleEnabled: false
-        })
-    }
-
     if (mcl.wGet('darkoak:scriptsettings') === undefined) {
         mcl.jsonWSet('darkoak:scriptsettings', {
             cancelWatchdog: false,
             datalog: false,
-        })
-    }
-
-    if (mcl.wGet('darkoak:welcome') === undefined) {
-        mcl.jsonWSet('darkoak:welcome', {
-            welcome: 'Welcome! Use The Main UI Item To Start.',
-            welcomeS: false,
-            bye: 'Goodbye #name#!',
-            byeS: false,
-        })
-    }
-
-    if (mcl.wGet('darkoak:worldprotection') === undefined) {
-        mcl.jsonWSet('darkoak:worldprotection', {
-            boats: false
         })
     }
 

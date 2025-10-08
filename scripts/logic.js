@@ -60,6 +60,19 @@ export class mcl {
         return characters.join('')
     }
 
+    /**Converts a string to a number by getting each characters unicode number and adding them together
+     * @param {string} string 
+     */
+    static stringToNumber(string) {
+        let characters = string.split('')
+        let num = 0
+
+        for (let index = 0; index < characters.length; index++) {
+            num += string.charCodeAt(index)
+        }
+        return num
+    }
+
     /**Deletes '§' from strings and the following letter, and converts common replacements
      * @param {string} string 
      */
@@ -292,7 +305,7 @@ export class mcl {
      * @param {Player} player 
      * @param {string} id 
      * @param {string} updateKey 
-     * @param {Object} data 
+     * @param {object} data 
      */
     static jsonPUpdate(player, id, updateKey, data) {
         let cd = mcl.jsonPGet(player, id)
@@ -971,5 +984,82 @@ export class mcl {
             pos = string.indexOf(match, pos + match.length)
         }
         return count
+    }
+
+    /**Returns whether the two locations are the same
+     * @param {{x: number, y: number, z: number}} loc1 
+     * @param {{x: number, y: number, z: number}} loc2 
+     */
+    static compareLocations(loc1, loc2) {
+        if (
+            loc1.x === loc2.x &&
+            loc1.y === loc2.y &&
+            loc1.z === loc2.z
+        ) return true
+        return false
+    }
+
+    /**
+     * @param {{x: number, y: number, z: number}} loc1 
+     * @param {{x: number, y: number, z: number}} loc2 
+     */
+    static particleOutline(loc1, loc2, particle = 'minecraft:endrod', amount = 1, dimension = 'overworld') {
+        if (system.currentTick % 10 != 0) return
+
+        const minX = Math.min(loc1.x, loc2.x) - 0.5
+        const maxX = Math.max(loc1.x, loc2.x) + 0.5
+        const minY = Math.min(loc1.y, loc2.y) - 0.5
+        const maxY = Math.max(loc1.y, loc2.y) + 0.5
+        const minZ = Math.min(loc1.z, loc2.z) - 0.5
+        const maxZ = Math.max(loc1.z, loc2.z) + 0.5
+        const dimen = world.getDimension(dimension)
+
+        const seen = new Set()
+
+        function spawn(x, y, z) {
+            const key = `${x},${y},${z}`
+            if (seen.has(key)) return
+            seen.add(key)
+            try {
+                dimen.spawnParticle(particle, { x: x + 0.5, y: y + 0.5, z: z + 0.5 })
+            } catch {
+
+            }
+        }
+
+        for (let x = minX; x <= maxX; x += amount) {
+            for (let y of [minY, maxY]) for (let z of [minZ, maxZ]) spawn(x, y, z)
+        }
+        for (let y = minY; y <= maxY; y += amount) {
+            for (let x of [minX, maxX]) for (let z of [minZ, maxZ]) spawn(x, y, z)
+        }
+        for (let z = minZ; z <= maxZ; z += amount) {
+            for (let x of [minX, maxX]) for (let y of [minY, maxY]) spawn(x, y, z)
+        }
+    }
+
+    /**Returns the role permissions from the players role, it gets the first role
+     * @param {Player} player 
+     * @returns {{name: string, break: boolean, build: boolean, chat: boolean, mainUI: boolean, punishmentsUI: boolean, rolesUI: boolean, tpcommand: boolean, killcommand: boolean} | undefined}
+     */
+    static roleCheck(player) {
+        let roles = mcl.jsonListGetBoth(`darkoak:role:`)
+        for (let index = 0; index < roles.length; index++) {
+            const role = roles[index]
+            if (player.hasTag(`darkoak:role:${role.value?.name}`)) {
+                return role.value
+            }
+        }
+        return {
+            name: 'default',
+            break: true,
+            build: true,
+            chat: true,
+            mainUI: false,
+            punishmentsUI: false,
+            rolesUI: false,
+            tpcommand: false,
+            killcommand: false
+        }
     }
 }

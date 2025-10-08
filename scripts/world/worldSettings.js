@@ -139,12 +139,12 @@ export function interactCommandBlock(evd) {
     const loc = evd.block.location
     for (let index = 0; index < defaults.length; index++) {
         const p = JSON.parse(defaults[index])
-        if (p.coords.x === loc.x && p.coords.y === loc.y && p.coords.z === loc.z) {
+        if (mcl.compareLocations(loc, p.coords)) {
             system.runTimeout(() => {
                 try {
                     evd.player.runCommand(arrays.replacer(evd.player, p.command))
                 } catch {
-                    
+
                 }
             })
             return
@@ -163,16 +163,16 @@ export function welcomeMessage(evd) {
         if (!evd.initialSpawn) return
         system.runTimeout(() => {
             if (d?.welcomeS) {
-                world.sendMessage(arrays.replacer(evd.player, d.welcome || ''))
+                world.sendMessage(arrays.replacer(evd.player, d?.welcome || ''))
             } else {
-                evd.player.sendMessage(arrays.replacer(evd.player, d.welcome || ''))
+                evd.player.sendMessage(arrays.replacer(evd.player, d?.welcome || ''))
             }
         }, 100)
     } else {
         if (d?.byeS) {
-            world.sendMessage(arrays.replacer(evd.player, d.bye || ''))
+            world.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
         } else {
-            evd.player.sendMessage(arrays.replacer(evd.player, d.bye || ''))
+            evd.player.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
         }
     }
 }
@@ -180,13 +180,22 @@ export function welcomeMessage(evd) {
 /**Player tracking and world border
  * @param {Player} player 
  */
-export function borderAndTracking(player) {
-    const worldBorder = mcl.wGet('darkoak:cws:border')
+export function borderAndTracking(player, worldBorder, track) {
+    
 
     const x = player.location.x
     const z = player.location.z
 
-    tracking(player, mcl.jsonWGet('darkoak:tracking'))
+    tracking(player, track || {
+        flying: false,
+        gliding: false,
+        climbing: false,
+        emoting: false,
+        falling: false,
+        inwater: false,
+        jumping: false,
+        onground: false
+    })
 
     // World border
     if (worldBorder != 0) {
@@ -208,7 +217,7 @@ export function borderAndTracking(player) {
     }
 }
 
-/**Don't recommend touching lol
+/**Don't recommend touching lol, hehe ima touch it
  * @param {Player} player 
  * @param {Object} d 
  */
@@ -222,7 +231,8 @@ function tracking(player, d) {
 
         if (d[oKey] && player[pKey]) {
             player.addTag(`darkoak:${oKey}`)
-            if (d[`${oKey}C`]) player.runCommand(arrays.replacer(player, d[`${oKey}C`]))
+            const keyC = d[`${oKey}C`]
+            if (keyC) player.runCommand(arrays.replacer(player, keyC))
         } else {
             player.removeTag(`darkoak:${oKey}`)
         }
@@ -247,23 +257,19 @@ export function pacifistArrowFix(evd) {
 export function bindedItems(evd) {
     const item = mcl.jsonWGet(`darkoak:bind:${evd.itemStack.typeId}`)
     if (!item) return
-    if (item.command1) {
+    if (item?.command1) {
         system.runTimeout(() => {
-            evd.source.runCommand(arrays.replacer(evd.source, item.command1))
+            evd.source.runCommand(arrays.replacer(evd.source, item?.command1))
         })
     }
 }
 
-let ticker2 = 0
+
 /**
  * @param {Player} player 
  */
 export function verify(player, old = '') {
-    if (ticker2 <= 2) {
-        ticker2 += 1
-        return
-    }
-    ticker2 = 0
+    if (system.currentTick % 2 != 0) return
 
     const d = mcl.jsonWGet('darkoak:whitelist')
     if (player.hasTag('darkoak:verified') || !d?.venabled) return

@@ -1,5 +1,5 @@
 // first is minecraft resources
-import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType, StructureSaveMode, EntityComponentTypes, CustomCommandStatus, CustomCommandError } from "@minecraft/server"
+import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType, StructureSaveMode, EntityComponentTypes, CustomCommandStatus, CustomCommandError, CustomCommandSource } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import { transferPlayer } from "@minecraft/server-admin"
 
@@ -21,6 +21,8 @@ import * as chat from "./chat"
 import * as anticheat from "./world/anticheat"
 import * as worldSettings from "./world/worldSettings"
 import * as worldProtection from "./world/worldProtection"
+import * as worldEdit from "./world/worldEdit"
+import * as roles from "./world/roles"
 
 // seventh set up external uis / commands
 import * as external from "./external/external"
@@ -46,6 +48,7 @@ world.afterEvents.entityHitEntity.subscribe((evd) => {
     anticheat.antiCps(evd)
     enchantOnHit(evd)
     worldSettings.smiteDataEditor(evd)
+    anticheat.antiVelocity(evd)
 
     // system.sendScriptEvent('darkoak:afterentityhitentity', JSON.stringify({
     //     damagingEntity: evd.damagingEntity,
@@ -73,6 +76,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
     worldProtection.placeBreakLandclaim(evd)
     dataEditorBlock(evd)
     worldSettings.interactCommandBlock(evd)
+    worldEdit.WEselector(evd)
 
     // system.runTimeout(() => {
     //     system.sendScriptEvent('darkoak:beforeplayerinteractwithblock', JSON.stringify({
@@ -155,6 +159,7 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
     worldProtection.placeBreakLandclaim(evd)
     anticheat.antiNuker(evd)
     worldProtection.lockedChestProtection(evd)
+    roles.roleBreak(evd)
 
     // system.runTimeout(() => {
     //     system.sendScriptEvent('darkoak:beforeplayerbreakblock', JSON.stringify({
@@ -172,6 +177,7 @@ world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
     worldProtection.placeBreakLandclaim(evd)
     anticheat.antiFastPlace(evd)
     worldSettings.worldSettingsBuild(evd)
+    roles.roleBuild(evd)
 
     // system.sendScriptEvent('darkoak:beforeplayerplaceblock', JSON.stringify({
     //     block: evd.block,
@@ -260,32 +266,39 @@ system.beforeEvents.startup.subscribe((evd) => {
 
 // system for handling most system intervals
 system.runInterval(() => {
-    defaults.defaultData()
 
     uis()
     gens()
-    bans()
     chat.chatGames()
-    defaults.byteChecker()
     defaults.timers()
+    defaults.defaultData()
 
-    landclaimBorders()
 
     const players = world.getAllPlayers()
+    bans(players)
+    landclaimBorders(players)
+
+    const ocs = mcl.jsonWGet('darkoak:chat:other')
+    const anticheatD = mcl.jsonWGet('darkoak:anticheat')
+    const wp = mcl.jsonWGet('darkoak:worldprotection')
+    const worldBorder = mcl.wGet('darkoak:cws:border')
+    const tracking = mcl.jsonWGet('darkoak:tracking')
+    const ss = mcl.jsonWGet('darkoak:scriptsettings')
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
-        worldProtection.worldProtectionOther(player)
-        worldSettings.borderAndTracking(player)
-        enchantOnJump(player)
+        worldProtection.worldProtectionOther(player, wp)
+        worldSettings.borderAndTracking(player, worldBorder, tracking)
+        enchantOnJump(player, ss)
         actionBar(player)
         anticheat.anticheatMain(player)
         anticheat.cpsTester(player)
-        chat.nametag(player, mcl.jsonWGet('darkoak:chat:other'))
+        chat.nametag(player, ocs)
         glideFeather(player)
         playerLister(player)
         worldProtection.dimensionBan(player)
-        anticheat.dupeIDChecker(player)
+        anticheat.dupeIDChecker(player, anticheatD)
         worldSettings.verify(player)
+        // mcl.particleOutline({x: -167, y: 62, z: -76}, {x: -171, y: 66, z: -80}, undefined, 0.1, player.dimension.id)
     }
 
     // system.sendScriptEvent('darkoak:interval', JSON.stringify({
@@ -304,9 +317,8 @@ function itemOpeners(evd) {
     const item = evd.itemStack
     const direction = player.getViewDirection()
     if (item.typeId == 'darkoak:main') {
-        if (mcl.isDOBAdmin(player)) {
+        if (mcl.isDOBAdmin(player) || mcl.roleCheck(player)?.mainUI) {
             interfaces.mainUI(player)
-            player.addTag('darkoak:admin')
             return
         } else {
             player.sendMessage('§cYou Aren\'t An Admin! Tag Yourself With darkoak:admin§r')
@@ -420,7 +432,11 @@ function chestLock(evd) {
         for (let index = 0; index < locks.length; index++) {
             const parts = JSON.parse(locks[index])
             const loc = evd.block.location
-            if (loc.x.toString() === parts.x && loc.y.toString() === parts.y && loc.z.toString() === parts.z && evd.player.name != parts.player) {
+            // if (loc.x.toString() === parts.x && loc.y.toString() === parts.y && loc.z.toString() === parts.z && evd.player.name != parts.player) {
+            //     evd.cancel = true
+            //     return
+            // }
+            if (mcl.compareLocations(loc, { x: parts.x, y: parts.y, z: parts.z })) {
                 evd.cancel = true
                 return
             }
@@ -449,7 +465,7 @@ function dataEditorBlock(evd) {
         system.runTimeout(() => {
 
             if (evd.player.isSneaking) {
-                if (bi.endsWith('stairs')) {
+                if (perm.getState('weirdo_direction') != undefined) {
 
                     let num = perm.getState('weirdo_direction') + 1
 
@@ -459,45 +475,27 @@ function dataEditorBlock(evd) {
                         bl.setPermutation(perm.withState('weirdo_direction', num))
                     }
 
-                } else if (bi.endsWith('slab')) {
+                } else if (perm.getState('minecraft:vertical_half') != undefined) {
 
                     let tog = 'bottom'
                     if (perm.getState('minecraft:vertical_half') === 'bottom') tog = 'top'
                     bl.setPermutation(perm.withState('minecraft:vertical_half', tog))
 
-                } else if (
-                    bi.endsWith('command_block') ||
-                    bi.endsWith('piston') ||
-                    bi === 'minecraft:end_rod' ||
-                    bi === 'minecraft:lightning_rod' ||
-                    bi === 'minecraft:hopper' ||
-                    bi.endsWith('_head') ||
-                    bi.endsWith('_skull') ||
-                    bi === 'minecraft:dispenser' ||
-                    bi === 'minecraft:dropper' ||
-                    bi === 'minecraft:barrel'
-                ) {
+                } else if (perm.getState('facing_direction') != undefined) {
 
                     let num = (perm.getState('facing_direction') + 1) % 6
                     bl.setPermutation(perm.withState('facing_direction', num))
 
-                } else if (bi.endsWith('button')) {
+                } else if (perm.getState('button_pressed_bit') != undefined) {
 
                     bl.setPermutation(perm.withState('button_pressed_bit', !perm.getState('button_pressed_bit')))
 
-                } else if (bi.endsWith('standing_sign')) {
+                } else if (perm.getState('ground_sign_direction') != undefined) {
 
                     let num = (perm.getState('ground_sign_direction') + 1) % 16
                     bl.setPermutation(perm.withState('ground_sign_direction', num))
 
-                } else if (
-                    bi.endsWith('chest') ||
-                    bi.endsWith('furnace') ||
-                    bi === 'minecraft:end_portal_frame' ||
-                    bi.endsWith('powered_comparator') ||
-                    bi.endsWith('powered_repeater') ||
-                    bi.endsWith('anvil')
-                ) {
+                } else if (perm.getState('minecraft:cardinal_direction') != undefined) {
 
                     let states = ['north', 'east', 'south', 'west']
                     let current = perm.getState('minecraft:cardinal_direction')
@@ -505,7 +503,7 @@ function dataEditorBlock(evd) {
                     let next = states[(idx + 1) % states.length]
                     bl.setPermutation(perm.withState('minecraft:cardinal_direction', next))
 
-                } else if (bi === 'minecraft:bamboo') {
+                } else if (perm.getState('bamboo_stalk_thickness') != undefined) {
 
                     let states = ['thick', 'thin']
                     let current = perm.getState('bamboo_stalk_thickness')
@@ -513,29 +511,26 @@ function dataEditorBlock(evd) {
                     let next = states[(idx + 1) % states.length]
                     bl.setPermutation(perm.withState('bamboo_stalk_thickness', next))
 
-                } else if (
-                    bi === 'minecraft:bed' ||
-                    bi === 'minecraft:grindstone'
-                ) {
+                } else if (perm.getState('direction') != undefined) {
 
                     let num = (perm.getState('direction') + 1) % 4
                     bl.setPermutation(perm.withState('direction', num))
 
-                } else if (bi === 'minecraft:cauldron') {
+                } else if (perm.getState('fill_level') != undefined) {
 
                     let num = (perm.getState('fill_level') + 1) % 7
                     bl.setPermutation(perm.withState('fill_level', num))
 
-                } else if (bi === 'minecraft:vine') {
+                } else if (perm.getState('vine_direction_bits') != undefined) {
 
                     let num = (perm.getState('vine_direction_bits') + 1) % 16
                     bl.setPermutation(perm.withState('vine_direction_bits', num))
 
-                } else if (bi === 'minecraft:scaffolding') {
+                } else if (perm.getState('stability') != undefined) {
                     let num = (perm.getState('stability') + 1) % 8
                     bl.setPermutation(perm.withState('stability', num))
 
-                } else if (bi === 'minecraft:portal') {
+                } else if (perm.getState('portal_axis') != undefined) {
                     let states = ['x', 'z']
                     let current = perm.getState('portal_axis')
                     let idx = states.findIndex(dir => dir === current)
@@ -642,11 +637,14 @@ function gens() {
     }
 }
 
-/**Ban system */
-function bans() {
+
+/**Ban system
+ * @param {Player[]} players 
+ */
+function bans(players) {
     if (system.currentTick < 100) return
 
-    const p = world.getAllPlayers()[0]
+    const p = players[0]
     const d = mcl.jsonWGet('darkoak:anticheat')
 
     if (d?.prebans) {
@@ -668,43 +666,44 @@ function bans() {
     }
 
     const bans = mcl.listGetBoth('darkoak:bans:')
-    if (!bans) return
-    for (let index = 0; index < bans.length; index++) {
-        const ban = bans[index]
-        const data = JSON.parse(ban.value)
-        if (data.time == 0) {
-            mcl.adminMessage(`${data.player} Has Been Unbanned`)
-            mcl.wRemove(ban.id)
-            continue
-        }
-        mcl.jsonWUpdate(ban.id, 'time', data.time - 1)
-        const banned = mcl.getPlayer(data.player)
-        if (!banned) continue
-        if (!data?.crash) {
-            if (data?.soft) {
-                transferPlayer(gp, {
-                    hostname: '127.0.0.0',
-                    port: 0
-                })
+    if (bans) {
+        for (let index = 0; index < bans.length; index++) {
+            const ban = bans[index]
+            const data = JSON.parse(ban.value)
+            if (data.time == 0) {
+                mcl.adminMessage(`${data.player} Has Been Unbanned`)
+                mcl.wRemove(ban.id)
+                continue
+            }
+            mcl.jsonWUpdate(ban.id, 'time', data.time - 1)
+            const banned = mcl.getPlayer(data.player)
+            if (!banned) continue
+            if (!data?.crash) {
+                if (data?.soft) {
+                    transferPlayer(gp, {
+                        hostname: '127.0.0.0',
+                        port: 0
+                    })
+                } else {
+                    p.runCommand(`kick "${data.player}" ${data?.message || ''}`)
+                }
             } else {
+                let o = 0
+                while (o++ < 100) {
+                    banned.sendMessage(`§a§k`)
+                    banned.sendMessage(`§a§k`)
+                    banned.sendMessage(`§a§k`)
+                    try {
+                        mcl.stopPlayer(banned)
+                        banned.teleport(banned.location)
+                    } catch {
+                        banned.sendMessage(`§a§k`)
+                        banned.sendMessage(`§a§k`)
+                        banned.sendMessage(`§a§k`)
+                    }
+                }
                 p.runCommand(`kick "${data.player}" ${data?.message || ''}`)
             }
-        } else {
-            let o = 0
-            while (o++ < 100) {
-                banned.sendMessage(`§a§k`)
-                banned.sendMessage(`§a§k`)
-                banned.sendMessage(`§a§k`)
-                try {
-                    mcl.stopPlayer(banned)
-                    banned.teleport(banned.location)
-                } catch {
-                    banned.sendMessage(`§a§k`)
-                    banned.sendMessage(`§a§k`)
-                    banned.sendMessage(`§a§k`)
-                }
-            }
-            p.runCommand(`kick "${data.player}" ${data?.message || ''}`)
         }
     }
 
@@ -713,7 +712,7 @@ function bans() {
     if (whitelist?.enabled) {
         const wlp = whitelist?.whitelist.split(',').map(e => e.trim())
 
-        const ps = world.getAllPlayers()
+        const ps = players
         for (let index = 0; index < ps.length; index++) {
             const pl = ps[index]
             if (wlp.includes(pl.name)) continue
@@ -722,11 +721,14 @@ function bans() {
     }
 }
 
-function landclaimBorders() {
+/**
+ * @param {Player[]} players 
+ * @returns 
+ */
+function landclaimBorders(players) {
     if (system.currentTick % 10 != 0) return
 
     const lcs = mcl.listGetBoth('darkoak:landclaim:')
-    const players = world.getAllPlayers()
 
     for (let index = 0; index < lcs.length; index++) {
         const area = JSON.parse(lcs[index].value)
@@ -770,25 +772,24 @@ function landclaimBorders() {
                 const minZ = Math.min(lc.p1.z, lc.p2.z)
                 const maxZ = Math.max(lc.p1.z, lc.p2.z)
 
-                for (let x = minX; x <= maxX; x += 4) {
-                    for (let z of [minZ, maxZ]) {
-                        for (let p = 0; p < players.length; p++) {
-                            const y = players[p].location.y
-                            players[p].spawnParticle('minecraft:endrod', {
+
+                for (let p = 0; p < players.length; p++) {
+                    const pl = players[p]
+                    for (let z = minZ + 1; z < maxZ; z += 4) {
+                        for (let x of [minX, maxX]) {
+                            pl.spawnParticle('minecraft:endrod', {
                                 x: x + 0.0,
-                                y: y + 0.2,
+                                y: pl.location.y + 0.2,
                                 z: z + 0.0
                             })
                         }
                     }
-                }
-                for (let z = minZ + 1; z < maxZ; z += 4) {
-                    for (let x of [minX, maxX]) {
-                        for (let p = 0; p < players.length; p++) {
-                            const y = players[p].location.y
-                            players[p].spawnParticle('minecraft:endrod', {
+
+                    for (let x = minX; x <= maxX; x += 4) {
+                        for (let z of [minZ, maxZ]) {
+                            pl.spawnParticle('minecraft:endrod', {
                                 x: x + 0.0,
-                                y: y + 0.2,
+                                y: pl.location.y + 0.2,
                                 z: z + 0.0
                             })
                         }
@@ -1204,7 +1205,7 @@ function modalTextUIBuilder(playerToShow, ui) {
 function animatedActionUIBuilder(player, ui, frame = 0) {
     let f = new ActionFormData()
 
-    
+
 }
 
 let acbarTicker = 0
@@ -1280,9 +1281,12 @@ function playerLister(player) {
  * @param {StartupEvent} evd 
  */
 function customSlashCommands(evd) {
+    worldEdit.WEcommands(evd)
+    roles.roleCommand(evd)
+
 
     evd.customCommandRegistry.registerEnum('darkoak:dimensions', ['overworld', 'nether', 'end'])
-    evd.customCommandRegistry.registerEnum('darkoak:compare', ['==', '!=', '<', '>', '=<', '>='])
+    evd.customCommandRegistry.registerEnum('darkoak:compare', ['==', '!=', '<', '>', '<=', '>='])
 
     evd.customCommandRegistry.registerEnum('darkoak:moneyfunctions', ['add', 'remove', 'set', 'test'])
     evd.customCommandRegistry.registerCommand({
@@ -1309,35 +1313,74 @@ function customSlashCommands(evd) {
                 name: 'darkoak:compare'
             }
         ]
-    }, (evd, player, moneyfunctions, amount, compare) => {
-        let result = true
-        system.runTimeout(() => {
-            switch (moneyfunctions) {
-                case 'add':
-                    mcl.addScore(player[0], amount)
-                    break
-                case 'remove':
-                    mcl.removeScore(player[0], amount)
-                    break
-                case 'set':
-                    mcl.setScore(player[0], amount)
-                    break
-                case 'test':
-                    result = Boolean(Function(`return ${amount} ${compare} ${mcl.getScore(player[0])}`))
-                    break
-            }
-        })
-        if (result) {
-            return {
-                status: CustomCommandStatus.Success,
-                message: `§a${player[0].name} Now Has $${mcl.getScore(player[0]).toString()}§r`
-            }
-        } else {
-            return {
-                status: CustomCommandStatus.Failure,
-                message: `Player: ${player[0].name}, Type: ${moneyfunctions}, Amount: ${amount}, Compare: ${compare}, Has: ${mcl.getScore(player[0])}, Result: ${result}`
-            }
+    }, (evd, players, moneyfunctions, amount, compare) => {
+        let player = players[0]
+        if (!player || player.typeId != 'minecraft:player') return {
+            status: CustomCommandStatus.Failure,
+            message: 'Missing Player'
         }
+
+        let result = 0
+        switch (moneyfunctions) {
+            case 'add':
+                mcl.addScore(player, amount)
+                result = 1
+                break
+            case 'remove':
+                mcl.removeScore(player, amount)
+                result = 1
+                break
+            case 'set':
+                mcl.setScore(player, amount)
+                result = 1
+                break
+            case 'test':
+                let bool = Function(`return (${amount} ${compare} ${mcl.getScore(player)})`)()
+                if (bool) {
+                    result = 2
+                } else {
+                    result = 3
+                }
+                break
+        }
+
+        switch (result) {
+            case 0:
+                return {
+                    status: CustomCommandStatus.Failure,
+                    message: 'Uncaught Result'
+                }
+                break
+            case 1:
+                return {
+                    status: CustomCommandStatus.Success,
+                    message: `${player.name} Now Has $${mcl.getScore(player).toString()}`
+                }
+                break
+            case 2:
+                return {
+                    status: CustomCommandStatus.Success,
+                    message: `${player.name}'s Test Result Was A Success`
+                }
+                break
+            case 3:
+                return {
+                    status: CustomCommandStatus.Failure,
+                    message: `${player.name}'s Test Result Was A Fail`
+                }
+                break
+        }
+        // if (result) {
+        //     return {
+        //         status: CustomCommandStatus.Success,
+        //         message: `§a${player[0].name} Now Has $${mcl.getScore(player[0]).toString()}§r`
+        //     }
+        // } else {
+        //     return {
+        //         status: CustomCommandStatus.Failure,
+        //         message: `Player: ${player[0].name}, Type: ${moneyfunctions}, Amount: ${amount}, Compare: ${compare}, Has: ${mcl.getScore(player[0])}, Result: ${result}`
+        //     }
+        // }
     })
 
     evd.customCommandRegistry.registerCommand({
@@ -1746,7 +1789,7 @@ function customSlashCommands(evd) {
 
                     break
                 case 'fakeplayer':
-                    
+
                     break
             }
         })
@@ -1984,8 +2027,8 @@ function customSlashCommands(evd) {
         ]
     }, (evd, players, inventype, nameInven) => {
 
-        evd?.sourceEntity?.sendMessage('§cCurrently Not Working')
-        return
+        // evd?.sourceEntity?.sendMessage('§cCurrently Not Working')
+        // return
 
         const dimen = evd.initiator?.dimension || evd.sourceBlock?.dimension || evd.sourceEntity?.dimension
 
@@ -1998,11 +2041,17 @@ function customSlashCommands(evd) {
                     case 'save':
 
                         // entity creation
-
+                        player.runCommand('summon darkoak:inv_accessor ~ ~ ~')
                         // duping
+                        const invenP = mcl.getInventory(player)
+                        console.log(invenP.inventorySize)
+                        for (let index = 0; index < invenP.inventorySize; index++) {
+                            const element = 0
+                            return
 
+                        }
                         // saving section
-                        world.structureManager.createFromWorld(`darkoak:inventory_${nameInven}`, dimen, player.location, {
+                        world.structureManager.createFromWorld(`darkoak:inventory_${nameInven}`, player.dimension, player.location, {
                             x: player.location.x,
                             y: player.location.y + 1,
                             z: player.location.z
@@ -2325,5 +2374,94 @@ function customSlashCommands(evd) {
             }
 
         })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:votetypes', ['1', '2', '3', '4', 'yes', 'no', 'open', 'close'])
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:vote',
+        description: 'Voting System',
+        permissionLevel: CommandPermissionLevel.Any,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:votetypes'
+            }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.String,
+                name: 'question'
+            }
+        ]
+    }, (evd, type, question) => {
+        const currentVote = mcl.jsonWGet('darkoak:voting')
+
+        switch (type) {
+            case 'open':
+                if (!question) return {
+                    status: CustomCommandStatus.Failure,
+                    message: 'Question Must Be Filled For Opening A Vote'
+                }
+                mcl.jsonWSet('darkoak:voting', {
+                    'question': question,
+                    '1': 0,
+                    '2': 0,
+                    '3': 0,
+                    '4': 0,
+                    'yes': 0,
+                    'no': 0,
+                    'voted': []
+                })
+                world.sendMessage(`§aVOTE§f: ${question}`)
+                break
+            case 'close':
+                if (!currentVote) return {
+                    status: CustomCommandStatus.Failure,
+                    message: 'No Open Vote Found'
+                }
+                world.sendMessage(`§aVOTE RESULTS§f:\nOption 1: ${currentVote['1']}\nOption 2: ${currentVote['2']}\nOption 3: ${currentVote['3']}\nOption 4: ${currentVote['4']}\nYes\'s: ${currentVote['yes']}\nNo\'s: ${currentVote['no']}`)
+                mcl.wRemove('darkoak:voting')
+                break
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case 'yes':
+            case 'no':
+                if (!currentVote) return {
+                    status: CustomCommandStatus.Failure,
+                    message: 'No Open Vote Found'
+                }
+                let toPush = ''
+                switch (evd.sourceType) {
+                    case CustomCommandSource.Block:
+                        toPush = evd.sourceBlock.location.x.toString() + evd.sourceBlock.location.y.toString() + evd.sourceBlock.location.z.toString() + 'BLOCK'
+                        break
+                    case CustomCommandSource.Entity:
+                        toPush = evd.sourceEntity.nameTag + 'ENTITY'
+                        break
+                    case CustomCommandSource.NPCDialogue:
+                        toPush = evd.initiator.nameTag + 'NPC'
+                        break
+                    case CustomCommandSource.Server:
+                        toPush = 'SERVER'
+                        break
+                }
+                /**@type {string[]} */
+                let newVoted = currentVote['voted']
+                if (newVoted.includes(toPush)) return {
+                    status: CustomCommandStatus.Failure,
+                    message: 'You\'ve Already Voted!'
+                }
+                newVoted.push(toPush)
+                mcl.jsonWUpdate('darkoak:voting', 'voted', newVoted)
+                const newAmount = parseInt(currentVote[type]) + 1
+                mcl.jsonWUpdate('darkoak:voting', type, newAmount)
+                return {
+                    status: CustomCommandStatus.Success,
+                    message: `You\'ve Voted For Option ${type}, It Is Now ${newAmount}`
+                }
+                break
+        }
     })
 }

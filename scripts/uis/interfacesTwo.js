@@ -539,7 +539,7 @@ export function anticheatSettings(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Anti-Invalid 4', d?.antiinvalid4)
-    bui.label(f, 'Checks If Certain Values Like A Hotbar Slot Are Above Or Below Normal Limits. Does Not Log, Only Sets To Normal')
+    bui.label(f, 'Checks If Certain Values Like A Hotbar Slot Are Above Or Below Normal Limits. Only Logs Certain Things And Attempts To Set To Normal')
 
     bui.divider(f)
 
@@ -562,6 +562,11 @@ export function anticheatSettings(player) {
 
     bui.toggle(f, 'Anti-Bowspam', d?.antibowspam)
     bui.label(f, 'Checks If The Delay Between Two Shots Isn\'t Within Normal Limits')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Velocity', d?.antivelocity)
+    bui.label(f, 'When A Player Is Hit, Checks If Their Location Has Changed')
 
     bui.divider(f)
 
@@ -608,6 +613,7 @@ export function anticheatSettings(player) {
             antiphasesense: e[i++],
             antiscaffold: e[i++],
             antibowspam: e[i++],
+            antivelocity: e[i++],
         })
     }).catch()
 }
@@ -1252,11 +1258,12 @@ export function scriptSettings(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:scriptsettings', {
-            cancelWatchdog: e[0],
-            datalog: e[1],
-            chatmaster: e[2],
-            enchantsmaster: e[3],
+            cancelWatchdog: e[i++],
+            datalog: e[i++],
+            chatmaster: e[i++],
+            enchantsmaster: e[i++],
         })
     }).catch()
 }
@@ -2127,6 +2134,7 @@ export function dimensionBansUI(player) {
 
     bui.toggle(f, 'Ban The Nether?', d?.nether)
     bui.toggle(f, 'Ban The End?', d?.end)
+    bui.toggle(f, 'TP?', d?.tp)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2134,9 +2142,11 @@ export function dimensionBansUI(player) {
             return
         }
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:dimensionbans', {
-            nether: e[0],
-            end: e[1],
+            nether: e[i++],
+            end: e[i++],
+            tp: e[i++],
         })
     })
 }
@@ -2477,6 +2487,164 @@ export function animatedActionUIMakerUI(player, ui = animatedActionDef, id = `da
         })
     })
 }
+
+export function rolesMainUI(player) {
+
+    if (!mcl.roleCheck(player)?.rolesUI && !mcl.isDOBAdmin(player)) {
+        player.sendMessage('§cYour Role Doesn\'t Allow You To Use The Roles UI!§r')
+        return
+    }
+
+    let f = new ActionFormData()
+    bui.title(f, 'Manage Roles')
+
+    bui.button(f, 'Add New Role')
+    bui.button(f, 'Remove A Role')
+    bui.button(f, 'Modify A Role')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.dashboardMainUI(player)
+            return
+        }
+
+        switch (evd.selection) {
+            case 0:
+                rolesAddUI(player)
+                break
+            case 1:
+                rolesRemoveUI(player)
+                break
+            case 2:
+                rolesModifyPickerUI(player)
+                break
+        }
+    })
+}
+
+/**
+ * @param {Player} player 
+ * @param {{id: string, value: object | undefined} | undefined} role
+ */
+export function rolesAddUI(player, role) {
+    let f = new ModalFormData()
+    bui.title(f, 'Add New / Modify Role')
+
+    const r = role?.value
+
+    bui.textField(f, 'Name Of Role:', 'Example: Owner', r?.name || '', 'Tag Will Be "darkoak:role:[name here]"')
+
+    bui.toggle(f, 'Can Break Blocks?', r?.break || true)
+    bui.toggle(f, 'Can Build?', r?.build || true)
+    bui.toggle(f, 'Can Send Chat Messages?', r?.chat || true)
+    bui.toggle(f, 'Can Access The Main UI?', r?.mainUI || false)
+    bui.toggle(f, 'Can Access The Punishments UI?', r?.punishmentsUI || false)
+    bui.toggle(f, 'Can Access The Roles UI?', r?.rolesUI || false)
+    bui.toggle(f, 'Can Use /tp?', r?.tpcommand || false, 'Use It Through /darkoak:c')
+    bui.toggle(f, 'Can Use /kill?', r?.killcommand || false, 'Use It Through /darkoak:c')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            rolesMainUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        let i = 0
+
+        mcl.jsonWSet(`darkoak:role:${e[0]}`, {
+            name: e[i++],
+            break: e[i++],
+            build: e[i++],
+            chat: e[i++],
+            mainUI: e[i++],
+            punishmentsUI: e[i++],
+            rolesUI: e[i++],
+            tpcommand: e[i++],
+            killcommand: e[i++],
+        })
+    })
+}
+
+export function rolesRemoveUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Remove A Role')
+
+    let roles = mcl.jsonListGetBoth('darkoak:role:')
+    for (let index = 0; index < roles.length; index++) {
+        const role = roles[index].value
+        bui.button(f, role?.name)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            rolesMainUI(player)
+            return
+        }
+        const role = roles[evd.selection].value
+        const players = world.getPlayers({tags: [role?.name]})
+        for (let index = 0; index < players.length; index++) {
+            const player = players[index]
+            player.removeTag(role?.name)
+        }
+        mcl.wRemove(roles[evd.selection].id)
+    })
+}
+
+export function rolesModifyPickerUI(player) {
+    let f = new ActionFormData()
+
+    let roles = mcl.jsonListGetBoth('darkoak:role:')
+    for (let index = 0; index < roles.length; index++) {
+        const role = roles[index].value
+        bui.button(f, role?.name)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            rolesMainUI(player)
+            return
+        }
+        const role = roles[evd.selection]
+        rolesAddUI(player, role)
+    })
+}
+
+// /**
+//  * @param {Player} player 
+//  * @param {{id: string, value: object | undefined}} role 
+//  */
+// export function rolesModifyUI(player, role) {
+//     let f = new ModalFormData()
+//     bui.title(f, `Modify Role: ${role.value?.name}`)
+
+//     bui.textField(f, 'Name Of Role:', 'Example: Owner', role.value?.name, 'Tag Will Be "darkoak:role:[name here]"')
+
+//     bui.toggle(f, 'Can Break Blocks?', role.value?.break)
+//     bui.toggle(f, 'Can Build?', role.value?.build)
+//     bui.toggle(f, 'Can Send Chat Messages?', role.value?.chat)
+//     bui.toggle(f, 'Can Access The Main UI?', role.value?.mainUI)
+//     bui.toggle(f, 'Can Access The Punishments UI?', role.value?.punishmentsUI)
+//     bui.toggle(f, 'Can Use /tp?', role.value?.tpcommand, 'Use It Through /darkoak:command')
+
+//     f.show(player).then((evd) => {
+//         if (evd.canceled) {
+//             rolesMainUI(player)
+//             return
+//         }
+//         const e = bui.formValues(evd)
+//         let i = 0
+
+//         mcl.jsonWSet(role.id, {
+//             name: e[i++],
+//             break: e[i++],
+//             build: e[i++],
+//             chat: e[i++],
+//             mainUI: e[i++],
+//             punishmentsUI: e[i++],
+//             tpcommand: e[i++],
+//         })
+//     })
+// }
 
 export function darkoakboatBio(player) {
     let f = new ActionFormData()

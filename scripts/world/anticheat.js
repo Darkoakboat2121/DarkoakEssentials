@@ -1,9 +1,10 @@
-import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent } from "@minecraft/server"
+import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { logcheck } from "../data/defaults"
 import { badBlocksList, hackedItemsList, hackedItemsVanilla } from "../data/arrays"
 
+let nukerMap = new Map()
 
 /**Anti nuker, works by checking the number of blocks broken in a small timeframe
  * @param {PlayerBreakBlockBeforeEvent} evd 
@@ -12,13 +13,14 @@ export function antiNuker(evd) {
     const d = mcl.jsonWGet('darkoak:anticheat')
     const player = evd.player
 
-    const current = mcl.pGet(player, 'darkoak:ac:blocksbroken') || 0
+    const current = nukerMap.get(player.name) || 0
 
     if (d?.antinuker) {
-        player.setDynamicProperty('darkoak:ac:blocksbroken', current + 1)
+        nukerMap.set(player.name, current + 1)
 
         if (current > 45) {
             evd.cancel = true
+            log(`${player.name} -> anti-nuker`)
         }
     }
 
@@ -32,6 +34,8 @@ export function antiNuker(evd) {
     }
 }
 
+let placeMap = new Map()
+
 /**Anti fast place, works by checking the number of blocks placed in a small timeframe
  * @param {PlayerPlaceBlockBeforeEvent} evd 
  */
@@ -39,14 +43,14 @@ export function antiFastPlace(evd) {
     const d = mcl.jsonWGet('darkoak:anticheat')
     const player = evd.player
     const block = evd.block
-    const current = mcl.pGet(player, 'darkoak:ac:blocksplaced') || 0
 
+    const current = placeMap.get(player.name) || 0
 
-    if (d.antifastplace) {
-        mcl.pSet(player, 'darkoak:ac:blocksplaced', current + 1)
+    if (d?.antifastplace) {
+        placeMap.set(player.name, current + 1)
         if (current > 20) {
             evd.cancel = true
-            console.log(`Debug: ANTIFASTPLACE, ${player.name} ${block.typeId} ${current}`)
+            log(`${player.name} -> anti-fast-place`)
         }
     }
 
@@ -83,12 +87,12 @@ export function antiFastPlace(evd) {
 export function antiCps(evd) {
     const player = evd.damagingEntity
     const d = mcl.jsonWGet('darkoak:anticheat')
-    if (player.typeId != 'minecraft:player' || !d?.antikillaura) return
+    if (player.typeId != 'minecraft:player') return
 
     const currentCPS = mcl.pGet(player, 'darkoak:ac:cps') || 0
     mcl.pSet(player, 'darkoak:ac:cps', currentCPS + 1)
 
-    if (currentCPS > 15) {
+    if (currentCPS > 15 && d?.antikillaura) {
         log(`${player.name} -> anti-killaura (${currentCPS})`)
     }
 }
@@ -117,27 +121,15 @@ export function antiReach(evd) {
     }
 }
 
-let ticker4 = 0
 /**
  * @param {Player} player 
  */
 export function cpsTester(player) {
-    if (ticker4 <= 20) {
-        ticker4++
-        return
-    }
+    if (system.currentTick % 20 == 0) return
+
     mcl.pSet(player, 'darkoak:ac:cps', 0)
-
-    if ((player.getDynamicProperty('darkoak:ac:blocksplaced') || 0) > 20) {
-        log(`${player.name} -> anti-fast-place`)
-    }
-    player.setDynamicProperty('darkoak:ac:blocksplaced', 0)
-
-    if ((player.getDynamicProperty('darkoak:ac:blocksbroken') || 0) > 45) {
-        log(`${player.name} -> anti-nuker`)
-    }
-    player.setDynamicProperty('darkoak:ac:blocksbroken', 0)
-    ticker4 = 0
+    nukerMap.set(player.name, 0)
+    placeMap.set(player.name, 0)
 }
 
 /**
@@ -145,66 +137,72 @@ export function cpsTester(player) {
  */
 export function antiGameMode(evd) {
     const d = mcl.jsonWGet('darkoak:anticheat')
-    if (!mcl.isDOBAdmin(evd.player) && d.antigamemode) {
+    if (!mcl.isDOBAdmin(evd.player) && d?.antigamemode) {
+        evd.player.setGameMode(evd.fromGameMode)
         evd.cancel = true
     }
 }
 
+/**
+ * 
+ * @param {PlayerInteractWithEntityBeforeEvent} evd 
+ */
 export function antiNpc(evd) {
     const d = mcl.jsonWGet('darkoak:anticheat')
-    if (d.npcdetect && evd.target.typeId == 'minecraft:npc' && !mcl.isDOBAdmin(evd.player)) {
+    if (d?.npcdetect && evd.target.typeId == 'minecraft:npc' && !mcl.isDOBAdmin(evd.player)) {
         log(`${evd.player.name} -> npc detected`)
         mcl.adminMessage(`${evd.player.name} -> npc detected`)
         evd.cancel = true
     }
 }
 
-let tickerDupe = 0
+// let tickerDupe = 0
 
-// antidupe, every tick applys a unique id to an item, and checks if 2 items have same id, doesnt id items held by admins in c-mode (for allowed duping)
+// // antidupe, every tick applys a unique id to an item, and checks if 2 items have same id, doesnt id items held by admins in c-mode (for allowed duping)
+// /**
+//  * @param {Player} player 
+//  */
+// export function antiDupeID(player) {
+//     if (tickerDupe < 1) {
+//         tickerDupe++
+//         return
+//     }
+//     tickerDupe = 0
+
+//     const d = mcl.jsonWGet('darkoak:anticheat')
+//     if (!d?.antidupe1) return
+
+//     const item = mcl.getHeldItem(player)
+
+//     if (!item || item.isStackable || player.getGameMode() === GameMode.Creative || item.typeId === '') return
+
+//     const idCycle = mcl.wGet('darkoak:idsystem') || 0
+
+//     let lore = item.getLore()
+//     let hasID = lore.some(line => /\[.*?\]/.test(line))
+
+//     if (!hasID) {
+//         const newID = `[${idCycle + 1}]`
+//         lore.push(newID)
+//         let newItem = new ItemStack(item.type, 1)
+//         newItem = item
+//         newItem.setLore(lore)
+//         mcl.getItemContainer(player).setItem(player.selectedSlotIndex, newItem)
+//         mcl.wSet('darkoak:idsystem', idCycle + 1)
+//         return
+//     }
+
+// }
+
+
+
 /**
  * @param {Player} player 
  */
-export function antiDupeID(player) {
-    if (tickerDupe < 1) {
-        tickerDupe++
-        return
-    }
-    tickerDupe = 0
-
-    const d = mcl.jsonWGet('darkoak:anticheat')
-    if (!d?.antidupe1) return
-
-    const item = mcl.getHeldItem(player)
-
-    if (!item || item.isStackable || player.getGameMode() === GameMode.Creative || item.typeId === '') return
-
-    const idCycle = mcl.wGet('darkoak:idsystem') || 0
-
-    let lore = item.getLore()
-    let hasID = lore.some(line => /\[.*?\]/.test(line))
-
-    if (!hasID) {
-        const newID = `[${idCycle + 1}]`
-        lore.push(newID)
-        let newItem = new ItemStack(item.type, 1)
-        newItem = item
-        newItem.setLore(lore)
-        mcl.getItemContainer(player).setItem(player.selectedSlotIndex, newItem)
-        mcl.wSet('darkoak:idsystem', idCycle + 1)
-        return
-    }
-
-}
-
-/**
- * @param {Player} player 
- */
-export function dupeIDChecker(player) {
+export function dupeIDChecker(player, d) {
     const inventory = mcl.getItemContainer(player)
     const idLog = new Set()
 
-    const d = mcl.jsonWGet('darkoak:anticheat')
 
     for (let index = 0; index < inventory.size; index++) {
         const item = inventory.getItem(index)
@@ -288,27 +286,26 @@ export function dupeIDChecker(player) {
 }
 
 /**
- * @param {Player} player 
- * @param {ItemStack} item 
- * @param {Container} inventory 
- * @param {number} index 
+ * @param {Player} player Player to add ID too
+ * @param {ItemStack} item Item to add ID too
+ * @param {Container} inventory Inventory of the player
+ * @param {number} index Index of the item (here for performance)
  */
 export function addID(player, item, inventory, index) {
     if (!item.isStackable && player.getGameMode() != GameMode.Creative) {
-        const idCycle = mcl.wGet('darkoak:idsystem') || 0
         let lore = item.getLore()
         let hasID = lore.some(line => /\[.*?\]/.test(line))
         if (!hasID) {
-            const newID = `[${idCycle + 1}]`
+            const newID = `[${mcl.timeUuid()}]`
             lore.push(newID)
             let newItem = new ItemStack(item.type, 1)
             newItem = item
             newItem.setLore(lore)
             inventory.setItem(index, newItem)
-            mcl.wSet('darkoak:idsystem', idCycle + 1)
         }
     }
 }
+// idea, stacks of 64 can have ids but if you make them not 64, removes the id; if two stacks have same id, log
 
 /**system interval function, player type
  * @param {Player} player 
@@ -328,38 +325,38 @@ export function anticheatMain(player) {
 
     if (gm != GameMode.Creative && gm != GameMode.Spectator) {
         // anti fly 1
-        if (player.isFlying && d.antifly1) {
+        if (player.isFlying && d?.antifly1) {
             log(`${player.name} -> anti-fly 1`)
         }
 
         // anti fly 2
-        if (player.isFlying && d.antifly2 && player.isGliding) {
+        if (player.isFlying && d?.antifly2 && player.isGliding) {
             log(`${player.name} -> anti-fly 2`)
         }
 
         // anti fly 3
-        if (d.antifly3 && player.isGliding && v.y > 0.8 && v.x < 0.2 && v.z < 0.2 && vd.y < 1) {
+        if (d?.antifly3 && player.isGliding && v.y > 0.8 && v.x < 0.2 && v.z < 0.2 && vd.y < 1) {
             log(`${player.name} -> anti-fly 3`)
         }
     }
 
     // anti invalid movements 1
-    if (d.antiinvalid1 && player.isSneaking && player.isSprinting && !player.isFlying && !player.isInWater) {
+    if (d?.antiinvalid1 && player.isSneaking && player.isSprinting && !player.isFlying && !player.isInWater) {
         log(`${player.name} -> anti-invalid 1`)
     }
 
     // anti invalid movements 2
-    if (d.antiinvalid2 && player.isSprinting && player.isOnGround && dot < -0.3) {
+    if (d?.antiinvalid2 && player.isSprinting && player.isOnGround && dot < -0.3) {
         log(`${player.name} -> anti-invalid 2`)
     }
 
     // anti invalid movements 3
-    if (d.antiinvalid3 && player.isClimbing && v.y > 1) {
+    if (d?.antiinvalid3 && player.isClimbing && v.y > 1) {
         log(`${player.name} -> anti-invalid 3`)
     }
 
     // anti speed 2
-    if ((Math.abs(v.x) >= 10 || Math.abs(v.z) >= 10) && d.antispeed1) {
+    if ((Math.abs(v.x) >= 10 || Math.abs(v.z) >= 10) && d?.antispeed1) {
         log(`${player.name} -> speed 2`)
         mcl.stopPlayer(player)
     }
@@ -381,14 +378,19 @@ export function anticheatMain(player) {
         log(`${player.name} -> anti-crasher 2`)
     }
 
-    if (d?.antiinvalid4 && (player.selectedSlotIndex > 8 || player.selectedSlotIndex < 0)) {
-        player.selectedSlotIndex = 0
+    if (d?.antiinvalid4) {
+        if (player.selectedSlotIndex > 8 || player.selectedSlotIndex < 0) player.selectedSlotIndex = 0
+        if (system.currentTick % 100 === 0) {
+            const mrd = player.clientSystemInfo
+            if (mrd.maxRenderDistance < 1) log(`${player.name} -> anti-invalid 4, max-render-distance: ${mrd.maxRenderDistance.toString()}`)
+            if (mrd.memoryTier < 0 || mrd.memoryTier > 4) log(`${player.name} -> anti-invalid 4, memory-tier: ${mrd.memoryTier}`)
+
+        }
     }
 
-    if (d?.antiphase && system.currentTick % (d?.antiphasesense || 10) === 0) {
+    if (d?.antiphase && system.currentTick % (d?.antiphasesense || 10) === 0 && gm != GameMode.Spectator) {
         const block = player.dimension.getBlock(player.location)
-        if (!block.isSolid || player.getGameMode() === GameMode.Spectator) return
-        mcl.knockback(player, v.x * -3, v.z * -3, v.y * -1)
+        if (block.isSolid) mcl.knockback(player, v.x * -3, v.z * -3, v.y * -1)
     }
 }
 
@@ -410,6 +412,25 @@ export function antiBowSpam(evd) {
 }
 
 /**
+ * @param {EntityHitEntityAfterEvent} evd 
+ */
+export function antiVelocity(evd) {
+    /**
+     * @type {Player}
+     */
+    const player = evd.hitEntity
+    if (player.typeId !== 'minecraft:player' || player.getGameMode() === GameMode.Creative) return
+    const cl = player.location
+    system.runTimeout(() => {
+        const p = mcl.getPlayer(player.name)
+        if (!p) return
+        if (mcl.compareLocations(cl, p.location)) {
+
+        }
+    }, 2)
+}
+
+/**
  * @param {string} mess 
  */
 export function log(mess) {
@@ -417,13 +438,13 @@ export function log(mess) {
     let data2 = mcl.jsonWGet(`darkoak:log`) || { logs: [{ message: 'placeholder' }] }
     data2.logs.push({ message: `${mess}\n[${d.getTime()}]` })
     const da = mcl.jsonWGet('darkoak:anticheat')
-    if (da.notify) {
+    if (da?.notify) {
         system.runTimeout(() => mcl.adminMessage(`Anticheat: ${mess}`))
     }
     mcl.jsonWSet(`darkoak:log`, data2)
 
     const player = mcl.getPlayer(mess.split('->').at(0).trim())
-    if (player && da.strike) {
+    if (player && da?.strike) {
         const current = mcl.pGet(player, 'darkoak:strikes') || 0
         mcl.pSet(player, 'darkoak:strikes', current + 1)
         if (current >= da?.strikeamount) {
@@ -439,4 +460,3 @@ export function log(mess) {
     }
     logcheck()
 }
-
