@@ -368,8 +368,15 @@ export function chatGames() {
 /**Interval event for nametags
  * @param {Player} p 
  * @param {object} ocs 
+ * @param {{antinametags: boolean | undefined}} d 
  */
-export function nametag(p, ocs) {
+export function nametag(p, ocs, d) {
+
+    if (mcl.tickTimer(20)) {
+        system.runTimeout(() => {
+            p.nameTag = ''
+        })
+    }
 
     let cr = mcl.jsonWGet('darkoak:chatranks') || {
         start: '[',
@@ -401,7 +408,11 @@ export function nametag(p, ocs) {
     if (ocs?.nametagRanks) lines.push(`${cr.start}${replacer(p, ranks.join(cr.middle))}${cr.end}`)
 
     system.runTimeout(() => {
-        p.nameTag = lines.join('\n')
+        try {
+            p.nameTag = lines.join('\n')
+        } catch {
+
+        }
     })
 }
 

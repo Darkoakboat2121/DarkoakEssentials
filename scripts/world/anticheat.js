@@ -1,8 +1,9 @@
-import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent } from "@minecraft/server"
+import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent, EffectTypes, InputPermissionCategory, EquipmentSlot } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { logcheck } from "../data/defaults"
 import { badBlocksList, hackedItemsList, hackedItemsVanilla } from "../data/arrays"
+import { transferPlayer } from "@minecraft/server-admin"
 
 let nukerMap = new Map()
 
@@ -18,16 +19,16 @@ export function antiNuker(evd) {
     if (d?.antinuker) {
         nukerMap.set(player.name, current + 1)
 
-        if (current > 45) {
+        if (current > (d?.antinukersense || 40)) {
             evd.cancel = true
-            log(`${player.name} -> anti-nuker`)
+            log(`${player.name} -> anti-nuker (${current})`)
         }
     }
 
     if (d?.antinuker2) {
-        const b = player.getBlockFromViewDirection()
+        const b = player.getBlockFromViewDirection({ maxDistance: 10 })
         const l = evd.block.location
-        if (b && b.block.isSolid && (b.block.location.x != l.x && b.block.location.y != l.y && b.block.location.z != l.z)) {
+        if (b && b?.block && b.block.isSolid && (b.block.location.x != l.x && b.block.location.y != l.y && b.block.location.z != l.z)) {
             evd.cancel = true
             log(`${player.name} -> anti-nuker 2`)
         }
@@ -48,9 +49,9 @@ export function antiFastPlace(evd) {
 
     if (d?.antifastplace) {
         placeMap.set(player.name, current + 1)
-        if (current > 20) {
+        if (current > (d?.antifastplacesense || 15)) {
             evd.cancel = true
-            log(`${player.name} -> anti-fast-place`)
+            log(`${player.name} -> anti-fast-place (${current})`)
         }
     }
 
@@ -81,19 +82,41 @@ export function antiFastPlace(evd) {
     }
 }
 
+let antiAutoMap = new Map()
 /**Anti killaura, works by checking the number of clicks in a small timeframe
  * @param {EntityHitEntityAfterEvent} evd 
  */
 export function antiCps(evd) {
+    /**@type {Player} */
     const player = evd.damagingEntity
-    const d = mcl.jsonWGet('darkoak:anticheat')
     if (player.typeId != 'minecraft:player') return
+    const d = mcl.jsonWGet('darkoak:anticheat')
 
     const currentCPS = mcl.pGet(player, 'darkoak:ac:cps') || 0
     mcl.pSet(player, 'darkoak:ac:cps', currentCPS + 1)
 
-    if (currentCPS > 15 && d?.antikillaura) {
+    if (currentCPS > (d?.antikillaurasense || 15) && d?.antikillaura) {
         log(`${player.name} -> anti-killaura (${currentCPS})`)
+    }
+
+    if (d?.antiautoclicker) {
+        const now = Date.now()
+        let times = antiAutoMap.get(player.name) || []
+        times.push(now)
+
+        if (times.length > 4) times = times.slice(-4)
+        antiAutoMap.set(player.name, times)
+
+        if (times.length === 4) {
+            const interval1 = times[1] - times[0]
+            const interval2 = times[2] - times[1]
+            const interval3 = times[3] - times[2]
+
+            let sensitivity = d?.antiautoclickersense || 2
+            if (Math.abs(interval1 - interval2) < sensitivity && Math.abs(interval2 - interval3) < sensitivity) {
+                log(`${player.name} -> anti-auto-clicker`)
+            }
+        }
     }
 }
 
@@ -116,7 +139,7 @@ export function antiReach(evd) {
         Math.pow(bl.y - pl.y, 2) +
         Math.pow(bl.z - pl.z, 2)
     )
-    if (distance > 5.2) {
+    if (distance > ((d?.antireachsense || 7.5) / 10)) {
         log(`${player.name} -> anti-reach\nDistance: ${distance.toString()}`)
     }
 }
@@ -125,7 +148,7 @@ export function antiReach(evd) {
  * @param {Player} player 
  */
 export function cpsTester(player) {
-    if (system.currentTick % 20 == 0) return
+    if (system.currentTick % 20 != 0) return
 
     mcl.pSet(player, 'darkoak:ac:cps', 0)
     nukerMap.set(player.name, 0)
@@ -136,11 +159,13 @@ export function cpsTester(player) {
  * @param {PlayerGameModeChangeBeforeEvent} evd 
  */
 export function antiGameMode(evd) {
-    const d = mcl.jsonWGet('darkoak:anticheat')
-    if (!mcl.isDOBAdmin(evd.player) && d?.antigamemode) {
-        evd.player.setGameMode(evd.fromGameMode)
-        evd.cancel = true
-    }
+    // const d = mcl.jsonWGet('darkoak:anticheat')
+    // if (!mcl.isDOBAdmin(evd.player) && d?.antigamemode) {
+    //     system.runTimeout(() => {
+    //         evd.player.setGameMode(evd.fromGameMode)
+    //     })
+    //     evd.cancel = true
+    // }
 }
 
 /**
@@ -202,6 +227,7 @@ export function antiNpc(evd) {
 export function dupeIDChecker(player, d) {
     const inventory = mcl.getItemContainer(player)
     const idLog = new Set()
+    const equiped = player.getComponent(EntityComponentTypes.Equippable)
 
 
     for (let index = 0; index < inventory.size; index++) {
@@ -212,7 +238,7 @@ export function dupeIDChecker(player, d) {
         if (d?.antidupe1) {
             // anti dupe id adder
             addID(player, item, inventory, index)
-
+            stackARID(player, item, inventory, index, d)
 
             // const content = item.getComponent(ItemComponentTypes.Inventory)
             // if (content) {
@@ -223,19 +249,25 @@ export function dupeIDChecker(player, d) {
             //         addID(player, fitem, contents, findex)
             //     }
             // }
-
-
-
             // anti dupe checker
             const lore = item.getLore() || []
             for (let index2 = 0; index2 < lore.length; index2++) {
-                const match = lore[index2].match(/\[(\d+)\]/)
-
+                const match = lore[index2].match(/\[R(\d+)T(\d+)\]/)
                 if (match) {
-                    const id = match[1]
+                    const id = match[0]
                     if (idLog.has(id)) {
                         log(`${player.name} -> anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
-                        mcl.getItemContainer(player).setItem(index)
+                        if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
+                    } else {
+                        idLog.add(id)
+                    }
+                }
+                const matchOld = lore[index2].match(/\[(\d+)\]/)
+                if (matchOld) {
+                    const id = matchOld[1]
+                    if (idLog.has(id)) {
+                        log(`${player.name} -> anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
+                        if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
                     } else {
                         idLog.add(id)
                     }
@@ -282,6 +314,14 @@ export function dupeIDChecker(player, d) {
                 }
             }
         }
+
+    }
+
+    const gm = player.getGameMode()
+    if (gm != GameMode.Creative && gm != GameMode.Spectator) {
+        if (d?.antifly4 && player.isGliding && equiped?.getEquipment(EquipmentSlot.Chest)?.typeId != 'minecraft:elytra') {
+            log(`${player.name} -> anti-fly 4`)
+        }
     }
 }
 
@@ -292,9 +332,9 @@ export function dupeIDChecker(player, d) {
  * @param {number} index Index of the item (here for performance)
  */
 export function addID(player, item, inventory, index) {
+    let lore = item.getLore()
+    let hasID = lore.some(line => /\[.*?\]/.test(line))
     if (!item.isStackable && player.getGameMode() != GameMode.Creative) {
-        let lore = item.getLore()
-        let hasID = lore.some(line => /\[.*?\]/.test(line))
         if (!hasID) {
             const newID = `[${mcl.timeUuid()}]`
             lore.push(newID)
@@ -305,7 +345,32 @@ export function addID(player, item, inventory, index) {
         }
     }
 }
-// idea, stacks of 64 can have ids but if you make them not 64, removes the id; if two stacks have same id, log
+
+/**stacks of maxamount can have ids but if you make them not maxamount, removes the id; if two stacks have same id, log
+ * @param {Player} player Player to add ID too
+ * @param {ItemStack} item Item to add ID too
+ * @param {Container} inventory Inventory of the player
+ * @param {number} index Index of the item (here for performance)
+ */
+export function stackARID(player, item, inventory, index, d) {
+    if (item.amount === item.maxAmount && player.getGameMode() != GameMode.Creative && d?.antidupe2) {
+        let lore = item.getLore()
+        let hasID = lore.some(line => /\[.*?\]/.test(line))
+        if (!hasID) {
+            const newID = `[${mcl.timeUuid()}]`
+            lore.push(newID)
+            let newItem = new ItemStack(item.type, item.amount)
+            newItem = item
+            newItem.setLore(lore)
+            inventory.setItem(index, newItem)
+        }
+    } else if (item.amount < item.maxAmount && item.getLore().length > 0) {
+        let newItem = new ItemStack(item.type, item.amount)
+        newItem = item
+        newItem.setLore([''])
+        inventory.setItem(index, newItem)
+    }
+}
 
 /**system interval function, player type
  * @param {Player} player 
@@ -338,6 +403,35 @@ export function anticheatMain(player) {
         if (d?.antifly3 && player.isGliding && v.y > 0.8 && v.x < 0.2 && v.z < 0.2 && vd.y < 1) {
             log(`${player.name} -> anti-fly 3`)
         }
+
+        // anti air jump
+        if (d?.antiairjump) {
+            const loc = player.location
+            const block = player.dimension.getBlock({
+                x: loc.x,
+                y: loc.y - 1,
+                z: loc.z,
+            })
+            if (block && block.typeId === 'minecraft:air') {
+                let allAir = 0
+                const blocksToCheck = [block.below(1), block.west(1), block.east(1), block.north(1), block.south(1)]
+                for (let index = 0; index < blocksToCheck.length; index++) {
+                    const b = blocksToCheck[index]
+                    if (!b) continue
+                    if (b.typeId === 'minecraft:air') allAir += 1
+                }
+
+                if (player.isOnGround && allAir >= 5) {
+                    log(`${player.name} -> anti-air-jump`)
+                }
+            }
+        }
+
+        // anti no web
+        // if (false) {
+        //     const block = player.dimension.getBlock(player.location)
+
+        // }
     }
 
     // anti invalid movements 1
@@ -351,31 +445,45 @@ export function anticheatMain(player) {
     }
 
     // anti invalid movements 3
-    if (d?.antiinvalid3 && player.isClimbing && v.y > 1) {
+    if (d?.antiinvalid3 && player.isClimbing && v.y > (d?.antiinvalid3sense || 1)) {
         log(`${player.name} -> anti-invalid 3`)
     }
 
-    // anti speed 2
-    if ((Math.abs(v.x) >= 10 || Math.abs(v.z) >= 10) && d?.antispeed1) {
-        log(`${player.name} -> speed 2`)
+
+    if (d?.antiantiimmobile && (
+        (!player.inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Sneak) && player.isSneaking) ||
+        (!player.inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Jump) && player.isJumping)
+    )) {
+        log(`${player.name} -> anti-anti-immobile`)
+    }
+
+    if (d?.antiairswim && player.isSwimming) {
+        const block = player.dimension.getBlock(player.location)
+        if (!block.isLiquid) log(`${player.name} -> anti-air-swim`)
+    }
+
+    // anti speed 1
+    const antispeedmax = d?.antispeedsense || 20
+    if ((Math.abs(v.x) >= antispeedmax || Math.abs(v.z) >= antispeedmax) && d?.antispeed) {
+        if (player.getEffect(EffectTypes.get('minecraft:speed'))) return
+        log(`${player.name} -> speed, X${Math.abs(v.x)}-Z${Math.abs(v.z)}`)
         mcl.stopPlayer(player)
     }
 
-    if (d?.antidupe2) {
-
-    }
-
     const mil = 1000000
-    if (d?.anticrasher2 && (Math.abs(player.location.x) > mil || Math.abs(player.location.z) > mil || Math.abs(player.location.y) > mil)) {
-        const sl = player.getSpawnPoint()
-        if (!player.kill()) player.teleport({
-            x: sl.x,
-            y: sl.y,
-            z: sl.z
-        }, {
-            dimension: sl.dimension
-        })
-        log(`${player.name} -> anti-crasher 2`)
+    if (d?.anticrasher2) {
+        let crasherLog = false
+        const loc = player.location
+        const nameFL = player.name
+        if (isNaN(loc.x) || isNaN(loc.y) || isNaN(loc.z)) {
+            transferPlayer(player, { hostname: '127.0.0.0', port: 0 })
+            crasherLog = true
+        }
+        if (Math.abs(loc.x) > mil || Math.abs(loc.z) > mil || Math.abs(loc.y) > mil) {
+            transferPlayer(player, { hostname: '127.0.0.0', port: 0 })
+            crasherLog = true
+        }
+        if (crasherLog) log(`${nameFL} -> anti-crasher 2`)
     }
 
     if (d?.antiinvalid4) {
@@ -383,9 +491,13 @@ export function anticheatMain(player) {
         if (system.currentTick % 100 === 0) {
             const mrd = player.clientSystemInfo
             if (mrd.maxRenderDistance < 1) log(`${player.name} -> anti-invalid 4, max-render-distance: ${mrd.maxRenderDistance.toString()}`)
-            if (mrd.memoryTier < 0 || mrd.memoryTier > 4) log(`${player.name} -> anti-invalid 4, memory-tier: ${mrd.memoryTier}`)
+            if (mrd.memoryTier < 0 || mrd.memoryTier > 4) log(`${player.name} -> anti-invalid 4, memory-tier: ${mrd.memoryTier.toString()}`)
 
         }
+        if (vd.x > 1 || vd.x < -1 || vd.y > 1 || vd.y < -1 || vd.z > 1 || vd.z < -1) player.teleport(player.location, {
+            facingLocation: player.location,
+            keepVelocity: true
+        })
     }
 
     if (d?.antiphase && system.currentTick % (d?.antiphasesense || 10) === 0 && gm != GameMode.Spectator) {
@@ -430,6 +542,8 @@ export function antiVelocity(evd) {
     }, 2)
 }
 
+let strikeMap = new Map()
+
 /**
  * @param {string} mess 
  */
@@ -445,13 +559,13 @@ export function log(mess) {
 
     const player = mcl.getPlayer(mess.split('->').at(0).trim())
     if (player && da?.strike) {
-        const current = mcl.pGet(player, 'darkoak:strikes') || 0
-        mcl.pSet(player, 'darkoak:strikes', current + 1)
-        if (current >= da?.strikeamount) {
-            mcl.pSet(player, 'darkoak:strikes', 0)
+        const current = strikeMap.get(player.name) || 0
+        strikeMap.set(player.name, current + 1)
+        if (current >= (da?.strikeamount || 5)) {
+            strikeMap.set(player.name, 0)
             system.runTimeout(() => {
                 try {
-                    player.kill()
+                    player.applyDamage(da?.strikedamage || 20)
                 } catch {
 
                 }

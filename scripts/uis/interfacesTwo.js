@@ -80,7 +80,9 @@ export function dataEditorBlockUI(player, block) {
         }
         if (e[1] && e[1] != block.typeId) block.setType(e[1])
 
-        if (e[3] != block.isWaterlogged) block.setWaterlogged(e[3])
+        if (e[3] != block.isWaterlogged) try {
+            block.setWaterlogged(e[3])
+        } catch { }
 
     }).catch()
 }
@@ -142,17 +144,21 @@ export function genAddUI(player) {
     bui.textField(f, 'Block ID:', 'Example: minecraft:diamond_ore')
     bui.textField(f, 'Co-ords:', 'Example: 10 1 97', `${n.x || ''} ${n.y || ''} ${n.z || ''}`.trim())
 
+    bui.textField(f, 'Co-ords 2 (For Areas):', 'Example: 20 11 107', '', 'Leave Empty For One Block')
+
     const dimensions = bui.dimensionPicker(f, player, true)
 
+    bui.textField(f, 'Delay In Ticks:', 'Example: 200')
+
     f.show(player).then((evd) => {
-        if (evd.canceled) return
+        if (evd.canceled) genMainUI(player)
         const e = bui.formValues(evd)
-        const blockId = e[0].trim()
-        const coords1 = e[1].trim()
         mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, {
-            block: blockId,
-            coords: coords1,
-            dimension: dimensions[e[2]]
+            block: e[0].trim(),
+            coords: e[1].trim(),
+            coords2: e[2].trim(),
+            dimension: dimensions[e[3]],
+            delay: e[4],
         })
     }).catch()
 }
@@ -161,8 +167,7 @@ export function genRemoveUI(player) {
     let f = new ActionFormData()
     bui.title(f, 'Remove A Generator')
 
-    const raw = mcl.listGet('darkoak:gen:')
-    const gens = mcl.listGetValues('darkoak:gen:')
+    const gens = mcl.listGetBoth('darkoak:gen:')
 
     if (gens === undefined || gens.length === 0) {
         player.sendMessage('§cNo Generators Found§r')
@@ -170,13 +175,17 @@ export function genRemoveUI(player) {
     }
 
     for (let index = 0; index < gens.length; index++) {
-        const g = JSON.parse(gens[index])
-        bui.button(f, `Delete: ${g.block}\n${g.coords}, ${g.dimension || 'overworld'}`)
+        const g = JSON.parse(gens[index].value)
+        if (g.coords2) {
+            bui.button(f, `Delete: ${g.block}\n${g.coords} - ${g.coords2}, ${g.dimension || 'overworld'}`)
+        } else {
+            bui.button(f, `Delete: ${g.block}\n${g.coords}, ${g.dimension || 'overworld'}`)
+        }
     }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        mcl.wSet(raw[evd.selection])
+        mcl.wRemove(gens[evd.selection].id)
     }).catch()
 }
 
@@ -211,14 +220,22 @@ export function genModifyUI(player, gen) {
     bui.textField(f, 'Block ID:', '', data?.block)
     bui.textField(f, 'Co-ords:', '', data?.coords)
 
+    bui.textField(f, 'Co-ords 2 (For Areas):', 'Example: 20 11 107', data?.coords2, 'Leave Empty For One Block')
+
     const dimensions = bui.dimensionPicker(f, player, true)
+
+    bui.textField(f, 'Delay In Ticks:', 'Example: 200', data?.delay)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
-        const blockId = e[0].trimStart()
-        const coords1 = e[1].trimStart()
-        mcl.jsonWSet(gen, { block: blockId, coords: coords1, dimension: dimensions[e[2]] })
+        mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, {
+            block: e[0].trim(),
+            coords: e[1].trim(),
+            coords2: e[2].trim(),
+            dimension: dimensions[e[3]],
+            delay: e[4],
+        })
     }).catch()
 }
 
@@ -380,7 +397,7 @@ export function anticheatSettings(player) {
 
     const d = mcl.jsonWGet('darkoak:anticheat')
 
-    bui.label(f, '§cRemember To Always Verify If The Player Is Actually Hacking. Anticheat Always Has A Chance Of False Positives.')
+    bui.label(f, '§cRemember To Always Verify If The Player Is Actually Hacking. Anticheat Always Has A Chance Of False Positives.§r')
 
     bui.toggle(f, 'Pre-bans', d?.prebans)
     bui.label(f, 'Automatically Bans Hackers Darkoakboat2121 Knows About')
@@ -391,10 +408,14 @@ export function anticheatSettings(player) {
     bui.toggle(f, 'Anti-nuker 1', d?.antinuker)
     bui.label(f, 'Checks If A Player Is Breaking Blocks Too Fast')
 
+    bui.slider(f, 'Block Limit', 20, 50, d?.antinukersense, 1)
+
     bui.divider(f)
 
     bui.toggle(f, 'Anti-fast-place', d?.antifastplace)
     bui.label(f, 'Checks If A Player Is Placing Blocks Too Fast')
+
+    bui.slider(f, 'Block Limit', 10, 40, d?.antifastplacesense, 1)
 
     bui.divider(f)
 
@@ -403,8 +424,10 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-speed 1', d?.antispeed1)
+    bui.toggle(f, 'Anti-speed', d?.antispeed)
     bui.label(f, 'Checks If Player Is Moving Too Fast')
+
+    bui.slider(f, 'Speed Limit', 10, 40, d?.antispeedsense, 1)
 
     bui.divider(f)
 
@@ -422,6 +445,8 @@ export function anticheatSettings(player) {
 
     bui.toggle(f, 'Anti-killaura', d?.antikillaura)
     bui.label(f, 'Checks If The Players CPS Is Too High')
+
+    bui.slider(f, 'CPS Limit', 15, 40, d?.antikillaurasense, 1)
 
     bui.divider(f)
 
@@ -458,10 +483,7 @@ export function anticheatSettings(player) {
     bui.toggle(f, 'Anti-invalid 3', d?.antiinvalid3)
     bui.label(f, 'Checks If The Player Is Climbing A Ladder Too Quickly')
 
-    bui.divider(f)
-
-    bui.toggle(f, 'Anti-speed 2', d?.antispeed2)
-    bui.label(f, 'Checks If The Player Is Going At Insane Speeds (Also Slows Them Down)')
+    bui.slider(f, 'Sensitivity', 1, 3, d?.antiinvalid3sense, 1)
 
     bui.divider(f)
 
@@ -476,9 +498,10 @@ export function anticheatSettings(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Strike Action', d?.strike)
-    bui.label(f, 'If This Is On And If A Player Triggers Anticheat Measures, The Player Gets Killed')
+    bui.label(f, 'If This Is On And If A Player Triggers Anticheat Measures, The Player Gets Damaged')
 
     bui.slider(f, 'How Many Should Trigger', 3, 15, d?.strikeamount, 1)
+    bui.slider(f, 'Damage Amount', 1, 20, d?.strikedamage, 1)
 
     bui.divider(f)
 
@@ -498,17 +521,18 @@ export function anticheatSettings(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Anti-Dupe 1', d?.antidupe1)
-    bui.label(f, 'Adds An ID To Each Non-stackable Item And Checks If Two ID\'s Are The Same, Also Removes Duped Items')
+    bui.label(f, 'Adds An ID To Each Non-stackable Item And Checks If Two ID\'s Are The Same')
+
+    bui.toggle(f, 'Clear Item?', d?.antidupeclear)
+    bui.label(f, 'Clears The Duped Items. §cHeavily Recommended!§r')
+
+    bui.toggle(f, 'Anti-Dupe 2', d?.antidupe2)
+    bui.label(f, 'Adds An ID To Max Stacked Items And Removes The ID Once Unstacked, Requires Anti-Dupe 1 To Be Enabled')
 
     bui.divider(f)
 
     bui.toggle(f, 'Anti-NBT 2', d?.antinbt2)
     bui.label(f, 'Bans Items That Are Named The Same As Common Hacked Kits And NBT Exploits')
-
-    bui.divider(f)
-
-    bui.toggle(f, 'Anti-Dupe 2', d?.antidupe2)
-    bui.label(f, 'Does Not Work Yet')
 
     bui.divider(f)
 
@@ -519,6 +543,7 @@ export function anticheatSettings(player) {
 
     bui.toggle(f, 'Anti-Reach', d?.antireach)
     bui.label(f, 'Checks How Far Away Two Players Are When One Hits Another')
+    bui.slider(f, 'Reach Distance To Log', 55, 80, d?.antireachsense, 1, 'Tens Place = Ones Place (For Example: 65 = 6.5)')
 
     bui.divider(f)
 
@@ -533,7 +558,7 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-Crasher 2', d?.anticrasher2)
+    bui.toggle(f, 'Anti-Crasher 2', d?.anticrasher2, 'This Is For Outdated Crashers')
     bui.label(f, 'Limits World Size To 1mil By 1mil, If A Player Goes Farther They Get Killed')
 
     bui.divider(f)
@@ -570,6 +595,38 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
+    bui.toggle(f, 'Anti-Nametags', d?.antinametags)
+    bui.label(f, 'Flickers Players Nametags Every Five Ticks So Hack Clients Are Forced To Redraw Them (May Cause Lag To Hackers)')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Anti-Immobile', d?.antiantiimmobile)
+    bui.label(f, 'Checks If A Player Is Moving When Immobile Flags Are Set')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Air-Swim', d?.antiairswim)
+    bui.label(f, 'Checks If A Player Is Swimming Without Being In Water')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Auto-Clicker', d?.antiautoclicker)
+    bui.label(f, 'Checks If A Player Is Hitting An Entity At The Same Delay Three Times In A Row')
+
+    bui.slider(f, 'Sensitivity (Smaller Is More Sensitive)', 2, 12, d?.antiautoclickersense, 1, 'This Changes The Millisecond Allowance Between Hits, 0 Means The Three Hits Have To Be Exactly The Same Delay Between Each, 10 Means Each Hit Can Be Ten Milliseconds Away From Each Other To Still Log')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Air-Jump', d?.antiairjump)
+    bui.label(f, 'Checks If A Player Is Not On The Ground And Is Jumping')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Fly 4', d?.antifly4)
+    bui.label(f, 'Checks If A Player Is Gliding Without An Elytra Equiped')
+
+    bui.divider(f)
+
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
@@ -577,13 +634,17 @@ export function anticheatSettings(player) {
         mcl.jsonWSet('darkoak:anticheat', {
             prebans: e[i++],
             antinuker: e[i++],
+            antinukersense: e[i++],
             antifastplace: e[i++],
+            antifastplacesense: e[i++],
             antifly1: e[i++],
-            antispeed1: e[i++],
+            antispeed: e[i++],
+            antispeedsense: e[i++],
             antispam: e[i++],
             antispam2: e[i++],
             antiillegalenchant: e[i++],
             antikillaura: e[i++],
+            antikillaurasense: e[i++],
             antigamemode: e[i++],
             npcdetect: e[i++],
             antifly2: e[i++],
@@ -591,19 +652,22 @@ export function anticheatSettings(player) {
             antiinvalid1: e[i++],
             antiinvalid2: e[i++],
             antiinvalid3: e[i++],
-            antispeed2: e[i++],
+            antiinvalid3sense: e[i++],
             antiblockreach: e[i++],
             notify: e[i++],
             strike: e[i++],
             strikeamount: e[i++],
+            strikedamage: e[i++],
             anticrasher1: e[i++],
             antinuker2: e[i++],
             antinbt: e[i++],
             antidupe1: e[i++],
-            antinbt2: e[i++],
+            antidupeclear: e[i++],
             antidupe2: e[i++],
+            antinbt2: e[i++],
             antiadminitems: e[i++],
             antireach: e[i++],
+            antireachsense: e[i++],
             antiairplace: e[i++],
             antistreamermode: e[i++],
             anticrasher2: e[i++],
@@ -614,6 +678,13 @@ export function anticheatSettings(player) {
             antiscaffold: e[i++],
             antibowspam: e[i++],
             antivelocity: e[i++],
+            antinametags: e[i++],
+            antiantiimmobile: e[i++],
+            antiairswim: e[i++],
+            antiautoclicker: e[i++],
+            antiautoclickersense: e[i++],
+            antiairjump: e[i++],
+            antifly4: e[i++],
         })
     }).catch()
 }
@@ -643,25 +714,42 @@ export function auctionMain(player) {
     }).catch()
 }
 
-export function auctionAddUI(player) {
+export function auctionAddUI(player, errorMessage = '') {
     let f = new ModalFormData()
     bui.title(f, 'Add Item')
 
-    bui.textField(f, '\nAdd An Item Into The Auction House? It\'s Permanant! Also This Will Remove Any Enchantments.\nPrice:', 'Example: 100')
+    bui.label(f, errorMessage)
 
-    bui.slider(f, 'Slot', 1, 9)
+    let itemList = []
+    const inven = mcl.getItemContainer(player)
+    for (let index = 0; index < inven.size; index++) {
+        const ci = inven.getItem(index)
+        if (!ci) continue
+        itemList.push({
+            item: ci,
+            slot: index
+        })
+    }
+    bui.dropdown(f, 'Item:', itemList.map(e => `${e.item.nameTag || e.item.typeId} x${e.item.amount} (Slot: ${e.slot})`))
+
+    bui.textField(f, 'Price:', 'Example: 100') // e[1]
 
     bui.submitButton(f, `Add Item?`)
-
+    //Noob was here
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
-        if (isNaN(e[0])) {
-            auctionAddUI(player)
+        if (isNaN(e[1]) || e[1] < 0) {
+            auctionAddUI(player, '§cThe Price Is Invalid§r')
             return
         }
-        const item = mcl.getItemContainer(player).getItem(e[1])
-        mcl.jsonWSet(`darkoak:auction:item${mcl.timeUuid()}`, mcl.itemToData(item))
+        const item = itemList[e[0]]
+        mcl.jsonWSet(`darkoak:auction:item:${mcl.timeUuid()}`, {
+            item: mcl.itemToData(item.item),
+            price: parseInt(e[1]),
+            slot: item.slot
+        })
+        inven.setItem(inven.find(item.item))
     }).catch()
 }
 
@@ -672,7 +760,7 @@ export function auctionHouse(player) {
     let f = new ActionFormData()
     bui.title(f, 'Auction House')
 
-    const items = mcl.listGetBoth('darkoak:auction:item')
+    const items = mcl.listGetBoth('darkoak:auction:item:')
 
     if (items === undefined || items.length === 0) {
         player.sendMessage('§cNo Items Found§r')
@@ -681,13 +769,17 @@ export function auctionHouse(player) {
 
     for (let index = 0; index < items.length; index++) {
         const d = JSON.parse(items[index].value)
-        bui.button(f, `${d.itemTypeId} x${d.itemAmount} for ${d.price}`)
+        bui.button(f, `${d.item.typeId} x${d.item.amount} for ${d.price}$`)
     }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        const selected = JSON.parse(items.at(evd.selection).value)
-        if (mcl.buy(player, selected.price, selected.itemTypeId, selected.itemAmount)) mcl.wSet(items[index].id)
+        const selected = JSON.parse(items[evd.selection].value)
+        if (mcl.getScore(player) > selected.price) {
+            player.runCommand(`give @s ${selected.item.typeId} ${selected.item.amount}`)
+            mcl.removeScore(player, selected.price)
+            mcl.wSet(items[evd.selection].id)
+        }
     }).catch()
 }
 
@@ -2204,7 +2296,7 @@ export function modalTextAddingUI(player) {
     bui.textField(f, 'UI Text') // 11
     bui.textField(f, 'UI Text') // 12
     bui.textField(f, 'UI Text') // 13
-    
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             modalTextUIMakerUI(player)
@@ -2280,7 +2372,7 @@ export function modalTextModifyUI(player, ui) {
     bui.textField(f, 'UI Text', '', ui.value.lines[9]) // 11
     bui.textField(f, 'UI Text', '', ui.value.lines[10]) // 12
     bui.textField(f, 'UI Text', '', ui.value.lines[11]) // 13
-    
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             modalTextModifyPickerUI(player)
@@ -2433,25 +2525,25 @@ export function modalTextTemplatesUI(player) {
 const animatedActionDef = {
     title: '',
     tag: '',
-    frames: [{buttons: ['','','','','',]},{buttons: ['','','','','',]},{buttons: ['','','','','',]},
-        {
-            buttons: [
-                '',
-                '',
-                '',
-                '',
-                '',
-            ]
-        },
-        {
-            buttons: [
-                '',
-                '',
-                '',
-                '',
-                '',
-            ]
-        },
+    frames: [{ buttons: ['', '', '', '', '',] }, { buttons: ['', '', '', '', '',] }, { buttons: ['', '', '', '', '',] },
+    {
+        buttons: [
+            '',
+            '',
+            '',
+            '',
+            '',
+        ]
+    },
+    {
+        buttons: [
+            '',
+            '',
+            '',
+            '',
+            '',
+        ]
+    },
     ]
 }
 
@@ -2459,7 +2551,7 @@ export function animatedActionUIMakerUI(player, ui = animatedActionDef, id = `da
     let f = new ModalFormData()
     bui.title(f, 'Animated Action UI Maker')
 
-    bui.textField(f, 'Title:', '', ui.title, )
+    bui.textField(f, 'Title:', '', ui.title,)
 
     for (let index = 0; index < 5; index++) {
         bui.header(f, `Frame ${index + 1}`)
@@ -2581,7 +2673,7 @@ export function rolesRemoveUI(player) {
             return
         }
         const role = roles[evd.selection].value
-        const players = world.getPlayers({tags: [role?.name]})
+        const players = world.getPlayers({ tags: [role?.name] })
         for (let index = 0; index < players.length; index++) {
             const player = players[index]
             player.removeTag(role?.name)
@@ -2608,6 +2700,8 @@ export function rolesModifyPickerUI(player) {
         rolesAddUI(player, role)
     })
 }
+
+
 
 // /**
 //  * @param {Player} player 
@@ -2704,3 +2798,17 @@ But let's be real, most of the time I'm just throwing my keyboard across the roo
 
     bui.show(f, player)
 }
+
+
+// // gutgud
+
+
+// export function noobExampleUI(player) {
+//     let f = new ModalFormData()
+
+//     bui.textField(f, 'gut gud','what i want is for you to gut gud', '', '')
+//     bui.textField(f, 'Example Textfield:', 'Example: noob box')
+
+
+
+// }

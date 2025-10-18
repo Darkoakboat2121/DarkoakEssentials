@@ -108,6 +108,10 @@ export const preBannedList = [
     'W1sley', //Alt
     'BorealJam397537', //Op exploit? Invisible account? Really powerful hacks
     'GamerBoi1234113', //Homophobia, general hate towards LGBTQ stuff
+    'TylertheBoss251', //Basic
+    'cqrmmm', //Alt
+    'sineP 00700', //Inapropriate image spamming in realms
+    'CreeperFight491', //Alt
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -181,7 +185,9 @@ export const worldProtectionWater = [
 export const hackedItemsVanilla = [
     'minecraft:client_request_placeholder_block',
     'minecraft:moving_block',
-    'minecraft:unknown'
+    'minecraft:unknown',
+    'minecraft:info_update',
+    'minecraft:reserved6'
 ]
 
 /**Holds special rank images in F1 glyph */
@@ -259,9 +265,9 @@ export function replacer(player, string) {
     try {
         const view = player.getViewDirection()
         formattedString = formattedString
-            .replaceAll('#viewx#', view.x.toFixed(0))
-            .replaceAll('#viewy#', view.y.toFixed(0))
-            .replaceAll('#viewz#', view.z.toFixed(0))
+            .replaceAll('#viewx#', view.x.toFixed(1))
+            .replaceAll('#viewy#', view.y.toFixed(1))
+            .replaceAll('#viewz#', view.z.toFixed(1))
     } catch {
 
     }

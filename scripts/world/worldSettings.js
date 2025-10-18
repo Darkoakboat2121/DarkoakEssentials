@@ -11,8 +11,21 @@ import { transferPlayer } from "@minecraft/server-admin"
  * @param {PlayerBreakBlockBeforeEvent} evd 
  */
 export function worldSettingsBreak(evd) {
+
+    if (evd.player.getGameMode() != "creative") {
+        let blocks = mcl.listGetValues('darkoak:cws:unbreakableBlocks')
+        for (let index = 0; index < blocks.length; index++) {
+            if (evd.block.typeId === blocks[index]) {
+                evd.cancel = true
+                return
+            }
+        }
+    }
+
     const d = mcl.jsonWGet('darkoak:cws')
     if (!mcl.isCreating(evd.player)) {
+        const loc = evd.block.location
+        if (mcl.allowCheck(evd.block)) return
         if (d?.breakblocks) {
             evd.cancel = true
             return
@@ -33,15 +46,6 @@ export function worldSettingsBreak(evd) {
             }, d?.breakregenrate * 20)
         }
     }
-    if (evd.player.getGameMode() != "creative") {
-        let blocks = mcl.listGetValues('darkoak:cws:unbreakableBlocks')
-        for (let index = 0; index < blocks.length; index++) {
-            if (evd.block.typeId === blocks[index]) {
-                evd.cancel
-                return
-            }
-        }
-    }
 }
 
 /**
@@ -50,6 +54,8 @@ export function worldSettingsBreak(evd) {
 export function worldSettingsBuild(evd) {
     const d = mcl.jsonWGet('darkoak:cws')
     if (!mcl.isCreating(evd.player)) {
+        const loc = evd.block.location
+        if (mcl.allowCheck(evd.block)) return
         if (d?.builddecay) {
             system.runTimeout(() => {
                 if (d?.buildreturn) evd.player.runCommand(`give @s ${evd.block.typeId} 1`)
@@ -65,8 +71,11 @@ export function worldSettingsBuild(evd) {
  * @returns 
  */
 export function worldSettingsInteract(evd) {
+    
     if (!mcl.isCreating(evd.player)) {
         const d = mcl.jsonWGet('darkoak:cws')
+        const loc = evd.block.location
+        if (mcl.allowCheck(evd.block)) return
         if (d?.interactwithblocks) {
             evd.cancel = true
             return

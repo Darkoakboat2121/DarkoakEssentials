@@ -513,9 +513,11 @@ export class mcl {
         const p = (typeof player === 'string') ? mcl.getPlayer(player) : player
         if (!p) return false
         if (p.hasTag('darkoak:admin') || mcl.isHost(p)) {
-            system.runTimeout(() => {
-                p.addTag('darkoak:admin')
-            })
+            if (!p.hasTag('darkoak:admin')) {
+                system.runTimeout(() => {
+                    p.addTag('darkoak:admin')
+                })
+            }
             return true
         } else {
             return false
@@ -530,9 +532,11 @@ export class mcl {
         const p = (typeof player === 'string') ? mcl.getPlayer(player) : player
         if (!p) return false
         if (p.hasTag('darkoak:mod') || mcl.isHost(p)) {
-            system.runTimeout(() => {
-                p.addTag('darkoak:mod')
-            })
+            if (!p.hasTag('darkoak:mod')) {
+                system.runTimeout(() => {
+                    p.addTag('darkoak:mod')
+                })
+            }
             return true
         } else {
             return false
@@ -823,6 +827,18 @@ export class mcl {
     }
 
     /**
+     * @param {ItemStack} item 
+     * @param {Container} container 
+     * @param {string} lore 
+     */
+    static addLore(item, container, lore) {
+        let newItem = new ItemStack(item.type, item.amount)
+        newItem = item
+        newItem.setLore(lore)
+        container.setItem(container.find(item), newItem)
+    }
+
+    /**
      * @param {Player} player 
      * @param {number} amount 
      */
@@ -846,7 +862,7 @@ export class mcl {
         mcl.pSet(player, 'darkoak:money', parseInt(amount))
     }
 
-    /**
+    /**Returns the players money amount
      * @param {Player} player 
      * @returns {number}
      */
@@ -866,7 +882,9 @@ export class mcl {
         if (mcl.getScore(player) < price) return false
 
         const mscore = mcl.jsonWGet('darkoak:moneyscore')
-        mcl.removeScore(player, Math.floor(price * mscore.tax / 100))
+        const taxAmount = Math.floor(price * mscore.tax / 100)
+        const total = price + taxAmount
+        mcl.removeScore(player, total)
         player.runCommand(`give @s ${result} ${amount}`)
         return true
     }
@@ -1061,5 +1079,39 @@ export class mcl {
             tpcommand: false,
             killcommand: false
         }
+    }
+
+    /**Checks if there is an allow block beneath the block
+     * @param {Block} block 
+     */
+    static allowCheck(block) {
+        for (let index = block.y; index > -64; index--) {
+            const loc = block.location
+            if (block.dimension.getBlock({ x: loc.x, y: index, z: loc.z })?.typeId === 'minecraft:allow') return true
+        }
+        return false
+    }
+
+    /**Returns true every X amount of ticks
+     * @param {number} ticks 
+     */
+    static tickTimer(ticks) {
+        return (system.currentTick % ticks == 0)
+    }
+
+    /**Finds the closest player to the location
+     * @param {{x: number, y: number, z: number}} location Vector3 of coords to start the search
+     * @param {string} dimension Dimension ID to search
+     * @param {string} skip Name to skip, useful for searching from an entity
+     * @returns 
+     */
+    static closestPlayer(location, dimension, skip) {
+        const players = world.getDimension(dimension).getEntities({
+            location: location,
+            closest: 1,
+            type: 'minecraft:player',
+            excludeNames: [skip]
+        })
+        return players[0]
     }
 }

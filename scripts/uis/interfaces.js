@@ -352,8 +352,8 @@ export function playerSettingsUI(player) {
 export function playerDataMainUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Player Data')
-    const u = mcl.getPlayerList()
-    bui.dropdown(f, 'Player:', u)
+    
+    let u = bui.namePicker(f, undefined, 'Player:', false)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -362,11 +362,7 @@ export function playerDataMainUI(player) {
         }
         const e = bui.formValues(evd)
         const p = mcl.getPlayer(u[e[0]])
-        if (p) {
-            playerDataViewUI(player, p)
-        } else {
-            playerDataOfflineUI(player, p)
-        }
+        if (p) playerDataViewUI(player, p)
     }).catch()
 }
 

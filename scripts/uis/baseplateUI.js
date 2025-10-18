@@ -95,6 +95,12 @@ export class bui {
 
     /**Generic slider
      * @param {ModalFormData} f 
+     * @param {string} [label=''] Text that shows above the slider
+     * @param {number} [minimum=0] The minimum amount the slider can be, must be an integer
+     * @param {number} [maximum=10] The maximum amount the slider can be, must be an integer
+     * @param {number} [defaultValue=minimum] The default value the slider will be at, most of the time it's a d?.namehere
+     * @param {number} [valueStep=1] How many numbers it scrolls through, most of the time it's 1
+     * @param {string} [tooltip=''] Tooltip icon text
      */
     static slider(f, label = '', minimum = 0, maximum = 10, defaultValue = minimum, valueStep = 1, tooltip = '') {
         return f.slider(label.toString() || '', parseInt(minimum) || 0, parseInt(maximum) || 0, {

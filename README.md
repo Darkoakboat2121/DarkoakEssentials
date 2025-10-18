@@ -62,9 +62,9 @@ changelog:
 
         arrow border killer *
         plots *
+        dynamic shops *
         
-        roles system
-        #playerlist#
+        
 
         we circle maker /wecircle *
 
@@ -83,16 +83,11 @@ changelog:
 
 
     fixed:
-        anti-spam, anti-nuker, and anti-fast-place is now more performant
-        anti-gamemode
-        anti-nuker and anti-fast-place
-        #cps#
-        #commands
-        boat world protection now kills chest boats
+        
 
         anti-velocity *
         owner fix *
-        landclaims * (interactions with entities)
+        landclaims * (interactions with entities and admin claims)
 
         
     changes:
@@ -108,6 +103,18 @@ IDEA NOTE: for the array things, use a var and a ++ iterator so you can just cop
 naman1141
 
 IDEA NOTE: for things that constantly get data, delay each by 20 ticks for retrieval
+
+IDEA NOTE: "minecraft:entity_created" listen for this event, might use component system idk, datadrivenentitytrigger?
+
+i do have some ideas to improve them though:
+an area option for gens (fill)
+adding them to the roles editor (so you can give roles permission to break the certain gens)
+
+https://github.com/NRGJobro/Horion-Open-SRC/tree/master/Horion/Module/Modules
+https://github.com/TheProjectLumina/LuminaClient/blob/main/app/src/main/java/com/project/lumina/client/game/module/impl/
+
+
+M IDEA: have a map in defaults file that has all the dynamic properties, then just retrieve them from that, when updating a property set map and dynamic property
 
 hacks to detect:
 Anti .xp: detect if xp level went up real fast (warn users not to use /xp with this module)
