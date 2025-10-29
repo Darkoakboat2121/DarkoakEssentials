@@ -6,11 +6,11 @@ const nerf = 4
 
 /**
  * @param {EntityHitEntityAfterEvent} evd 
+ * @param {object} d 
  */
-export function enchantOnHit(evd) {
+export function enchantOnHit(evd, d) {
     if (evd.damagingEntity.typeId != 'minecraft:player') return
-    const d = mcl.jsonWGet('darkoak:scriptsettings')
-    if (d.enchantsmaster) return
+    if (d?.enchantsmaster) return
 
     const player = evd.damagingEntity
     const entity = evd.hitEntity
@@ -47,11 +47,11 @@ export function enchantOnHit(evd) {
 
 /**
  * @param {EntityDieAfterEvent} evd
+ * @param {object} d 
  */
-export function enchantOnDeathKill(evd) {
+export function enchantOnDeathKill(evd, d) {
     if (!evd.damageSource.damagingEntity) return
-    const d = mcl.jsonWGet('darkoak:scriptsettings')
-    if (d.enchantsmaster) return
+    if (d?.enchantsmaster) return
 
     // on death
     if (evd.deadEntity.typeId === 'minecraft:player') {
@@ -126,10 +126,10 @@ export function enchantOnDeathKill(evd) {
 
 /**
  * @param {ItemUseAfterEvent} evd 
+ * @param {object} d 
  */
-export function enchantOnUse(evd) {
-    const d = mcl.jsonWGet('darkoak:scriptsettings')
-    if (d.enchantsmaster) return
+export function enchantOnUse(evd, d) {
+    if (d?.enchantsmaster) return
     const player = evd.source
 
     const i = mcl.getHeldItem(player)
@@ -209,12 +209,12 @@ export function enchantOnJump(player, d) {
 
 /**
  * @param {EntityHurtAfterEvent} evd 
+ * @param {object} d 
  */
-export function enchantOnDamaged(evd) {
+export function enchantOnDamaged(evd, d) {
     if (evd.hurtEntity.typeId != 'minecraft:player') return
     if (!evd.damageSource.damagingEntity) return
-    const d = mcl.jsonWGet('darkoak:scriptsettings')
-    if (d.enchantsmaster) return
+    if (d?.enchantsmaster) return
 
     const player = evd.hurtEntity
     const entity = evd.damageSource.damagingEntity

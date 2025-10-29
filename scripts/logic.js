@@ -1,4 +1,5 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode } from "@minecraft/server"
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel } from "@minecraft/server"
+import { transferPlayer } from "@minecraft/server-admin"
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting API*/
 export class mcl {
@@ -457,20 +458,27 @@ export class mcl {
 
     /**Returns an array of a inputted players tags
      * @param {Player | undefined} player 
+     * @param {string} [filter=''] 
+     * @param {boolean} [removeFilter=false] If true, will remove the filter part of the tag, example: filter(rank:) rank:rankhere -> rankhere
     */
-    static playerTagsArray(player, filter = '') {
+    static playerTagsArray(player, filter = '', removeFilter = false) {
         if (player != undefined) {
             const tags = player.getTags()
             if (tags.length == 0) {
                 return []
             } else {
-                return tags.filter(e => e.startsWith(filter))
+                if (removeFilter) {
+                    return tags.filter(e => e.startsWith(filter)).map(e => e.replace(filter, ''))
+                } else {
+                    return tags.filter(e => e.startsWith(filter))
+                }
             }
         } else {
             let u = []
             let players = world.getAllPlayers()
             for (let index = 0; index < players.length; index++) {
                 const tags = players[index].getTags().filter(e => e.startsWith(filter))
+                if (removeFilter) tags = tags.map(e => e.replace(filter, ''))
                 if (tags.length == 0) continue
                 for (let index = 0; index < tags.length; index++) {
                     if (u.includes(tags[index])) continue
@@ -1113,5 +1121,24 @@ export class mcl {
             excludeNames: [skip]
         })
         return players[0]
+    }
+
+    /**
+     * @param {Player} player Player to soft-kick
+     */
+    static softKick(player) {
+        transferPlayer(player, {
+            hostname: '127.0.0.0',
+            port: 0
+        })
+    }
+
+    /**
+     * @param {Player} player Player to kick
+     * @param {string} message Message to send to the kicked player
+     */
+    static kick(player, message) {
+        const op = world.getAllPlayers().filter(e => e.commandPermissionLevel === CommandPermissionLevel.Admin)[0]
+        op.runCommand(`kick "${player.name}" ${message}`)
     }
 }

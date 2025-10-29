@@ -1,10 +1,11 @@
-import { world, system, Player, ChatSendBeforeEvent, PlayerSpawnAfterEvent } from "@minecraft/server"
+import { world, system, Player, ChatSendBeforeEvent, PlayerSpawnAfterEvent, PlayerLeaveBeforeEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as i from "./uis/interfaces"
 import { mcl } from "./logic"
-import { boatTypes, colorCodes, crasherSymbol, crasherSymbol2, emojis, professionalism, replacer, specialRanks, version } from "./data/arrays"
+import { boatTypes, colorCodes, crasherSymbol, crasherSymbol2, emojis, professionalism, replacer, spanishToEnglish, specialRanks, version } from "./data/arrays"
 import { landclaimMainUI, queueMessageUI } from "./uis/interfacesTwo"
 import { log } from "./world/anticheat"
+import { cd } from "./data/defaults"
 
 
 // This file handles all chat interactions such as:
@@ -19,7 +20,7 @@ let lastSender = ''
  * @param {Player} player 
  */
 export function chatSystem(evd = undefined, player, message) {
-    const chat = mcl.jsonWGet('darkoak:scriptsettings')
+    const chat = cd.get('darkoak:scriptsettings')
     if (chat.chatmaster === true) return
 
     if (evd) evd.cancel = true
@@ -50,11 +51,13 @@ export function chatSystem(evd = undefined, player, message) {
     }
 
     // mutes
-    if (player.hasTag('darkoak:muted') || !mcl.roleCheck(player)?.chat) return
+    if (player.hasTag('darkoak:muted')) return
+    const canChat = mcl.roleCheck(player)?.chat
+    if (canChat && canChat === false) return
 
     // censoring
     /**@type {string[]} */
-    let censor = mcl.jsonWGet('darkoak:censor')
+    let censor = cd.get('darkoak:censor')
     if (censor && censor.length != 0 && !mcl.isDOBAdmin(player)) {
         for (let index = 0; index < censor.length; index++) {
             if (mcl.deleteFormatting(message).toLowerCase().includes(censor[index].toLowerCase())) return
@@ -62,19 +65,22 @@ export function chatSystem(evd = undefined, player, message) {
     }
 
     // anti spam
-    const d = mcl.jsonWGet('darkoak:anticheat')
+    const d = cd.get('darkoak:anticheat')
 
     if (d?.antispam) {
-        if ((messageMap.get(player.name) || '') == message.trim() && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return
+        const trimmed = message.trim()
+        if ((messageMap.get(player.name) || '') == trimmed && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return
         if (
-            message.trim().includes('Horion - the best minecraft bedrock utility mod - horion.download') ||
-            message.trim().includes('horion.download')
+            trimmed.includes('Horion - the best minecraft bedrock utility mod - horion.download') ||
+            trimmed.includes('horion.download') ||
+            trimmed.includes('lumineproxy') ||
+            trimmed.includes('packet.sell.app')
         ) {
             log(`${player.name} -> hack client message`)
             return
         }
         if (d?.antispam2) {
-            if (message.trim().split('|')[1]?.trim().length === 8) {
+            if (trimmed.split('|')[1]?.trim().length === 8) {
                 return
             }
         }
@@ -132,28 +138,14 @@ export function chatSystem(evd = undefined, player, message) {
         }
     }
 
+    const ocs = cd.get('darkoak:chat:other')
+
     // message logs
-    if (mcl.jsonWGet('darkoak:chat:other')) {
-        /**@type {string[]} */
-        let logs2 = mcl.jsonWGet('darkoak:messagelogs')?.log || ['Default -> Default']
-        if (logs2.length > 250) {
-            while (logs2.length > 250) {
-                logs2.shift()
-            }
-        }
-        if (logs2.length > 0 && logs2[logs2.length - 1].split('->')[0].trim() === player.name) {
-            logs2[logs2.length - 1] += `\n${message}`
-        } else {
-            logs2.push(`${player.name} -> ${message}`)
-        }
-        mcl.jsonWSet('darkoak:messagelogs', {
-            log: logs2
-        })
-    }
+    if (ocs?.chatLogs) messageLog(player, message)
 
     let formattedMessage = message
 
-    if (mcl.jsonWGet('darkoak:community:general').emojisenabled) {
+    if (cd.get('darkoak:community:general').emojisenabled) {
         for (let index = 0; index < emojis.length; index++) {
             const e = emojis[index]
             formattedMessage = formattedMessage.replaceAll(e.m, e.e)
@@ -164,9 +156,15 @@ export function chatSystem(evd = undefined, player, message) {
         }
     }
 
-    const ocs = mcl.jsonWGet('darkoak:chat:other')
+    if (ocs?.translateToEng) {
+        formattedMessage = ' ' + formattedMessage + ' '
+        for (let index = 0; index < spanishToEnglish.length; index++) {
+            const word = spanishToEnglish[index]
+            formattedMessage = formattedMessage.replaceAll((' ' + word.spa + ' '), (' ' + word.eng + ' '))
+        }
+    }
 
-    if (ocs.professional) {
+    if (ocs?.professional) {
         formattedMessage = ' ' + formattedMessage + ' '
         for (let index = 0; index < professionalism.length; index++) {
             const pro = professionalism[index]
@@ -231,16 +229,17 @@ export function chatSystem(evd = undefined, player, message) {
             .replace('N', 'Ν')
     }
 
-    const text = `${clanS}${clan}${clanE}${cr.start}${replacer(player, ranks.join(cr.middle))}${cr.end}§r§f${nameColors.join('')}${pName}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage}`
+    const text = `${clanS}${clan}${clanE}${cr.start}${replacer(player, ranks.join(cr.middle))}${cr.end}§r§f${nameColors.join('')}${pName}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage.trim()}`
 
-    if (ocs.proximity) {
+    if (ocs?.proximity) {
         system.runTimeout(() => {
             player.runCommand(`tellraw @a [r=15] {"rawtext": [{"text":"${text}"}]}`)
+            if (player.hasTag('darkoak:radio')) player.runCommand(`tellraw @a [tag="darkoak:radio"] {"rawtext": [{"text":"${text}"}]}`)
         }, 1)
     } else {
-        if (ocs.discordstyle) {
+        if (ocs?.discordstyle) {
             if (lastSender === player.name) {
-                world.sendMessage({ rawtext: [{ text: `§r§f${chatColors.join('')}${formattedMessage}` }] })
+                world.sendMessage({ rawtext: [{ text: `| §r§f${chatColors.join('')}${formattedMessage}` }] })
             } else {
                 world.sendMessage({ rawtext: [{ text: text }] })
             }
@@ -326,9 +325,10 @@ function hashtag(hashtagKey, sender) {
 let loops = 0
 let time1 = 0
 let time2 = 205
-/**Chat games handler */
-export function chatGames() {
-    const chat = mcl.jsonWGet('darkoak:scriptsettings')
+/**Chat games handler
+ * @param {object} chat 
+ */
+export function chatGames(chat) {
     if (chat?.chatmaster === true) return
 
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string, catcherEnabled: boolean, catcherInterval: number}} */
@@ -372,7 +372,7 @@ export function chatGames() {
  */
 export function nametag(p, ocs, d) {
 
-    if (mcl.tickTimer(20)) {
+    if (d?.antinametags && mcl.tickTimer(20)) {
         system.runTimeout(() => {
             p.nameTag = ''
         })
@@ -490,4 +490,42 @@ export function chatCommand(player, p) {
     }
     player.runCommand(replacer(player, commandToRun3))
 
+}
+
+/**
+ * 
+ * @param {Player} player 
+ * @param {string} message 
+ */
+export function messageLog(player, message) {
+    /**@type {{name: string, message: string, time: number}[]} */
+    let logs2 = mcl.jsonWGet('darkoak:messagelogs:v2') || [{name: 'Default', message: 'Default', time: Date.now()}]
+    if (logs2.length > 250) {
+        while (logs2.length > 250) {
+            logs2.shift()
+        }
+    }
+    if (logs2.length > 0 && logs2[logs2.length - 1].name === player.name) {
+        logs2[logs2.length - 1].message += `\n| ${message}`
+    } else {
+        logs2.push({
+            name: player.name,
+            message: message,
+            time: Date.now()
+        })
+    }
+    mcl.jsonWSet('darkoak:messagelogs:v2', logs2)
+}
+
+/**
+ * @param {PlayerSpawnAfterEvent | PlayerLeaveBeforeEvent} evd 
+ */
+export function logJoinsLeaves(evd) {
+    let now = Date.now().toString().slice(5)
+    const loc = evd.player.location
+    if ((evd instanceof PlayerSpawnAfterEvent) && evd.initialSpawn) {
+        messageLog(evd.player, `§eJoined The Game§r, Time: ${now}, Loc: ${loc.x.toFixed(0)}, ${loc.y.toFixed(0)}, ${loc.z.toFixed(0)}`)
+    } else if ((evd instanceof PlayerLeaveBeforeEvent)) {
+        messageLog(evd.player, `§eLeaved The Game§r, Time: ${now}, Loc: ${loc.x.toFixed(0)}, ${loc.y.toFixed(0)}, ${loc.z.toFixed(0)}`)
+    }
 }

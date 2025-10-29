@@ -1,15 +1,15 @@
 // first is minecraft resources
-import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType, StructureSaveMode, EntityComponentTypes, CustomCommandStatus, CustomCommandError, CustomCommandSource } from "@minecraft/server"
+import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType, StructureSaveMode, EntityComponentTypes, CustomCommandStatus, CustomCommandError, CustomCommandSource, ItemComponentTypes } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import { transferPlayer } from "@minecraft/server-admin"
 import { getPlayerSkin, SimulatedPlayer, spawnSimulatedPlayer } from "@minecraft/server-gametest"
 
-// second is setting defaults
-import * as defaults from "./data/defaults"
-import * as arrays from "./data/arrays"
-
-// third initializing mcl module
+// second initializing mcl module
 import { mcl } from "./logic"
+
+// third is setting defaults
+import { timers, defaultData, cd, updateData } from "./data/defaults" // defaults finally has a use lets gooooo
+import * as arrays from "./data/arrays"
 
 // fourth initialize the interfaces
 import * as interfaces from "./uis/interfaces"
@@ -24,19 +24,22 @@ import * as worldSettings from "./world/worldSettings"
 import * as worldProtection from "./world/worldProtection"
 import * as worldEdit from "./world/worldEdit"
 import * as roles from "./world/roles"
-import { combatManager } from "./fakeplayers/combat"
+import { combatManager, fakePlayerCommand } from "./entityHandlers/fakeplayers"
+import { scoreboardHandler } from "./entityHandlers/floatingtext"
 
 // seventh set up external uis / commands
 import * as external from "./external/external"
 import { customEnchantActions, customEnchantEvents, enchantOnDamaged, enchantOnDeathKill, enchantOnHit, enchantOnJump, enchantOnUse } from "./enchanting"
 import { bui } from "./uis/baseplateUI"
 
-const cooldown = new Map()
+let acbarTicker = 0
+let act = 0
 
+const cooldown = new Map()
 // main ui opener, see interfaces, also manages bindable/dummy items
 world.afterEvents.itemUse.subscribe((evd) => {
     itemOpeners(evd)
-    enchantOnUse(evd)
+    enchantOnUse(evd, cd.get('darkoak:scriptsettings'))
     worldSettings.bindedItems(evd)
 
     // system.sendScriptEvent('darkoak:afteritemuse', JSON.stringify({
@@ -48,7 +51,7 @@ world.afterEvents.itemUse.subscribe((evd) => {
 // anticps and onhitenchants
 world.afterEvents.entityHitEntity.subscribe((evd) => {
     anticheat.antiCps(evd)
-    enchantOnHit(evd)
+    enchantOnHit(evd, cd.get('darkoak:scriptsettings'))
     worldSettings.smiteDataEditor(evd)
     anticheat.antiVelocity(evd)
     anticheat.antiReach(evd)
@@ -65,6 +68,7 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
     worldSettings.welcomeMessage(evd)
     chat.messageQueueAndPlayerList(evd)
     moneySetter(evd)
+    chat.logJoinsLeaves(evd)
 
     // system.sendScriptEvent('darkoak:afterplayerspawn', JSON.stringify({
     //     initialSpawn: evd.initialSpawn,
@@ -108,7 +112,7 @@ world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
 
 // Entity hurt
 world.afterEvents.entityHurt.subscribe((evd) => {
-    enchantOnDamaged(evd)
+    enchantOnDamaged(evd, cd.get('darkoak:scriptsettings'))
 
     // system.sendScriptEvent('darkoak:afterentityhurt', JSON.stringify({
     //     damage: evd.damage,
@@ -119,7 +123,7 @@ world.afterEvents.entityHurt.subscribe((evd) => {
 
 // Entity Die
 world.afterEvents.entityDie.subscribe((evd) => {
-    enchantOnDeathKill(evd)
+    enchantOnDeathKill(evd, cd.get('darkoak:scriptsettings'))
 
     // system.sendScriptEvent('darkoak:afterentitydie', JSON.stringify({
     //     damageSource: evd.damageSource,
@@ -219,6 +223,7 @@ world.beforeEvents.playerGameModeChange.subscribe((evd) => {
 world.beforeEvents.playerLeave.subscribe((evd) => {
     worldSettings.welcomeMessage(evd)
     arrays.storePlayerData(evd.player)
+    chat.logJoinsLeaves(evd)
     system.runTimeout(() => {
         try {
             // system.sendScriptEvent('darkoak:beforeplayerleave', JSON.stringify({
@@ -272,46 +277,43 @@ system.runInterval(() => {
 
     uis()
     gens()
-    chat.chatGames()
-    defaults.timers()
-    defaults.defaultData()
+    chat.chatGames(cd.get('darkoak:scriptsettings'))
+    timers()
+    defaultData()
 
 
     const players = world.getAllPlayers()
-    bans(players)
-    landclaimBorders(players)
+    bans(players, cd.get('darkoak:anticheat'))
+    landclaimBorders(players, cd.get('darkoak:community:general'))
+    scoreboardHandler(players)
 
-    const ocs = mcl.jsonWGet('darkoak:chat:other')
-    const anticheatD = mcl.jsonWGet('darkoak:anticheat')
-    const wp = mcl.jsonWGet('darkoak:worldprotection')
-    const worldBorder = mcl.wGet('darkoak:cws:border')
-    const tracking = mcl.jsonWGet('darkoak:tracking')
-    const ss = mcl.jsonWGet('darkoak:scriptsettings')
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
-        worldProtection.worldProtectionOther(player, wp)
-        worldSettings.borderAndTracking(player, worldBorder, tracking)
-        enchantOnJump(player, ss)
+        worldProtection.worldProtectionOther(player, cd.get('darkoak:worldprotection'))
+        worldSettings.borderAndTracking(player, cd.get('worldBorder'), cd.get('darkoak:tracking'))
+        enchantOnJump(player, cd.get('darkoak:scriptsettings'))
         actionBar(player)
         anticheat.anticheatMain(player)
         anticheat.cpsTester(player)
-        chat.nametag(player, ocs, anticheatD)
+        chat.nametag(player, cd.get('darkoak:chat:other'), cd.get('darkoak:anticheat'))
         glideFeather(player)
         playerLister(player)
         worldProtection.dimensionBan(player)
-        anticheat.dupeIDChecker(player, anticheatD)
+        anticheat.dupeIDChecker(player, cd.get('darkoak:anticheat'))
         worldSettings.verify(player)
         combatManager(player)
         // mcl.particleOutline({x: -167, y: 62, z: -76}, {x: -171, y: 66, z: -80}, undefined, 0.1, player.dimension.id)
     }
+
+    anticheat.antiZDInterval(cd.get('darkoak:anticheat'))
+
+    updateData()
 
     // system.sendScriptEvent('darkoak:interval', JSON.stringify({
     //     sentTime: Date.now(),
     //     currentTick: system.currentTick
     // }))
 })
-
-
 
 /**
  * @param {ItemUseAfterEvent} evd 
@@ -652,12 +654,12 @@ function gens() {
 
 /**Ban system
  * @param {Player[]} players 
+ * @param {object} d 
  */
-function bans(players) {
+function bans(players, d) {
     if (system.currentTick < 100) return
 
     const p = players[0]
-    const d = mcl.jsonWGet('darkoak:anticheat')
 
     if (d?.prebans) {
         const prebans = arrays.preBannedList
@@ -735,9 +737,9 @@ function bans(players) {
 
 /**
  * @param {Player[]} players 
- * @returns 
+ * @param {object} community 
  */
-function landclaimBorders(players) {
+function landclaimBorders(players, community) {
     if (system.currentTick % 10 != 0) return
 
     const lcs = mcl.listGetBoth('darkoak:landclaim:')
@@ -773,9 +775,7 @@ function landclaimBorders(players) {
         }
     }
 
-    const settings = mcl.jsonWGet('darkoak:community:general')
-
-    if (settings?.landclaimsborder) {
+    if (community?.landclaimsborder) {
         try {
             for (let i = 0; i < lcs.length; i++) {
                 const lc = JSON.parse(lcs[i].value)
@@ -1220,8 +1220,7 @@ function animatedActionUIBuilder(player, ui, frame = 0) {
 
 }
 
-let acbarTicker = 0
-let act = 0
+
 /**System for displaying the actionbar and sidebar
  * @param {Player} player 
  */
@@ -1229,7 +1228,7 @@ function actionBar(player) {
     /**@type {{lines: string[], ticks: number}} */
     const text = mcl.jsonWGet('darkoak:actionbar:v2')
     const lines = text?.lines.filter(e => e.length > 0)
-    if (text) player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, lines[act] || '')}"}]}`)
+    if (text) player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, lines[act].replaceAll('\\n', '\n') || '')}"}]}`)
 
     /**@type {{lines: [string, string, string]}} */
     const text2 = mcl.jsonWGet('darkoak:sidebar')
@@ -1295,6 +1294,7 @@ function playerLister(player) {
 function customSlashCommands(evd) {
     worldEdit.WEcommands(evd)
     roles.roleCommand(evd)
+    fakePlayerCommand(evd)
 
 
     evd.customCommandRegistry.registerEnum('darkoak:dimensions', ['overworld', 'nether', 'end'])
@@ -1498,14 +1498,35 @@ function customSlashCommands(evd) {
             {
                 type: CustomCommandParamType.String,
                 name: 'name'
-            }
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'data'
+            },
+            {
+                type: CustomCommandParamType.Boolean,
+                name: 'keep_on_death'
+            },
         ]
-    }, (evd, itemType, amount, location, name) => {
+    }, (evd, itemType, amount, location, name, damage, keepondeath) => {
         system.runTimeout(() => {
             const dimen = evd.initiator?.dimension || evd.sourceBlock?.dimension || evd.sourceEntity?.dimension
             const item = new ItemStack(itemType, amount)
+
             item.nameTag = name
-            world.getDimension(dimen.id).spawnItem(item, location)
+
+            const dura = item.getComponent(ItemComponentTypes.Durability)
+            if (damage && dura) {
+                if (damage <= 0) {
+                    dura.damage = 0
+                } else {
+                    dura.damage = damage
+                }
+            }
+
+            item.keepOnDeath = keepondeath || false
+
+            world.getDimension(dimen?.id || 'overworld').spawnItem(item, location)
         })
     })
 
@@ -1791,7 +1812,7 @@ function customSlashCommands(evd) {
                     player.sendMessage('-----------------\n' + messageToSend.join('\n') + '\n-----------------')
                     break
                 case 'clipboard':
-
+                    
                     break
                 case 'fakeplayer':
 
@@ -1804,116 +1825,6 @@ function customSlashCommands(evd) {
                     let newItem = mcl.getHeldItem(player)
                     newItem?.setLore(undefined)
                     if (newItem) mcl.getInventory(player)?.container.addItem(newItem)
-                    break
-            }
-        })
-    })
-
-    evd.customCommandRegistry.registerEnum('darkoak:fakeplayer', ['chat(string)', 'spawn(none)', 'skin(player_name)', 'disconnect(none)', 'location_move(coords)', 'location_navigate(coords)', 'interact_block(coords)', 'attack(none)', 'look_location(coords)', 'respawn(bool|none)', 'combat(player_name|\'closest\')', 'follow(player_name|\'closest\')', 'jump(none|number)'])
-    evd.customCommandRegistry.registerCommand({
-        name: 'darkoak:fakeplayer',
-        description: 'Manages Fake Players',
-        permissionLevel: CommandPermissionLevel.GameDirectors,
-        mandatoryParameters: [
-            {
-                type: CustomCommandParamType.String,
-                name: 'fake_player_name'
-            },
-            {
-                type: CustomCommandParamType.Enum,
-                name: 'darkoak:fakeplayer'
-            }
-        ],
-        optionalParameters: [
-            {
-                type: CustomCommandParamType.String,
-                name: 'todo'
-            }
-        ]
-    }, (evd, name, action, todo) => {
-        const source = evd.initiator || evd.sourceBlock || evd.sourceEntity
-        const loc = source.location
-
-        if (action === 'spawn(none)') {
-            system.runTimeout(() => {
-                try {
-                    spawnSimulatedPlayer({
-                        dimension: source.dimension,
-                        x: loc.x,
-                        y: loc.y,
-                        z: loc.z
-                    }, name, GameMode.Survival)
-                } catch {
-
-                }
-            })
-            return
-        }
-
-        /**@type {SimulatedPlayer} */
-        const sim = mcl.getPlayer(name)
-        if (!sim) {
-            mcl.adminMessage(`There Isn\'t A Fake Player With The Name ${name}`)
-            return
-        }
-
-        const set = mcl.jsonPGet(sim, 'darkoak:sim')
-        const split = todo?.split(' ') || ['0', '0', '0']
-        const coords = {
-            x: parseFloat(split[0]),
-            y: parseFloat(split[1]),
-            z: parseFloat(split[2]),
-        }
-        system.runTimeout(() => {
-            switch (action) {
-                case 'chat(string)':
-                    sim.chat(todo)
-                    break
-                case 'skin(player_name)':
-                    const pl = mcl.getPlayer(todo)
-                    if (!pl) return
-                    sim.setSkin(getPlayerSkin(pl))
-                    break
-                case 'disconnect(none)':
-                    sim.disconnect()
-                    break
-                case 'location_move(coords)':
-                    sim.moveToLocation(coords)
-                    break
-                case 'location_navigate(coords)':
-                    sim.navigateToLocation(coords)
-                    break
-                case 'interact_block(coords)':
-                    sim.interactWithBlock(coords)
-                    break
-                case 'attack(none)':
-                    sim.attack()
-                    break
-                case 'look_location(coords)':
-                    sim.lookAtLocation(coords)
-                    break
-                case 'respawn(bool|none)':
-                    if (!todo) {
-                        sim.respawn()
-                    } else {
-                        mcl.jsonPUpdate(sim, 'darkoak:sim', 'respawn', todo)
-                    }
-                    break
-                case 'combat(player_name|\'closest\')':
-                    mcl.jsonPUpdate(sim, 'darkoak:sim', 'type', 'combat')
-                    mcl.jsonPUpdate(sim, 'darkoak:sim', 'target', todo)
-                    break
-                case 'follow(player_name|\'closest\')':
-                    mcl.jsonPUpdate(sim, 'darkoak:sim', 'type', 'follow')
-                    mcl.jsonPUpdate(sim, 'darkoak:sim', 'target', todo)
-                    break
-                case 'jump(none|number)':
-                    if (!todo) {
-                        sim.jump()
-                    } else {
-                        mcl.jsonPUpdate(sim, 'darkoak:sim', 'type', 'jump')
-                        mcl.jsonPUpdate(sim, 'darkoak:sim', 'interval', parseInt(todo))
-                    }
                     break
             }
         })
@@ -2594,7 +2505,7 @@ function customSlashCommands(evd) {
 //     console.log(evd.eventId)
 //     if (evd.eventId === 'minecraft:entity_spawned') {
 //         // try checking if this works!
-//         console.log(evd.entity.id)
+//         console.log(evd.entity.typeId)
 //     }
 // })
 

@@ -63,6 +63,7 @@ changelog:
         arrow border killer *
         plots *
         dynamic shops *
+        animated builds * (help soul please when we make this)
         
         
 
@@ -83,7 +84,7 @@ changelog:
 
 
     fixed:
-        
+        rank adding ui
 
         anti-velocity *
         owner fix *
@@ -96,7 +97,12 @@ changelog:
         more stuff to profiles *
 
     experimental:
+        
+
         http requests *
+
+    removed:
+        
         
 
 IDEA NOTE: for the array things, use a var and a ++ iterator so you can just copy them for long settings
@@ -106,8 +112,14 @@ IDEA NOTE: for things that constantly get data, delay each by 20 ticks for retri
 
 IDEA NOTE: "minecraft:entity_created" listen for this event, might use component system idk, datadrivenentitytrigger?
 
+IDEAS:
+clean up option
+announcement system
+leaderboards
+tags to have pariticles
+cosmetics system
+
 i do have some ideas to improve them though:
-an area option for gens (fill)
 adding them to the roles editor (so you can give roles permission to break the certain gens)
 
 https://github.com/NRGJobro/Horion-Open-SRC/tree/master/Horion/Module/Modules

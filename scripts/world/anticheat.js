@@ -1,4 +1,4 @@
-import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent, EffectTypes, InputPermissionCategory, EquipmentSlot } from "@minecraft/server"
+import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent, EffectTypes, InputPermissionCategory, EquipmentSlot, PlayerJoinAfterEvent, CommandPermissionLevel } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { logcheck } from "../data/defaults"
@@ -383,6 +383,8 @@ export function anticheatMain(player) {
     const gm = player.getGameMode()
     const dot = v.x * vd.x + v.z * vd.z
 
+    const op = world.getAllPlayers().filter(e => e.commandPermissionLevel === CommandPermissionLevel.Admin)[0]
+
     const ppl = mcl.jsonWGet('darkoak:fired') || []
     if (ppl.includes(player.name)) {
         player.setOnFire(10, false)
@@ -405,6 +407,7 @@ export function anticheatMain(player) {
         }
 
         // anti air jump
+        // fix, 9 blocks underneath have to be not air - P
         if (d?.antiairjump) {
             const loc = player.location
             const block = player.dimension.getBlock({
@@ -414,14 +417,14 @@ export function anticheatMain(player) {
             })
             if (block && block.typeId === 'minecraft:air') {
                 let allAir = 0
-                const blocksToCheck = [block.below(1), block.west(1), block.east(1), block.north(1), block.south(1)]
+                const blocksToCheck = [block.below(1), block.below(2), block.west(1).below(1), block.east(1).below(1), block.north(1).below(1), block.south(1).below(1)]
                 for (let index = 0; index < blocksToCheck.length; index++) {
                     const b = blocksToCheck[index]
                     if (!b) continue
                     if (b.typeId === 'minecraft:air') allAir += 1
                 }
 
-                if (player.isOnGround && allAir >= 5) {
+                if (player.isOnGround && allAir >= 6) {
                     log(`${player.name} -> anti-air-jump`)
                 }
             }
@@ -504,6 +507,12 @@ export function anticheatMain(player) {
         const block = player.dimension.getBlock(player.location)
         if (block.isSolid) mcl.knockback(player, v.x * -3, v.z * -3, v.y * -1)
     }
+
+    if (d?.antizd && player.name.length < 1) {
+        mcl.kick(player, 'ANTI-ZD 1, Please Report If This Is A Bug!')
+        mcl.softKick(player)
+        log(`${player.name} -> anti-ZD`)
+    }
 }
 
 let bowSpam = new Map()
@@ -540,6 +549,21 @@ export function antiVelocity(evd) {
 
         }
     }, 2)
+}
+
+
+/**
+ * @param {object} d 
+ */
+export function antiZDInterval(d) {
+    if (!d?.antizd) return
+    const entities = world.getDimension('overworld').getEntities({
+        excludeTypes: ['minecraft:player']
+    })
+    for (let index = 0; index < entities.length; index++) {
+        const entity = entities[index]
+        
+    }
 }
 
 let strikeMap = new Map()

@@ -68,7 +68,7 @@ export class bui {
         })
     }
 
-    /**Generic dropdown
+    /**Generic dropdown (in formvalues returns a number corresponding to the index picked)
      * @param {ModalFormData} f 
      */
     static dropdown(f, label = '', options = [''], defaultIndex = 0, tooltip = '') {

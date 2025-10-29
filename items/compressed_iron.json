@@ -5,7 +5,7 @@
             "identifier": "darkoak:compressed_iron"
         },
         "components": {
-            "minecraft:allow_off_hand": false,
+            "minecraft:allow_off_hand": true,
             "minecraft:can_destroy_in_creative": false,
             "minecraft:display_name": {
                 "value": "§l§1Compressed Iron Ingot"

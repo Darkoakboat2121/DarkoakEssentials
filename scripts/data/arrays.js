@@ -112,6 +112,27 @@ export const preBannedList = [
     'cqrmmm', //Alt
     'sineP 00700', //Inapropriate image spamming in realms
     'CreeperFight491', //Alt
+    'N0v13', //Client dev
+    'MojangContact', //Client dev
+    'FXE404', //Client dev
+    'Batmanbb7', //Racism
+    'Zwuiix', //Client dev
+    'GitHub Copilot', //Alt
+    'c1mv', //Alt
+    'SillyNkgga', //Client dev and probably racism
+    'Nya Enzo', //Client dev
+    'Reqoan', //Client advertiser & helper
+    'GoogleIA', //Alt
+    'Yoqsnd', //Alt
+    'rShizuka', //Alt
+    'htttqss', //Alt
+    'NeutroShortyyy', //Alt
+    'stevenhighway', //Alt
+    'Dsuky', //Client advertiser & helper
+    'Sr M4rkoz', //Basic
+    'DREAM8689', //Racism
+    'SplashifiedYT', //Racism
+    
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -229,7 +250,7 @@ export function replacer(player, string) {
     // }
     let formattedString = string
         .replaceAll('#name#', player.name)
-        .replaceAll('#health#', mcl.healthValue(player).toString())
+        .replaceAll('#health#', Math.ceil(mcl.healthValue(player)).toString())
         .replaceAll('#location#', `${loc.x.toFixed(0)} ${loc.y.toFixed(0)} ${loc.z.toFixed(0)}`)
         .replaceAll('#locationx#', `${loc.x.toFixed(0)}`)
         .replaceAll('#locationy#', `${loc.y.toFixed(0)}`)
@@ -519,6 +540,72 @@ export const emojis = [
     { m: ':format:', e: '§' },
 ]
 
+export const spanishToEnglish = [
+    {
+        spa: 'yo', eng: 'i'
+    },
+    {
+        spa: 'hola', eng: 'hello'
+    },
+    {
+        spa: 'libro', eng: 'book'
+    },
+    {
+        spa: 'amigo', eng: 'friend'
+    },
+    {
+        spa: 'diamante', eng: 'diamond'
+    },
+    {
+        spa: 'espada', eng: 'sword'
+    },
+    {
+        spa: 'pala', eng: 'shovel'
+    },
+    {
+        spa: 'piqueta', eng: 'pickaxe'
+    },
+    {
+        spa: 'armadura', eng: 'armor'
+    },
+    {
+        spa: 'explorar', eng: 'explore'
+    },
+    {
+        spa: 'explora', eng: 'explores'
+    },
+    {
+        spa: 'gracias', eng: 'thank you'
+    },
+    {
+        spa: 'bien', eng: 'good'
+    },
+    {
+        spa: 'ella', eng: 'she'
+    },
+    {
+        spa: 'es', eng: 'is'
+    },
+    {
+        spa: 'gustar', eng: 'like'
+    },
+    {
+        spa: 'gustos', eng: 'likes'
+    },
+    {
+        spa: 'eso', eng: 'that'
+    },
+    {
+        spa: 'buen', eng: 'good'
+    },
+    {
+        spa: 'como', eng: 'as'
+    },
+    // {
+    //     spa: '', eng: ''
+    // },
+]
+
 // this is a list of common abbreviations and their expanded forms for professionalism in chat
 // this also changes racist and toxic words to more professional ones
 // WARNING, CONTAINS RACIST WORDS, THEY ARE REPLACED WITH *RACISM HERE* IN THE EXPANDED FORM
@@ -684,7 +771,7 @@ export const specialRanks = {
  * @param {Player} player
  */
 export function storePlayerData(player) {
-    mcl.jsonWSet(`darkoak:playerdata:${player.name}`, mcl.playerToData(player))
+    //mcl.jsonWSet(`darkoak:playerdata:${player.name}`, mcl.playerToData(player))
 }
 
 

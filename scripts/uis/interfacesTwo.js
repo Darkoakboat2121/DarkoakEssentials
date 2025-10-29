@@ -627,6 +627,11 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
+    bui.toggle(f, 'Anti-ZD', d?.antizd)
+    bui.label(f, 'Checks If A Player Is Joining Without A Name And Kicks Them')
+
+    bui.divider(f)
+
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
@@ -685,6 +690,7 @@ export function anticheatSettings(player) {
             antiautoclickersense: e[i++],
             antiairjump: e[i++],
             antifly4: e[i++],
+            antizd: e[i++],
         })
     }).catch()
 }
@@ -1038,18 +1044,55 @@ export function personalLogUI(player) {
     }).catch()
 }
 
-export function messageLogUI(player) {
+/**
+ * @param {Player} player 
+ */
+export function messageLogUI(player, search = '') {
     let f = new ActionFormData()
     bui.title(f, 'Message Log')
 
-    const logs = mcl.jsonWGet('darkoak:messagelogs').log
+    bui.button(f, `Search: ${search}`)
+
+    /**@type {{name: string, message: string, time: number}[]} */
+    let logs = mcl.jsonWGet('darkoak:messagelogs:v2')
+    if (!logs) {
+        player.sendMessage('§cNo Messages Found!§r')
+        return
+    }
+
+    const now = Date.now()
+
     for (let index = 0; index < logs.length; index++) {
-        bui.label(f, logs[index])
+        const l = logs[index]
+        const timeDiff = now - l.time
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60))
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+        bui.label(f, `${l.name} (${hours}H ${minutes}M Ago) -> ${l.message}`)
     }
 
     bui.button(f, 'Dismiss')
 
-    f.show(player)
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        if (evd.selection === 0) messageSearchUI(player, search)
+    })
+}
+
+export function messageSearchUI(player, search = '') {
+    let f = new ModalFormData()
+    bui.title(f, 'Message Log Searching')
+
+    bui.textField(f, 'Search:', 'Example: Darkoakboat2121', search, 'Name Of Player')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            messageLogUI(player, search)
+            return
+        }
+        const e = bui.formValues(evd)
+        messageLogUI(player, e[0])
+    })
 }
 
 export function landclaimMainUI(player) {
@@ -1128,14 +1171,23 @@ export function addRankUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Add Rank')
 
-    const pl = bui.namePicker(f, undefined, '\nPlayer:')
-    bui.textField(f, 'Rank To Add:', 'Example: §1Admin§r')
+    const pl = bui.namePicker(f, undefined, '\nPlayer:') // 0
+    bui.textField(f, 'Rank To Add:', 'Example: §1Admin§r', '', 'Leave Empty To Use The Dropdown') // 1
+
+    let tags = mcl.playerTagsArray(undefined, 'rank:')
+    if (tags.length == 0) tags = ['rank:Admin', 'rank:Dev']
+    bui.dropdown(f, 'Rank To Add:', tags.map(e => e.replace('rank:', ''))) // 2
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
 
-        mcl.getPlayer(pl[e[0]]).addTag(`rank:${e[1]}`)
+        const playerToAdd = mcl.getPlayer(pl[e[0]])
+        if (!e[1]) {
+            playerToAdd.addTag(tags[e[2]])
+        } else {
+            playerToAdd.addTag(`rank:${e[1]}`)
+        }
     }).catch()
 }
 
@@ -1338,7 +1390,7 @@ export function chatGamesSettings(player) {
 export function scriptSettings(player) {
     let f = new ModalFormData()
     bui.title(f, 'Script Settings')
-    bui.label(f, '§cIt\'s Not Recommended To Change These Settings§r')
+    bui.label(f, '§cIt\'s Not Recommended To Change Some Of These Settings§r')
 
     const d = mcl.jsonWGet('darkoak:scriptsettings')
 
@@ -1351,6 +1403,7 @@ export function scriptSettings(player) {
         if (evd.canceled) return
         const e = bui.formValues(evd)
         let i = 0
+        
         mcl.jsonWSet('darkoak:scriptsettings', {
             cancelWatchdog: e[i++],
             datalog: e[i++],
@@ -1562,11 +1615,17 @@ export function floatingTextAddUI(player) {
 
     bui.textField(f, 'Text:', 'Example: Hello World!')
 
+    bui.textField(f, 'Score To Track:', 'Example: money', '', 'Leave Empty For Plain Text')
+
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
         const entity = player.dimension.spawnEntity('darkoak:floating_text', player.location)
         entity.nameTag = e[0]
+        if (e[1]) entity.setDynamicProperty('darkoak:floatingscore', JSON.stringify({
+            text: e[0],
+            score: e[1]
+        }))
     }).catch()
 }
 
@@ -2785,14 +2844,17 @@ export function wertwertBio(player) {
     bui.label(f, 'Long Live Hex!')
     bui.divider(f)
     bui.label(f, `
-Stil testing  the add-on for Minecraft and holy, it's been a wild ride. I mean, I've seen some crazy stuff go down, and I'm not even talking about the exploits yet. Just watching it break in all sorts of ridiculous ways is entertainment enough. Like, I've come up with some new and innovative ways to make it crash, and it's honestly been a blast.
+       
+still testing  the add-on for Minecraft and holy, it's been a wild ride. I mean, I've seen some crazy stuff go down, and I'm not even talking about the exploits yet. Just watching it break in all sorts of ridiculous ways is entertainment enough. Like, I've come up with some new and innovative ways to make it crash, and it's honestly been a blast.
 
-I'm hyped for the thrill of testing, the agony of watching it poop the bed, and the ecstasy of finally finding that one darn exploit that's been hiding in the shadows. It's like a game of cat and mouse, where I'm both the cat and the mouse, and I'm gonna crush it. Who needs a stable add-on when you can have the satisfaction of breaking it in creative, messed-up ways?
+I'm hyped for the thrill of testing, the agony of watching it cry and beg for mercy and the ecstasy of finally finding that one darn exploit that's been hiding ine shadows. It's like a game of cat and mouse, where I'm both the cat and the mouse, and I'm gonna crush it. Who needs a stable add-on when you can have the satisfaction of breaking it in creative, messed-up ways?
 
 I've never been a fan of testing, but I've learned to appreciate the little victories. Like when I finally find that one exploit that's been driving me crazy for hours. Or when I manage to fix a bug that's been causing problems for players. Those moments make all the frustration worth it, and I'm not even gonna lie.
 
-But let's be real, most of the time I'm just throwing my keyboard across the room, screaming at the top of my lungs, and wondering why the heck I even bother. My computer is covered in scratches, my mouse is held together with duct tape, and I'm pretty sure I've lost all feeling in my fingers from smashing them on the desk. It's a miracle I still have a functioning monitor, tbh.
+But let's be real, most of the time I'm just throwing my keyboard across the room, screaming at the top of my lungs, and wondering why the heck I even bother. My computer is covered in scratches, my mouse is held together with duct tape, and I'm pretty sure I've lost all feeling in my fingers from smashing them on the desk. It's a miracle I still have a functioning monitor, Tbh
 
+
+Update: I wrote this from the very foundation of the code that is right I am the code now I am one with the code jk but it is funny that I got here now how do I leave the real question! hahaha
 - Wertwert3612
 `)
 

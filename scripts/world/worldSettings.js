@@ -14,11 +14,9 @@ export function worldSettingsBreak(evd) {
 
     if (evd.player.getGameMode() != "creative") {
         let blocks = mcl.listGetValues('darkoak:cws:unbreakableBlocks')
-        for (let index = 0; index < blocks.length; index++) {
-            if (evd.block.typeId === blocks[index]) {
-                evd.cancel = true
-                return
-            }
+        if (blocks.includes(evd.block.typeId)) {
+            evd.cancel = true
+            return
         }
     }
 
@@ -71,7 +69,7 @@ export function worldSettingsBuild(evd) {
  * @returns 
  */
 export function worldSettingsInteract(evd) {
-    
+
     if (!mcl.isCreating(evd.player)) {
         const d = mcl.jsonWGet('darkoak:cws')
         const loc = evd.block.location
@@ -163,10 +161,9 @@ export function interactCommandBlock(evd) {
 
 /**
  * @param {PlayerSpawnAfterEvent | PlayerLeaveBeforeEvent} evd 
+ * @param {{welcome: string, welcomeS: boolean, bye: string, byeS: boolean}} d 
  */
-export function welcomeMessage(evd) {
-    /**@type {{welcome: string, welcomeS: boolean, bye: string, byeS: string}} */
-    const d = mcl.jsonWGet('darkoak:welcome')
+export function welcomeMessage(evd, d) {
     if (!d) return
     if (evd instanceof PlayerSpawnAfterEvent) {
         if (!evd.initialSpawn) return
@@ -190,7 +187,7 @@ export function welcomeMessage(evd) {
  * @param {Player} player 
  */
 export function borderAndTracking(player, worldBorder, track) {
-    
+
 
     const x = player.location.x
     const z = player.location.z

@@ -1097,27 +1097,28 @@ export function otherChatSettingsUI(player) {
 
     const default1 = mcl.jsonWGet('darkoak:chat:other')
 
-    bui.toggle(f, 'Proximity Chat (Fifteen Block Radius)', default1.proximity, 'Proximity Text Chat, Not Voice Chat')
+    bui.toggle(f, 'Proximity Chat (Fifteen Block Radius)', default1?.proximity, 'Proximity Text Chat, Not Voice Chat')
+    bui.label(f, 'Look At The Docs For How To Use The darkoak:radio Tag')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Nametag Chat (Chat Messages Appear In Chat And Under Nametag)', default1.nametag, 'Downside Is That It Displays When You Whisper')
+    bui.toggle(f, 'Nametag Chat (Chat Messages Appear In Chat And Under Nametag)', default1?.nametag, 'Downside Is That It Displays When You Whisper')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Chat Logs', default1.chatLogs, 'Logs The Last 100 Chat Messages')
+    bui.toggle(f, 'Chat Logs', default1?.chatLogs, 'Logs The Last 100 Chat Messages')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Health Display', default1.healthDisplay, 'Displays The Players Health Under Their Nametag')
+    bui.toggle(f, 'Health Display', default1?.healthDisplay, 'Displays The Players Health Under Their Nametag')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Professional Filter', default1.professional, 'Applys A Filter To Make Chat More Professional Looking')
+    bui.toggle(f, 'Professional Filter', default1?.professional, 'Applys A Filter To Make Chat More Professional Looking')
 
     bui.divider(f)
 
-    bui.toggle(f, 'Nametag Ranks (Displays Ranks Under Nametags)', default1.nametagRanks, '')
+    bui.toggle(f, 'Nametag Ranks (Displays Ranks Under Nametags)', default1?.nametagRanks, '')
 
     bui.divider(f)
 
@@ -1131,6 +1132,11 @@ export function otherChatSettingsUI(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Discord Style Messages', default1?.discordstyle, '')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Attempt To Translate Chat Messages To English', default1?.translateToEng, 'Supported Languages:\nSpanish')
+    bui.label(f, 'Translated Using Google Translate. §cMay Be Incorrect!§r')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1150,6 +1156,7 @@ export function otherChatSettingsUI(player) {
             afknotif: e[i++],
             afktime: e[i++],
             discordstyle: e[i++],
+            translateToEng: e[i++],
         })
     }).catch()
 }
@@ -1429,6 +1436,8 @@ export function docsUI(player) {
     bui.label(f, 'darkoak:inwater -> Tracking Tag')
     bui.label(f, 'darkoak:jumping -> Tracking Tag')
     bui.label(f, 'darkoak:onground -> Tracking Tag')
+
+    bui.label(f, 'darkoak:radio -> If A Player Has This Tag When Proximity Chat Is On, Messages Will Be Sent To Other Players With This Tag')
 
     bui.divider(f)
 
