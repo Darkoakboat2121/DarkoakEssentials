@@ -1060,14 +1060,10 @@ export function messageLogUI(player, search = '') {
         return
     }
 
-    const now = Date.now()
-
     for (let index = 0; index < logs.length; index++) {
         const l = logs[index]
-        const timeDiff = now - l.time
-        const hours = Math.floor(timeDiff / (1000 * 60 * 60))
-        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
-        bui.label(f, `${l.name} (${hours}H ${minutes}M Ago) -> ${l.message}`)
+        const timeDiff = mcl.timeDifference(l.time)
+        bui.label(f, `${l.name} (${timeDiff.hours}H ${timeDiff.minutes}M ${timeDiff.seconds}S Ago) -> ${l.message}`)
     }
 
     bui.button(f, 'Dismiss')

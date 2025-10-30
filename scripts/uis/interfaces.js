@@ -1634,7 +1634,7 @@ export function actionBarUI(player) {
         bui.textField(f, `Frame ${index + 1}:`, 'Example: #name#: #location#', d?.lines[index])
     }
 
-    bui.slider(f, 'Ticks Between Frames', 1, 100, d?.ticks, 1)
+    bui.slider(f, 'Ticks Between Frames', 1, 200, d?.ticks, 1)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {

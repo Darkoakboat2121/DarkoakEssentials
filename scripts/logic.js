@@ -1141,4 +1141,31 @@ export class mcl {
         const op = world.getAllPlayers().filter(e => e.commandPermissionLevel === CommandPermissionLevel.Admin)[0]
         op.runCommand(`kick "${player.name}" ${message}`)
     }
+
+    /**
+     * @param {string} type 
+     */
+    static getAllEntities(type) {
+        const entities = world.getDimension('overworld').getEntities({
+            type: type
+        }).concat(world.getDimension('nether').getEntities({
+            type: type
+        })).concat(world.getDimension('the_end').getEntities({
+            type: type
+        }))
+        return entities
+    }
+
+    /**Returns the hour/minute/second difference between 'time' and when this is ran
+     * @param {number} time
+     */
+    static timeDifference(time) {
+        const now = Date.now()
+        const timeDiff = now - time 
+        return {
+            hours: Math.floor(timeDiff / (1000 * 60 * 60)),
+            minutes: Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60)),
+            seconds: Math.floor((timeDiff % (1000 * 60)) / 1000)
+        }
+    }
 }

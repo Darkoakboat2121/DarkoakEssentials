@@ -32,7 +32,6 @@ import * as external from "./external/external"
 import { customEnchantActions, customEnchantEvents, enchantOnDamaged, enchantOnDeathKill, enchantOnHit, enchantOnJump, enchantOnUse } from "./enchanting"
 import { bui } from "./uis/baseplateUI"
 
-let acbarTicker = 0
 let act = 0
 
 const cooldown = new Map()
@@ -1234,11 +1233,9 @@ function actionBar(player) {
     const text2 = mcl.jsonWGet('darkoak:sidebar')
     if (text2 && text2.lines.join('').length > 0) player.runCommand(`titleraw @s title {"rawtext":[{"text":"${arrays.replacer(player, text2.lines.join('\n').trim())}"}]}`)
 
-    acbarTicker++
-    if (acbarTicker >= text?.ticks * 2) {
+    if (mcl.tickTimer(text?.ticks)) {
         act++
         if (act >= lines.length) act = 0
-        acbarTicker = 0
     }
 }
 

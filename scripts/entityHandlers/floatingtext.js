@@ -5,13 +5,7 @@ import { mcl } from "../logic"
  * @param {Player[]} players 
  */
 export function scoreboardHandler(players) {
-    const texts = world.getDimension('overworld').getEntities({
-        type: 'darkoak:floating_text'
-    }).concat(world.getDimension('nether').getEntities({
-        type: 'darkoak:floating_text'
-    })).concat(world.getDimension('the_end').getEntities({
-        type: 'darkoak:floating_text'
-    }))
+    const texts = mcl.getAllEntities('darkoak:floating_text')
 
     for (let index = 0; index < texts.length; index++) {
         try {

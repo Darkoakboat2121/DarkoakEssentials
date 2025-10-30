@@ -21,7 +21,7 @@ export function antiNuker(evd) {
 
         if (current > (d?.antinukersense || 40)) {
             evd.cancel = true
-            log(`${player.name} -> anti-nuker (${current})`)
+            log(player, `anti-nuker (${current})`)
         }
     }
 
@@ -30,7 +30,7 @@ export function antiNuker(evd) {
         const l = evd.block.location
         if (b && b?.block && b.block.isSolid && (b.block.location.x != l.x && b.block.location.y != l.y && b.block.location.z != l.z)) {
             evd.cancel = true
-            log(`${player.name} -> anti-nuker 2`)
+            log(player, `anti-nuker 2`)
         }
     }
 }
@@ -51,7 +51,7 @@ export function antiFastPlace(evd) {
         placeMap.set(player.name, current + 1)
         if (current > (d?.antifastplacesense || 15)) {
             evd.cancel = true
-            log(`${player.name} -> anti-fast-place (${current})`)
+            log(player, `anti-fast-place (${current})`)
         }
     }
 
@@ -65,19 +65,19 @@ export function antiFastPlace(evd) {
             Math.pow(bl.z - pl.z, 2)
         )
         if (distance > 8.5) {
-            log(`${player.name} -> anti-block-reach\nDistance: ${distance.toString()}`)
+            log(player, `anti-block-reach\nDistance: ${distance.toString()}`)
             evd.cancel = true
         }
     }
 
     if (d?.antiairplace) {
         if (!block.above() && !block.below() && !block.east() && !block.west() && !block.north() && !block.south()) {
-            log(`${player.name} -> anti-air-place`)
+            log(player, `anti-air-place`)
         }
     }
 
     if (d?.antiscaffold && block.location.y <= player.location.y && player.getViewDirection().y > 0) {
-        log(`${player.name} -> anti-scaffold`)
+        log(player, `anti-scaffold`)
         evd.cancel = true
     }
 }
@@ -96,7 +96,7 @@ export function antiCps(evd) {
     mcl.pSet(player, 'darkoak:ac:cps', currentCPS + 1)
 
     if (currentCPS > (d?.antikillaurasense || 15) && d?.antikillaura) {
-        log(`${player.name} -> anti-killaura (${currentCPS})`)
+        log(player, `anti-killaura (${currentCPS})`)
     }
 
     if (d?.antiautoclicker) {
@@ -114,7 +114,7 @@ export function antiCps(evd) {
 
             let sensitivity = d?.antiautoclickersense || 2
             if (Math.abs(interval1 - interval2) < sensitivity && Math.abs(interval2 - interval3) < sensitivity) {
-                log(`${player.name} -> anti-auto-clicker`)
+                log(player, `anti-auto-clicker`)
             }
         }
     }
@@ -140,7 +140,7 @@ export function antiReach(evd) {
         Math.pow(bl.z - pl.z, 2)
     )
     if (distance > ((d?.antireachsense || 7.5) / 10)) {
-        log(`${player.name} -> anti-reach\nDistance: ${distance.toString()}`)
+        log(player, `anti-reach\nDistance: ${distance.toString()}`)
     }
 }
 
@@ -175,7 +175,7 @@ export function antiGameMode(evd) {
 export function antiNpc(evd) {
     const d = mcl.jsonWGet('darkoak:anticheat')
     if (d?.npcdetect && evd.target.typeId == 'minecraft:npc' && !mcl.isDOBAdmin(evd.player)) {
-        log(`${evd.player.name} -> npc detected`)
+        log(evd.player, `npc detected`)
         mcl.adminMessage(`${evd.player.name} -> npc detected`)
         evd.cancel = true
     }
@@ -256,7 +256,7 @@ export function dupeIDChecker(player, d) {
                 if (match) {
                     const id = match[0]
                     if (idLog.has(id)) {
-                        log(`${player.name} -> anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
+                        log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
                         if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
                     } else {
                         idLog.add(id)
@@ -266,7 +266,7 @@ export function dupeIDChecker(player, d) {
                 if (matchOld) {
                     const id = matchOld[1]
                     if (idLog.has(id)) {
-                        log(`${player.name} -> anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
+                        log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
                         if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
                     } else {
                         idLog.add(id)
@@ -279,7 +279,7 @@ export function dupeIDChecker(player, d) {
         if (d?.antinbt) {
             const hv = hackedItemsVanilla
             if (hv.includes(item.typeId)) {
-                log(`${player.name} -> anti-nbt 1: ${item.typeId}`)
+                log(player, `anti-nbt 1: ${item.typeId}`)
                 mcl.getItemContainer(player).setItem(index)
             }
         }
@@ -288,7 +288,7 @@ export function dupeIDChecker(player, d) {
         if (d?.antinbt2) {
             const hil = hackedItemsList
             if (hil.includes(item.nameTag)) {
-                log(`${player.name} -> anti-nbt 2: ${item.nameTag}`)
+                log(player, `anti-nbt 2: ${item.nameTag}`)
                 mcl.getItemContainer(player).setItem(index)
             }
         }
@@ -307,7 +307,7 @@ export function dupeIDChecker(player, d) {
                 for (let index3 = 0; index3 < t.length; index3++) {
                     if (t[index3].level <= 5) continue
 
-                    log(`${player.name} -> anti-illegal-enchant: ${t[index3].type.id} ${t[index3].level}`)
+                    log(player, `anti-illegal-enchant: ${t[index3].type.id} ${t[index3].level}`)
                     let item2 = new ItemStack(item.type, item.amount)
                     item2.setLore(item.getLore())
                     mcl.getItemContainer(player).setItem(index, item2)
@@ -318,9 +318,9 @@ export function dupeIDChecker(player, d) {
     }
 
     const gm = player.getGameMode()
-    if (gm != GameMode.Creative && gm != GameMode.Spectator) {
+    if (gm != GameMode.creative && gm != GameMode.spectator) {
         if (d?.antifly4 && player.isGliding && equiped?.getEquipment(EquipmentSlot.Chest)?.typeId != 'minecraft:elytra') {
-            log(`${player.name} -> anti-fly 4`)
+            log(player, `anti-fly 4`)
         }
     }
 }
@@ -334,7 +334,7 @@ export function dupeIDChecker(player, d) {
 export function addID(player, item, inventory, index) {
     let lore = item.getLore()
     let hasID = lore.some(line => /\[.*?\]/.test(line))
-    if (!item.isStackable && player.getGameMode() != GameMode.Creative) {
+    if (!item.isStackable && player.getGameMode() != GameMode.creative) {
         if (!hasID) {
             const newID = `[${mcl.timeUuid()}]`
             lore.push(newID)
@@ -393,17 +393,17 @@ export function anticheatMain(player) {
     if (gm != GameMode.Creative && gm != GameMode.Spectator) {
         // anti fly 1
         if (player.isFlying && d?.antifly1) {
-            log(`${player.name} -> anti-fly 1`)
+            log(player, `anti-fly 1`)
         }
 
         // anti fly 2
         if (player.isFlying && d?.antifly2 && player.isGliding) {
-            log(`${player.name} -> anti-fly 2`)
+            log(player, `anti-fly 2`)
         }
 
         // anti fly 3
         if (d?.antifly3 && player.isGliding && v.y > 0.8 && v.x < 0.2 && v.z < 0.2 && vd.y < 1) {
-            log(`${player.name} -> anti-fly 3`)
+            log(player, `anti-fly 3`)
         }
 
         // anti air jump
@@ -527,7 +527,7 @@ export function antiBowSpam(evd) {
     const delay = now - (bowSpam.get(evd.source.name) || 0)
 
     if (delay < 200) {
-        log(`${evd.source.name} -> anti-bowspam`)
+        log(evd.source, `anti-bowspam`)
     }
     bowSpam.set(evd.source.name, now)
 }
@@ -569,32 +569,47 @@ export function antiZDInterval(d) {
 let strikeMap = new Map()
 
 /**
+ * @param {Player} player 
  * @param {string} mess 
  */
-export function log(mess) {
-    let d = new Date()
-    let data2 = mcl.jsonWGet(`darkoak:log`) || { logs: [{ message: 'placeholder' }] }
-    data2.logs.push({ message: `${mess}\n[${d.getTime()}]` })
-    const da = mcl.jsonWGet('darkoak:anticheat')
-    if (da?.notify) {
-        system.runTimeout(() => mcl.adminMessage(`Anticheat: ${mess}`))
-    }
-    mcl.jsonWSet(`darkoak:log`, data2)
+export function log(player, message) {
+    // let d = new Date()
+    // let data2 = mcl.jsonWGet(`darkoak:log`) || { logs: [{ message: 'placeholder' }] }
+    // data2.logs.push({ message: `${mess}\n[${d.getTime()}]` })
+    // const da = mcl.jsonWGet('darkoak:anticheat')
+    // if (da?.notify) {
+    //     system.runTimeout(() => mcl.adminMessage(`Anticheat: ${mess}`))
+    // }
+    // mcl.jsonWSet(`darkoak:log`, data2)
 
-    const player = mcl.getPlayer(mess.split('->').at(0).trim())
-    if (player && da?.strike) {
-        const current = strikeMap.get(player.name) || 0
-        strikeMap.set(player.name, current + 1)
-        if (current >= (da?.strikeamount || 5)) {
-            strikeMap.set(player.name, 0)
-            system.runTimeout(() => {
-                try {
-                    player.applyDamage(da?.strikedamage || 20)
-                } catch {
+    // const player = mcl.getPlayer(mess.split('->').at(0).trim())
+    // if (player && da?.strike) {
+    //     const current = strikeMap.get(player.name) || 0
+    //     strikeMap.set(player.name, current + 1)
+    //     if (current >= (da?.strikeamount || 5)) {
+    //         strikeMap.set(player.name, 0)
+    //         system.runTimeout(() => {
+    //             try {
+    //                 player.applyDamage(da?.strikedamage || 20)
+    //             } catch {
 
-                }
-            })
+    //             }
+    //         })
+    //     }
+    // }
+    // logcheck()
+
+    /**@type {{name: string, message: string, time: number}[]} */
+    let logs = mcl.jsonWGet('darkoak:anticheatlogs:v2') || [{name: 'Default', message: 'Default', time: Date.now()}]
+    if (logs.length > 250) {
+        while (logs.length > 250) {
+            logs.shift()
         }
     }
-    logcheck()
+    logs.push({
+        name: player.name,
+        message: message,
+        time: Date.now()
+    })
+    mcl.jsonWSet('darkoak:anticheatlogs:v2', logs)
 }
