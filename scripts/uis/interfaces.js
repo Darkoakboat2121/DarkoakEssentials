@@ -1362,16 +1362,14 @@ export function logsUI(player) {
 
     bui.label(f, 'Sorted By Latest First')
 
-    let logs = mcl.jsonWGet('darkoak:log')
-    if (logs != undefined) {
-        logs.logs.sort((a, b) => {
-            const numA = mcl.getStringBetweenChars(a.message, '[', ']')
-            const numB = mcl.getStringBetweenChars(b.message, '[', ']')
-            return numB - numA
-        })
+    /**@type {{name: string, message: string, time: number}[]} */
+    let logs = mcl.jsonWGet('darkoak:anticheatlogs:v2') || [{name: 'Default', message: 'Default', time: Date.now()}]
 
-        for (let index = 0; index < logs.logs.length; index++) {
-            bui.label(f, `${logs.logs[index].message}`)
+    if (logs.length > 0) {
+        for (let index = 0; index < logs.length; index++) {
+            const l = logs[index]
+            const time = mcl.timeDifference(l.time)
+            bui.label(f, `${l.name} (${time.hours}H ${time.minutes}M ${time.seconds}S Ago) -> ${l.message}`)
             bui.divider(f)
         }
     }
@@ -1384,7 +1382,7 @@ export function logsUI(player) {
                 messageLogUI(player)
                 break
             case 1:
-                mcl.wRemove('darkoak:log')
+                mcl.wRemove('darkoak:anticheatlogs:v2')
                 break
         }
     }).catch()

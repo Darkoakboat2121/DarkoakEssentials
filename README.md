@@ -92,7 +92,7 @@ changelog:
 
         
     changes:
-        
+        the anticheat log now has time stamps
 
         more stuff to profiles *
 

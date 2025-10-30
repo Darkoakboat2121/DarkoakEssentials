@@ -1,7 +1,6 @@
 import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent, EffectTypes, InputPermissionCategory, EquipmentSlot, PlayerJoinAfterEvent, CommandPermissionLevel } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
-import { logcheck } from "../data/defaults"
 import { badBlocksList, hackedItemsList, hackedItemsVanilla } from "../data/arrays"
 import { transferPlayer } from "@minecraft/server-admin"
 
@@ -425,7 +424,7 @@ export function anticheatMain(player) {
                 }
 
                 if (player.isOnGround && allAir >= 6) {
-                    log(`${player.name} -> anti-air-jump`)
+                    log(player, `anti-air-jump`)
                 }
             }
         }
@@ -439,17 +438,17 @@ export function anticheatMain(player) {
 
     // anti invalid movements 1
     if (d?.antiinvalid1 && player.isSneaking && player.isSprinting && !player.isFlying && !player.isInWater) {
-        log(`${player.name} -> anti-invalid 1`)
+        log(player, `anti-invalid 1`)
     }
 
     // anti invalid movements 2
     if (d?.antiinvalid2 && player.isSprinting && player.isOnGround && dot < -0.3) {
-        log(`${player.name} -> anti-invalid 2`)
+        log(player, `anti-invalid 2`)
     }
 
     // anti invalid movements 3
     if (d?.antiinvalid3 && player.isClimbing && v.y > (d?.antiinvalid3sense || 1)) {
-        log(`${player.name} -> anti-invalid 3`)
+        log(player, `anti-invalid 3`)
     }
 
 
@@ -457,19 +456,19 @@ export function anticheatMain(player) {
         (!player.inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Sneak) && player.isSneaking) ||
         (!player.inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Jump) && player.isJumping)
     )) {
-        log(`${player.name} -> anti-anti-immobile`)
+        log(player, `anti-anti-immobile`)
     }
 
     if (d?.antiairswim && player.isSwimming) {
         const block = player.dimension.getBlock(player.location)
-        if (!block.isLiquid) log(`${player.name} -> anti-air-swim`)
+        if (!block.isLiquid) log(player, `anti-air-swim`)
     }
 
     // anti speed 1
     const antispeedmax = d?.antispeedsense || 20
     if ((Math.abs(v.x) >= antispeedmax || Math.abs(v.z) >= antispeedmax) && d?.antispeed) {
         if (player.getEffect(EffectTypes.get('minecraft:speed'))) return
-        log(`${player.name} -> speed, X${Math.abs(v.x)}-Z${Math.abs(v.z)}`)
+        log(player, `speed (X${Math.abs(v.x)}-Z${Math.abs(v.z)})`)
         mcl.stopPlayer(player)
     }
 
@@ -478,6 +477,7 @@ export function anticheatMain(player) {
         let crasherLog = false
         const loc = player.location
         const nameFL = player.name
+        let copy = player
         if (isNaN(loc.x) || isNaN(loc.y) || isNaN(loc.z)) {
             transferPlayer(player, { hostname: '127.0.0.0', port: 0 })
             crasherLog = true
@@ -486,15 +486,15 @@ export function anticheatMain(player) {
             transferPlayer(player, { hostname: '127.0.0.0', port: 0 })
             crasherLog = true
         }
-        if (crasherLog) log(`${nameFL} -> anti-crasher 2`)
+        if (crasherLog) log(copy, `anti-crasher 2`)
     }
 
     if (d?.antiinvalid4) {
         if (player.selectedSlotIndex > 8 || player.selectedSlotIndex < 0) player.selectedSlotIndex = 0
         if (system.currentTick % 100 === 0) {
             const mrd = player.clientSystemInfo
-            if (mrd.maxRenderDistance < 1) log(`${player.name} -> anti-invalid 4, max-render-distance: ${mrd.maxRenderDistance.toString()}`)
-            if (mrd.memoryTier < 0 || mrd.memoryTier > 4) log(`${player.name} -> anti-invalid 4, memory-tier: ${mrd.memoryTier.toString()}`)
+            if (mrd.maxRenderDistance < 1) log(player, `anti-invalid 4, max-render-distance: ${mrd.maxRenderDistance.toString()}`)
+            if (mrd.memoryTier < 0 || mrd.memoryTier > 4) log(player, `anti-invalid 4, memory-tier: ${mrd.memoryTier.toString()}`)
 
         }
         if (vd.x > 1 || vd.x < -1 || vd.y > 1 || vd.y < -1 || vd.z > 1 || vd.z < -1) player.teleport(player.location, {
@@ -511,7 +511,7 @@ export function anticheatMain(player) {
     if (d?.antizd && player.name.length < 1) {
         mcl.kick(player, 'ANTI-ZD 1, Please Report If This Is A Bug!')
         mcl.softKick(player)
-        log(`${player.name} -> anti-ZD`)
+        log(player, `anti-ZD`)
     }
 }
 
@@ -606,10 +606,30 @@ export function log(player, message) {
             logs.shift()
         }
     }
+    let name = player?.name || player?.nameTag || 'EMPTY'
     logs.push({
-        name: player.name,
+        name: name,
         message: message,
         time: Date.now()
     })
     mcl.jsonWSet('darkoak:anticheatlogs:v2', logs)
+
+    const da = mcl.jsonWGet('darkoak:anticheat')
+    if (da?.notify) {
+        system.runTimeout(() => mcl.adminMessage(`Anticheat: ${player.name} -> ${message}`))
+    }
+    if (da?.strike) {
+        const current = strikeMap.get(player.name) || 0
+        strikeMap.set(player.name, current + 1)
+        if (current >= (da?.strikeamount || 5)) {
+            strikeMap.set(player.name, 0)
+            system.runTimeout(() => {
+                try {
+                    player.applyDamage(da?.strikedamage || 20)
+                } catch {
+
+                }
+            })
+        }
+    }
 }

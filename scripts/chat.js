@@ -76,7 +76,7 @@ export function chatSystem(evd = undefined, player, message) {
             trimmed.includes('lumineproxy') ||
             trimmed.includes('packet.sell.app')
         ) {
-            log(`${player.name} -> hack client message`)
+            log(player, `hack client message`)
             return
         }
         if (d?.antispam2) {
@@ -87,7 +87,7 @@ export function chatSystem(evd = undefined, player, message) {
     }
     if (d?.antispamactive) {
         if (player.isJumping || player.isSprinting) {
-            log(`${player.name} -> anti-spam-active`)
+            log(player, `anti-spam-active`)
             return
         }
     }
@@ -318,7 +318,6 @@ function hashtag(hashtagKey, sender) {
         }
     } catch (e) {
         mcl.adminMessage(`A Custom Command That Uses A Hashtag-Key Is Having An Error: ${hashtagKey} From ${sender.name}`)
-        console.log(`DEBUG CHATCOMMANDS: ${String(e)}`)
     }
 }
 

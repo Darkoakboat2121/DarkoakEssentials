@@ -4,18 +4,6 @@ import { mcl } from "../logic"
 
 // This file sets all dynamic propertys to their default state if they havent been setup yet and it manages data size / limits
 
-
-export function logcheck() {
-    let log = mcl.jsonWGet('darkoak:log')
-
-    if (log.logs.length > 100) {
-        log.logs.shift()
-    }
-
-    mcl.jsonWSet('darkoak:log', log)
-}
-
-
 let lastTime = Date.now()
 let sessionSeconds = 0
 let tickcount = 0

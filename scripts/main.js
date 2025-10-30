@@ -1046,7 +1046,7 @@ function scriptEvents(evd) {
                     mcl.adminMessage(arrays.debugEvents)
                     break
                 case 'aclog':
-                    anticheat.log(`${player.nameTag} -> DEBUG TEST`)
+                    anticheat.log(player, `DEBUG TEST`)
                     break
                 case 'playerlist':
                     mcl.adminMessage(mcl.getPlayerList().join('\n'))
@@ -1784,7 +1784,7 @@ function customSlashCommands(evd) {
         system.runTimeout(() => {
             switch (debugtype) {
                 case 'aclog':
-                    anticheat.log(`${player.nameTag} -> DEBUG TEST`)
+                    anticheat.log(player, `DEBUG TEST`)
                     break
                 case 'playerlist':
                     mcl.adminMessage(mcl.getPlayerList().join('\n'))
