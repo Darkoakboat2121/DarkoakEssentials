@@ -1,6 +1,7 @@
 import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, ModalFormResponse, MessageFormResponse, ActionFormResponse } from "@minecraft/server-ui"
 import { mcl } from "../logic"
+import { cd } from "../data/defaults"
 
 /**Baseplate UI, a class for making updates easier */
 export class bui {
@@ -62,8 +63,9 @@ export class bui {
      * @param {string} [tooltip=''] Text that appears in the tooltip icon
      */
     static textField(f, label = '', placeholder = '', defaultText = '', tooltip = '') {
-        return f.textField(label.toString() || '', placeholder.toString() || '', {
-            tooltip: tooltip.toString() || '',
+        const c = mcl.jsonWGet('darkoak:scriptsettings')
+        return f.textField(`${c?.textfieldcolor || ''}${label.toString()}` || '', `${placeholder.toString()}` || '', {
+            tooltip: `${c?.textfieldtooltipcolor || ''}${tooltip.toString()}` || '',
             defaultValue: defaultText.toString() || ''
         })
     }
@@ -72,9 +74,10 @@ export class bui {
      * @param {ModalFormData} f 
      */
     static dropdown(f, label = '', options = [''], defaultIndex = 0, tooltip = '') {
-        return f.dropdown(label.toString() || '', options.map(e => e.toString()) || [''], {
+        const c = mcl.jsonWGet('darkoak:scriptsettings')
+        return f.dropdown(`${c?.dropdowncolor || ''}${label.toString()}` || '', options.map(e => e.toString()) || [''], {
             defaultValueIndex: parseInt(defaultIndex.toString()) || 0,
-            tooltip: tooltip.toString() || ''
+            tooltip: `${c?.dropdowntooltipcolor || ''}${tooltip.toString()}` || ''
         })
     }
 
@@ -114,29 +117,33 @@ export class bui {
      * @param {ModalFormData | ActionFormData | MessageFormData} f
      */
     static title(f, text = '') {
-        return f.title(text.toString() || '')
+        const c = mcl.jsonWGet('darkoak:scriptsettings')
+        return f.title(`${c?.titlecolor || ''}${text.toString()}` || '')
     }
 
-    /**Generic button
+    /**Generic button, there can be around 930 buttons before the UI breaks
      * @param {ActionFormData} f 
      * @param {string | undefined} [image=undefined] 
      */
     static button(f, text = '', image = undefined) {
-        return f.button(text.toString() || '', image)
+        const c = mcl.jsonWGet('darkoak:scriptsettings')
+        return f.button(`${c?.buttoncolor || ''}${text.toString()}` || '', image)
     }
 
     /**Generic body
      * @param {MessageFormData | ActionFormData} f 
      */
     static body(f, text = '') {
-        return f.body(text.toString() || '')
+        const c = mcl.jsonWGet('darkoak:scriptsettings')
+        return f.body(`${c?.bodycolor || ''}${text.toString()}` || '')
     }
 
     /**Generic label
      * @param {ModalFormData | ActionFormData} f 
      */
     static label(f, text = '') {
-        return f.label(text.toString() || '')
+        const c = mcl.jsonWGet('darkoak:scriptsettings')
+        return f.label(`${c?.labelcolor || ''}${text.toString()}` || '')
     }
 
     /**Generic divider
@@ -150,9 +157,10 @@ export class bui {
      * @param {ModalFormData} f 
      */
     static toggle(f, label = '', defaultValue = false, tooltip = '') {
-        return f.toggle(label.toString() || '', {
-            defaultValue: defaultValue || false,
-            tooltip: tooltip.toString() || ''
+        const c = mcl.jsonWGet('darkoak:scriptsettings')
+        return f.toggle(`${c?.togglecolor || ''}${label.toString()}` || '', {
+            defaultValue: !!defaultValue || false,
+            tooltip: `${c?.toggletooltipcolor || ''}${tooltip.toString()}` || ''
         })
     }
 
@@ -167,7 +175,8 @@ export class bui {
      * @param {ActionFormData | ModalFormData} f 
      */
     static header(f, text = '') {
-        return f.header(text.toString() || '')
+        const c = mcl.jsonWGet('darkoak:scriptsettings')
+        return f.header(`${c?.headercolor || ''}${text.toString()}` || '')
     }
 
     /**Generic submitbutton

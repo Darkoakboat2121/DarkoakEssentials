@@ -67,7 +67,7 @@ export function combatManager(player) {
  * @param {StartupEvent} evd 
  */
 export function fakePlayerCommand(evd) {
-    evd.customCommandRegistry.registerEnum('darkoak:fakeplayer', ['chat(string)', 'spawn(none)', 'skin(player_name)', 'disconnect(none)', 'location_move(coords)', 'location_navigate(coords)', 'interact_block(coords)', 'attack(none)', 'look_location(coords)', 'respawn(bool|none)', 'combat(player_name|\'closest\')', 'follow(player_name|\'closest\')', 'jump(none|number)'])
+    evd.customCommandRegistry.registerEnum('darkoak:fakeplayer', ['chat(string)', 'spawn(none)', 'skin(player_name)', 'disconnect(none)', 'location_move(coords)', 'location_navigate(coords)', 'interact_block(coords)', 'attack(none)', 'look_location(coords)', 'respawn(bool|none)', 'combat(player_name|\'closest\')', 'follow(player_name|\'closest\')', 'jump(none|number)', 'command(string)'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:fakeplayer',
         description: 'Manages Fake Players',
@@ -172,6 +172,9 @@ export function fakePlayerCommand(evd) {
                         mcl.jsonPUpdate(sim, 'darkoak:sim', 'type', 'jump')
                         mcl.jsonPUpdate(sim, 'darkoak:sim', 'interval', parseInt(todo))
                     }
+                    break
+                case 'command(string)':
+                    sim.runCommand(todo)
                     break
             }
         })

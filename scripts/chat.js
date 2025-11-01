@@ -20,8 +20,8 @@ let lastSender = ''
  * @param {Player} player 
  */
 export function chatSystem(evd = undefined, player, message) {
-    const chat = cd.get('darkoak:scriptsettings')
-    if (chat.chatmaster === true) return
+    const chat = mcl.jsonWGet('darkoak:scriptsettings')
+    if (chat?.chatmaster === true) return
 
     if (evd) evd.cancel = true
 
@@ -233,8 +233,12 @@ export function chatSystem(evd = undefined, player, message) {
 
     if (ocs?.proximity) {
         system.runTimeout(() => {
-            player.runCommand(`tellraw @a [r=15] {"rawtext": [{"text":"${text}"}]}`)
-            if (player.hasTag('darkoak:radio')) player.runCommand(`tellraw @a [tag="darkoak:radio"] {"rawtext": [{"text":"${text}"}]}`)
+            if (player.hasTag('darkoak:radio')) {
+                player.runCommand(`tellraw @a [tag="darkoak:radio"] {"rawtext": [{"text":"${text}"}]}`)
+                player.runCommand(`tellraw @a [r=15,tag=!"darkoak:radio"] {"rawtext": [{"text":"${text}"}]}`)
+            } else {
+                player.runCommand(`tellraw @a [r=15] {"rawtext": [{"text":"${text}"}]}`)
+            }
         }, 1)
     } else {
         if (ocs?.discordstyle) {
@@ -499,10 +503,8 @@ export function chatCommand(player, p) {
 export function messageLog(player, message) {
     /**@type {{name: string, message: string, time: number}[]} */
     let logs2 = mcl.jsonWGet('darkoak:messagelogs:v2') || [{name: 'Default', message: 'Default', time: Date.now()}]
-    if (logs2.length > 250) {
-        while (logs2.length > 250) {
-            logs2.shift()
-        }
+    while (logs2.length > 500) {
+        logs2.shift()
     }
     if (logs2.length > 0 && logs2[logs2.length - 1].name === player.name) {
         logs2[logs2.length - 1].message += `\n| ${message}`

@@ -348,6 +348,9 @@ export function WEselector(evd) {
     const player = evd.player
     const item = evd.itemStack
 
+    const c = mcl.jsonWGet('darkoak:scriptsettings')
+    if (c?.worldeditmaster) return
+
     /**@type {{p1: {x: number, y: number, z: number}, p2: {x: number, y: number, z: number}, id: number}} */
     const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
     if (mcl.isDOBAdmin(player) && item && item.typeId === 'darkoak:world_edit' && evd.isFirstEvent) {

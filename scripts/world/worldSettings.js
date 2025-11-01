@@ -188,11 +188,12 @@ export function welcomeMessage(evd, d) {
  */
 export function borderAndTracking(player, worldBorder, track) {
 
+    const c = mcl.jsonWGet('darkoak:scriptsettings')
 
     const x = player.location.x
     const z = player.location.z
 
-    tracking(player, track || {
+    if (!c.trackingmaster) tracking(player, track || {
         flying: false,
         gliding: false,
         climbing: false,
@@ -200,11 +201,11 @@ export function borderAndTracking(player, worldBorder, track) {
         falling: false,
         inwater: false,
         jumping: false,
-        onground: false
+        onground: false,
     })
 
     // World border
-    if (worldBorder != 0) {
+    if (worldBorder != 0 && !c?.bordermaster) {
 
         if (Math.abs(x) > worldBorder) {
             const k = (x / worldBorder - 1) * -1

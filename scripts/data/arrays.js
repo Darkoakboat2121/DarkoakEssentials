@@ -132,7 +132,11 @@ export const preBannedList = [
     'Sr M4rkoz', //Basic
     'DREAM8689', //Racism
     'SplashifiedYT', //Racism
-    
+    'EchoHackCmd', //Alt
+    'qLqmqqz Bad', //Hack client dev
+    'insane bypasses', //Alt
+    'Chiika Fujiwara', //Alt
+    'ANSHUL MASTER', //Basic
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -787,6 +791,16 @@ export const modalTextTypes = [
     'divider',
     'Remember To Use "|" To Seperate Things, Not ":"'
 ].join('\n')
+
+/**Script settings helper function, gets the default index for the color codes
+ * @param {string} def 
+ * @returns 
+ */
+export function SSColorIndex(def) {
+    let index = colorCodes.findIndex(e => e === def)
+    if (index < 0) index = 12
+    return index
+}
 
 
 // dynamic propertys can hold 32767 characters

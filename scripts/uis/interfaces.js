@@ -263,7 +263,8 @@ export function welcomeMessageUI(player) {
 export function worldBorderUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'World Border')
-    bui.textField(f, '\n(Must Be A Number, 0 = Disabled)\nSize:', 'Example: 3000', mcl.wGet('darkoak:cws:border'))
+    const wb = mcl.jsonWGet('darkoak:worldborder')
+    bui.textField(f, '\n(Must Be A Number, 0 = Disabled)\nSize:', 'Example: 3000', wb?.size || '0')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -275,7 +276,9 @@ export function worldBorderUI(player) {
             worldBorderUI(player)
             return
         }
-        mcl.wSet('darkoak:cws:border', e[0])
+        mcl.jsonWSet('darkoak:worldborder', {
+            size: e[0]
+        })
     }).catch()
 }
 
@@ -2272,7 +2275,6 @@ export function myProfile(player) {
             age: ''
         })
     }
-    console.log(JSON.stringify(parts))
 
     bui.textField(f, '\nDescription:', 'Example: Hi, I\'m Darkoakboat2121.', parts?.description)
     bui.textField(f, 'Pronouns:', 'Example: He / Him', parts?.pronouns, 'Good For Other Things Too!')

@@ -3,7 +3,7 @@ import { ActionFormData, MessageFormData, ModalFormData, uiManager, UIManager } 
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
 import { customEnchantActions, customEnchantEvents } from "../enchanting"
-import { hashtags, preBannedList, icons, compress, decompress, replacer, crasherSymbol, modalTextTypes } from "../data/arrays"
+import { hashtags, preBannedList, icons, compress, decompress, replacer, crasherSymbol, modalTextTypes, colorCodes, SSColorIndex } from "../data/arrays"
 import { bui } from "./baseplateUI"
 import * as modal from "./modalUI"
 import { chatSystem } from "../chat"
@@ -1187,11 +1187,18 @@ export function addRankUI(player) {
     }).catch()
 }
 
+/**
+ * @param {Player} player 
+ */
 export function removeRankUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Remove Rank')
 
-    const tl = mcl.playerTagsArray(undefined, 'rank:')
+    let tl = mcl.playerTagsArray(undefined, 'rank:')
+    if (tl.length == 0) {
+        player.sendMessage('§cNo Ranks To Remove!§r')
+        return
+    }
 
     const pl = bui.namePicker(f, undefined, '\nPlayer:')
     bui.dropdown(f, 'Rank To Remove:', tl.map(e => e.replace('rank:', '')))
@@ -1383,28 +1390,83 @@ export function chatGamesSettings(player) {
     }).catch()
 }
 
+/**Manages settings related to the entire addon
+ * @param {Player} player 
+ */
 export function scriptSettings(player) {
     let f = new ModalFormData()
     bui.title(f, 'Script Settings')
-    bui.label(f, '§cIt\'s Not Recommended To Change Some Of These Settings§r')
 
     const d = mcl.jsonWGet('darkoak:scriptsettings')
 
-    bui.toggle(f, 'Cancel Watchdog Terminating', d.cancelWatchdog, 'If Enabled, Attempts To Cancel A Scripting Crash')
-    bui.toggle(f, 'Log Data To Console', d.datalog, 'Logs Data Changes To The Console')
-    bui.toggle(f, 'Disable All Chat Systems', d.chatmaster, 'Toggles The Chat System, Useful For Compatibility')
-    bui.toggle(f, 'Disable All Custom Enchant Functionality', d.enchantsmaster, 'Toggles The Custom Enchant System')
+    bui.divider(f)
+    bui.header(f, 'Main')
+
+    bui.slider(f, 'Seconds Between Data Updates', 0, 10, d?.updateinterval, 1, 'The Higher The Amount, The Less Laggy The Addon Will Be')
+
+    bui.divider(f)
+    bui.header(f, 'Feature Toggles')
+
+    bui.toggle(f, 'Disable All Chat Systems', d?.chatmaster, 'Toggles The Chat System, Useful For Compatibility')
+    bui.toggle(f, 'Disable All Custom Enchant Functionality', d?.enchantsmaster, 'Toggles The Custom Enchant System')
+    bui.toggle(f, 'Disable All World Edit Systems', d?.worldeditmaster, 'Toggles The World Edit System')
+    bui.toggle(f, 'Disable The World Border', d?.bordermaster, 'Toggles The World Border')
+    bui.toggle(f, 'Disable All Tracking Systems', d?.trackingmaster, 'Toggles The Tracking System')
+    bui.toggle(f, 'Disable All Custom UI\'s', d?.cuimaster, 'Toggles All Player Made UI\'s')
+    bui.toggle(f, 'Disable The Actionbar', d?.actionbarmaster, 'Toggles The Actionbar')
+
+    bui.divider(f)
+    bui.header(f, 'Customization')
+
+    const cc = colorCodes.map(e => e + 'Example')
+    bui.dropdown(f, 'Label Color:', cc, SSColorIndex(d?.labelcolor))
+    bui.dropdown(f, 'Body Color:', cc, SSColorIndex(d?.bodycolor))
+    bui.dropdown(f, 'Header Color:', cc, SSColorIndex(d?.headercolor))
+    bui.dropdown(f, 'Title Color:', cc, SSColorIndex(d?.titlecolor))
+    bui.dropdown(f, 'Button Text Color:', cc, SSColorIndex(d?.buttoncolor))
+    bui.dropdown(f, 'Toggle Label Color:', cc, SSColorIndex(d?.togglecolor))
+    bui.dropdown(f, 'Toggle Tooltip Color:', cc, SSColorIndex(d?.toggletooltipcolor))
+    bui.dropdown(f, 'Textfield Label Color:', cc, SSColorIndex(d?.textfieldcolor))
+    bui.dropdown(f, 'Textfield Tooltip Color:', cc, SSColorIndex(d?.textfieldtooltipcolor))
+    bui.dropdown(f, 'Dropdown Label Color:', cc, SSColorIndex(d?.dropdowncolor))
+    bui.dropdown(f, 'Dropdown Tooltip Color:', cc, SSColorIndex(d?.dropdowntooltipcolor))
+
+    bui.divider(f)
+    bui.header(f, 'Other')
+
+    bui.toggle(f, 'Cancel Watchdog Terminating', d?.cancelWatchdog, 'If Enabled, Attempts To Cancel A Scripting Crash')
+    bui.toggle(f, 'Log Data To Console', d?.datalog, 'Logs Data Changes To The Console')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
         let i = 0
-        
+
         mcl.jsonWSet('darkoak:scriptsettings', {
-            cancelWatchdog: e[i++],
-            datalog: e[i++],
-            chatmaster: e[i++],
-            enchantsmaster: e[i++],
+            updateinterval: e[i++], // working
+
+            chatmaster: e[i++], // working
+            enchantsmaster: e[i++], // working
+            worldeditmaster: e[i++], // working
+            bordermaster: e[i++], // working
+            trackingmaster: e[i++], // working
+            cuimaster: e[i++], // idk
+            actionbarmaster: e[i++], // idk
+
+            labelcolor: colorCodes[e[i++]], // working
+            bodycolor: colorCodes[e[i++]], // working
+            headercolor: colorCodes[e[i++]], // working
+            titlecolor: colorCodes[e[i++]], // working
+            buttoncolor: colorCodes[e[i++]], // working
+            togglecolor: colorCodes[e[i++]], // working
+            toggletooltipcolor: colorCodes[e[i++]], // working
+            textfieldcolor: colorCodes[e[i++]], // working
+            textfieldtooltipcolor: colorCodes[e[i++]], // working
+            dropdowncolor: colorCodes[e[i++]], // working
+            dropdowntooltipcolor: colorCodes[e[i++]], // working
+
+            cancelWatchdog: e[i++], // not working
+            datalog: e[i++], // not working
         })
     }).catch()
 }
@@ -2012,6 +2074,7 @@ export function otherPlayerSettingsUI(player) {
 
     bui.button(f, 'Bounty Settings')
     bui.button(f, 'Whitelist / Verfication')
+    bui.button(f, 'Item Banning')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2024,6 +2087,9 @@ export function otherPlayerSettingsUI(player) {
                 break
             case 1:
                 whitelistUI(player)
+                break
+            case 2:
+                itemBanningUI(player)
                 break
         }
     })
@@ -2794,6 +2860,72 @@ export function rolesModifyPickerUI(player) {
 //         })
 //     })
 // }
+
+export function itemBanningUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Item Banning')
+
+    bui.button(f, 'Add New Item')
+    bui.button(f, 'Modify An Item')
+    bui.button(f, 'Remove An Item')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            otherPlayerSettingsUI(player)
+            return
+        }
+
+        switch (evd.selection) {
+            case 0:
+                addModifyItemBanUI(player)
+                break
+            case 1:
+
+        }
+    })
+}
+
+export function itemBanModifyPickerUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Modify Picker')
+
+    for (let index = 0; index < array.length; index++) {
+        const element = array[index]
+
+    }
+}
+
+export function addModifyItemBanUI(player, item = undefined) {
+    let f = new ModalFormData()
+    bui.title(f, 'Add New / Modify Banned Item')
+
+    bui.textField(f, 'Item Type:', 'Example: minecraft:diamond', item?.type || '')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            itemBanningUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        /**@type {{type: string}[]} */
+        let items = mcl.jsonWGet('darkoak:banneditems') || []
+        if (!item) {
+            items.push({
+                type: e[i++],
+            })
+            mcl.jsonWSet('darkoak:banneditems', items)
+        } else {
+            items = items.with(items.findIndex(item), {
+                type: e[i++],
+            })
+            mcl.jsonWSet('darkoak:banneditems', items)
+        }
+    })
+}
+
+export function removeItemBanUI(player) {
+
+}
 
 export function darkoakboatBio(player) {
     let f = new ActionFormData()

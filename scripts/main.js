@@ -289,7 +289,7 @@ system.runInterval(() => {
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
         worldProtection.worldProtectionOther(player, cd.get('darkoak:worldprotection'))
-        worldSettings.borderAndTracking(player, cd.get('worldBorder'), cd.get('darkoak:tracking'))
+        worldSettings.borderAndTracking(player, mcl.jsonWGet('darkoak:worldborder'), mcl.jsonWGet('darkoak:tracking'))
         enchantOnJump(player, cd.get('darkoak:scriptsettings'))
         actionBar(player)
         anticheat.anticheatMain(player)
@@ -552,6 +552,9 @@ function dataEditorBlock(evd) {
 
 function uis() {
 
+    const c = mcl.jsonWGet('darkoak:scriptsettings')
+    if (c?.cuimaster) return
+
     let uisF = mcl.listGetBoth('darkoak:ui:')
     for (let index = 0; index < uisF.length; index++) {
         const parts = JSON.parse(uisF[index].value)
@@ -739,7 +742,7 @@ function bans(players, d) {
  * @param {object} community 
  */
 function landclaimBorders(players, community) {
-    if (system.currentTick % 10 != 0) return
+    if (!mcl.tickTimer(10)) return
 
     const lcs = mcl.listGetBoth('darkoak:landclaim:')
 
@@ -771,44 +774,17 @@ function landclaimBorders(players, community) {
                     })
                 }
             }
-        }
-    }
-
-    if (community?.landclaimsborder) {
-        try {
-            for (let i = 0; i < lcs.length; i++) {
-                const lc = JSON.parse(lcs[i].value)
-                const minX = Math.min(lc.p1.x, lc.p2.x)
-                const maxX = Math.max(lc.p1.x, lc.p2.x)
-                const minZ = Math.min(lc.p1.z, lc.p2.z)
-                const maxZ = Math.max(lc.p1.z, lc.p2.z)
-
-
-                for (let p = 0; p < players.length; p++) {
-                    const pl = players[p]
-                    for (let z = minZ + 1; z < maxZ; z += 4) {
-                        for (let x of [minX, maxX]) {
-                            pl.spawnParticle('minecraft:endrod', {
-                                x: x + 0.0,
-                                y: pl.location.y + 0.2,
-                                z: z + 0.0
-                            })
-                        }
-                    }
-
-                    for (let x = minX; x <= maxX; x += 4) {
-                        for (let z of [minZ, maxZ]) {
-                            pl.spawnParticle('minecraft:endrod', {
-                                x: x + 0.0,
-                                y: pl.location.y + 0.2,
-                                z: z + 0.0
-                            })
-                        }
-                    }
-                }
+            if (community?.landclaimsborder) {
+                mcl.particleOutline({
+                    x: area.p1.x,
+                    y: l.y,
+                    z: area.p1.z
+                }, {
+                    x: area.p2.x,
+                    y: l.y,
+                    z: area.p2.z
+                }, undefined, 8.4)
             }
-        } catch {
-
         }
     }
 }
@@ -1224,10 +1200,13 @@ function animatedActionUIBuilder(player, ui, frame = 0) {
  * @param {Player} player 
  */
 function actionBar(player) {
+
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+
     /**@type {{lines: string[], ticks: number}} */
     const text = mcl.jsonWGet('darkoak:actionbar:v2')
     const lines = text?.lines.filter(e => e.length > 0)
-    if (text) player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, lines[act].replaceAll('\\n', '\n') || '')}"}]}`)
+    if (text && !d?.actionbarmaster) player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, lines[act].replaceAll('\\n', '\n') || '')}"}]}`)
 
     /**@type {{lines: [string, string, string]}} */
     const text2 = mcl.jsonWGet('darkoak:sidebar')
@@ -1797,7 +1776,7 @@ function customSlashCommands(evd) {
                     mcl.adminMessage(`\nItem: ${mcl.getHeldItem(player)?.typeId}\nBlock: ${player.getBlockFromViewDirection()?.block?.typeId}`)
                     break
                 case 'http':
-                    get
+
                     break
                 case 'uis':
                     let messageToSend = []
@@ -1809,7 +1788,7 @@ function customSlashCommands(evd) {
                     player.sendMessage('-----------------\n' + messageToSend.join('\n') + '\n-----------------')
                     break
                 case 'clipboard':
-                    
+
                     break
                 case 'fakeplayer':
 
@@ -1984,7 +1963,7 @@ function customSlashCommands(evd) {
                     const centerX = Math.round(player.location.x)
                     const centerZ = Math.round(player.location.z)
 
-                    const claimRadius = settings.landclaimSize || 16
+                    const claimRadius = settings?.landclaimSize || 16
 
                     const newClaim = {
                         p1: { x: centerX + claimRadius, z: centerZ + claimRadius },

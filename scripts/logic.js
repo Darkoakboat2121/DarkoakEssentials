@@ -1,5 +1,6 @@
 import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel } from "@minecraft/server"
 import { transferPlayer } from "@minecraft/server-admin"
+import { cd } from "./data/defaults"
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting API*/
 export class mcl {
@@ -225,12 +226,13 @@ export class mcl {
      * @returns {object | undefined}
      */
     static jsonWGet(id) {
-        const t = world.getDynamicProperty(id)
-        if (t == undefined) {
-            return undefined
-        } else {
-            return JSON.parse(t)
-        }
+        // const t = world.getDynamicProperty(id)
+        // if (t == undefined) {
+        //     return undefined
+        // } else {
+        //     return JSON.parse(t)
+        // }
+        return cd.get(id)
     }
 
     /**Sets a global data object
@@ -1028,6 +1030,7 @@ export class mcl {
     /**
      * @param {{x: number, y: number, z: number}} loc1 
      * @param {{x: number, y: number, z: number}} loc2 
+     * @param {number} [amount=1] Amount of space (in blocks) between particles, defaults to 1
      */
     static particleOutline(loc1, loc2, particle = 'minecraft:endrod', amount = 1, dimension = 'overworld') {
         if (system.currentTick % 10 != 0) return

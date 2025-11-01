@@ -4,6 +4,38 @@ import { mcl } from "../logic"
 
 // This file sets all dynamic propertys to their default state if they havent been setup yet and it manages data size / limits
 
+/**Only use for jsonWGet things!
+ * @type {Map<string, object>} 
+ */
+export const cd = new Map()
+
+system.runTimeout(() => {
+    updateData(true)
+})
+
+export function updateData(initial = false) {
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    if (!mcl.tickTimer(((d?.updateinterval || 1) * 20)) && !initial) return
+    const properties = world.getDynamicPropertyIds()
+    for (let index = 0; index < properties.length; index++) {
+        const pro = properties[index]
+        cd.set(pro, dataGet(pro))
+    }
+}
+
+/**ONLY FOR THE UPDATEDATA FUNCTION, DO NOT USE ELSEWHERE
+ * @param {string} id 
+ * @returns {object | any[] | undefined}
+ */
+function dataGet(id) {
+    const t = world.getDynamicProperty(id)
+    if (t == undefined) {
+        return undefined
+    } else {
+        return JSON.parse(t)
+    }
+}
+
 let lastTime = Date.now()
 let sessionSeconds = 0
 let tickcount = 0
@@ -118,28 +150,3 @@ export function defaultData() {
     }
 }
 
-/**Only use for jsonWGet things!
- * @type {Map<string, object>} 
- */
-export const cd = new Map()
-
-system.runTimeout(() => {
-    updateData(true)
-})
-
-export function updateData(initial = false) {
-    if (!mcl.tickTimer(20) && !initial) return
-    cd.set('ocs', mcl.jsonWGet('darkoak:chat:other'))
-    cd.set('anticheatD', mcl.jsonWGet('darkoak:anticheat'))
-    cd.set('ss', mcl.jsonWGet('darkoak:scriptsettings'))
-    cd.set('wp', mcl.jsonWGet('darkoak:worldprotection'))
-    cd.set('worldBorder', mcl.wGet('darkoak:cws:border'))
-    cd.set('tracking', mcl.jsonWGet('darkoak:tracking'))
-    cd.set('community', mcl.jsonWGet('darkoak:community:general'))
-    cd.set('welcome', mcl.jsonWGet('darkoak:welcome'))
-    const properties = world.getDynamicPropertyIds()
-    for (let index = 0; index < properties.length; index++) {
-        const pro = properties[index]
-        cd.set(pro, mcl.jsonWGet(pro))
-    }
-}

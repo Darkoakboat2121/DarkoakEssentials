@@ -64,8 +64,16 @@ changelog:
         plots *
         dynamic shops *
         animated builds * (help soul please when we make this)
-        
-        
+        item banning ui *
+
+        script settings:
+            customization options
+            world edit toggle
+            world border toggle
+            tracking toggle
+            cui toggle
+        fake player command(string) command
+
 
         we circle maker /wecircle *
 
@@ -84,7 +92,8 @@ changelog:
 
 
     fixed:
-        rank adding ui
+        rank adding and removing ui (i really shouldn't code while tired)
+        radio tag duplicate send bug
 
         anti-velocity *
         owner fix *
@@ -93,6 +102,7 @@ changelog:
         
     changes:
         the anticheat log now has time stamps
+        doubled the max size of both the anticheat log and the chat log
 
         more stuff to profiles *
 
