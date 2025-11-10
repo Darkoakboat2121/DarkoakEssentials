@@ -1402,7 +1402,7 @@ export function scriptSettings(player) {
     bui.divider(f)
     bui.header(f, 'Main')
 
-    bui.slider(f, 'Seconds Between Data Updates', 0, 10, d?.updateinterval, 1, 'The Higher The Amount, The Less Laggy The Addon Will Be')
+    bui.slider(f, 'Seconds Between Data Updates', 1, 10, d?.updateinterval, 1, 'The Higher The Amount, The Less Laggy The Addon Will Be')
 
     bui.divider(f)
     bui.header(f, 'Feature Toggles')
@@ -2075,6 +2075,7 @@ export function otherPlayerSettingsUI(player) {
     bui.button(f, 'Bounty Settings')
     bui.button(f, 'Whitelist / Verfication')
     bui.button(f, 'Item Banning')
+    bui.button(f, 'Plots')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2091,6 +2092,8 @@ export function otherPlayerSettingsUI(player) {
             case 2:
                 itemBanningUI(player)
                 break
+            case 3:
+
         }
     })
 }
@@ -2874,13 +2877,17 @@ export function itemBanningUI(player) {
             otherPlayerSettingsUI(player)
             return
         }
-
+        let i = 0
         switch (evd.selection) {
-            case 0:
+            case i++:
                 addModifyItemBanUI(player)
                 break
-            case 1:
-
+            case i++:
+                itemBanModifyPickerUI(player)
+                break
+            case i++:
+                removeItemBanUI(player)
+                break
         }
     })
 }
@@ -2889,10 +2896,21 @@ export function itemBanModifyPickerUI(player) {
     let f = new ActionFormData()
     bui.title(f, 'Modify Picker')
 
-    for (let index = 0; index < array.length; index++) {
-        const element = array[index]
+    /**@type {{type: string}[]} */
+    let items = mcl.jsonWGet('darkoak:banneditems') || []
 
+    for (let index = 0; index < items.length; index++) {
+        const item = items[index]
+        bui.button(f, `Type: ${item.type}`)
     }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            itemBanningUI(player)
+            return
+        }
+        addModifyItemBanUI(player, items[evd.selection])
+    })
 }
 
 export function addModifyItemBanUI(player, item = undefined) {
@@ -2911,12 +2929,12 @@ export function addModifyItemBanUI(player, item = undefined) {
         let items = mcl.jsonWGet('darkoak:banneditems') || []
         if (!item) {
             items.push({
-                type: e[i++],
+                type: e[0],
             })
             mcl.jsonWSet('darkoak:banneditems', items)
         } else {
             items = items.with(items.findIndex(item), {
-                type: e[i++],
+                type: e[0],
             })
             mcl.jsonWSet('darkoak:banneditems', items)
         }
@@ -2924,7 +2942,71 @@ export function addModifyItemBanUI(player, item = undefined) {
 }
 
 export function removeItemBanUI(player) {
+    let f = new ActionFormData()
 
+    /**@type {{type: string}[]} */
+    let items = mcl.jsonWGet('darkoak:banneditems') || []
+
+    for (let index = 0; index < items.length; index++) {
+        const item = items[index]
+        bui.button(f, `Type: ${item.type}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            itemBanningUI(player)
+            return
+        }
+        items.splice(evd.selection, 1)
+        mcl.jsonWSet('darkoak:banneditems', items)
+    })
+}
+
+export function plotSettingsUI(player) {
+    let f = new ModalFormData()
+
+    bui.title(f, 'Plot Settings')
+
+    bui.textField(f, '')
+}
+
+/**
+ * @param {Player} player 
+ */
+export function invSeeUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Inv See')
+
+    bui.label(f, '§cUse At Your Own Risk! It Can Be Quite Buggy§r')
+
+    let names = bui.namePicker(f, undefined, 'Player:')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        const e = bui.formValues(evd)
+
+        const l = player.location
+        const invSeer = world.getDimension(player.dimension.id).spawnEntity('darkoak:inv_accessor', {
+            x: l.x,
+            y: l.y + 1.7,
+            z: l.z,
+        })
+
+        const invseerContainer = mcl.getItemContainer(invSeer)
+        const playerContainer = mcl.getItemContainer(mcl.getPlayer(names[e[0]]))
+        for (let slot = 9; slot < 36; slot++) {
+            const playerItem = playerContainer.getItem(slot)
+            invseerContainer.setItem(slot - 9, playerItem)
+        }
+
+        invSeer.nameTag = names[e[0]]
+        invSeer.setDynamicProperty('darkoak:invsee', JSON.stringify({
+            allowed: player.name,
+            target: names[e[0]]
+        }))
+        player.sendMessage('§aPress Interact!§r')
+    })
 }
 
 export function darkoakboatBio(player) {

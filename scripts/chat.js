@@ -20,10 +20,16 @@ let lastSender = ''
  * @param {Player} player 
  */
 export function chatSystem(evd = undefined, player, message) {
-    const chat = mcl.jsonWGet('darkoak:scriptsettings')
-    if (chat?.chatmaster === true) return
+    const enabled = mcl.jsonWGet('darkoak:scriptsettings')
+    if (enabled?.chatmaster === true) return
 
     if (evd) evd.cancel = true
+
+    let chat = {
+        name: player.name,
+        message: message,
+        reference: ''
+    }
 
     const commands = mcl.listGetValues('darkoak:command:')
     for (let index = 0; index < commands.length; index++) {
@@ -50,52 +56,7 @@ export function chatSystem(evd = undefined, player, message) {
         }
     }
 
-    // mutes
-    if (player.hasTag('darkoak:muted')) return
-    const canChat = mcl.roleCheck(player)?.chat
-    if (canChat && canChat === false) return
-
-    // censoring
-    /**@type {string[]} */
-    let censor = cd.get('darkoak:censor')
-    if (censor && censor.length != 0 && !mcl.isDOBAdmin(player)) {
-        for (let index = 0; index < censor.length; index++) {
-            if (mcl.deleteFormatting(message).toLowerCase().includes(censor[index].toLowerCase())) return
-        }
-    }
-
-    // anti spam
-    const d = cd.get('darkoak:anticheat')
-
-    if (d?.antispam) {
-        const trimmed = message.trim()
-        if ((messageMap.get(player.name) || '') == trimmed && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return
-        if (
-            trimmed.includes('Horion - the best minecraft bedrock utility mod - horion.download') ||
-            trimmed.includes('horion.download') ||
-            trimmed.includes('lumineproxy') ||
-            trimmed.includes('packet.sell.app')
-        ) {
-            log(player, `hack client message`)
-            return
-        }
-        if (d?.antispam2) {
-            if (trimmed.split('|')[1]?.trim().length === 8) {
-                return
-            }
-        }
-    }
-    if (d?.antispamactive) {
-        if (player.isJumping || player.isSprinting) {
-            log(player, `anti-spam-active`)
-            return
-        }
-    }
-
-    messageMap.set(player.name, message.trim())
-
-    // anti crasher 1
-    if (d?.anticrasher1 && (message.includes(crasherSymbol) || message.includes(crasherSymbol2))) return
+    if (chatPreventives(player, message)) return
 
     // chat games
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string}} */
@@ -126,7 +87,6 @@ export function chatSystem(evd = undefined, player, message) {
         }
     }
 
-
     // auto response
     const res = mcl.listGetValues('darkoak:autoresponse:')
     for (let index = 0; index < res.length; index++) {
@@ -138,52 +98,14 @@ export function chatSystem(evd = undefined, player, message) {
         }
     }
 
-    const ocs = cd.get('darkoak:chat:other')
+    const ocs = mcl.jsonWGet('darkoak:chat:other')
 
     // message logs
     if (ocs?.chatLogs) messageLog(player, message)
 
-    let formattedMessage = message
+    messageModifiers(ocs, chat, player)
 
-    if (cd.get('darkoak:community:general').emojisenabled) {
-        for (let index = 0; index < emojis.length; index++) {
-            const e = emojis[index]
-            formattedMessage = formattedMessage.replaceAll(e.m, e.e)
-        }
-        const matchAmount = mcl.findMatchingAmount(formattedMessage, '§?')
-        for (let index = 0; index < matchAmount; index++) {
-            formattedMessage = formattedMessage.replace('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
-        }
-    }
-
-    if (ocs?.translateToEng) {
-        formattedMessage = ' ' + formattedMessage + ' '
-        for (let index = 0; index < spanishToEnglish.length; index++) {
-            const word = spanishToEnglish[index]
-            formattedMessage = formattedMessage.replaceAll((' ' + word.spa + ' '), (' ' + word.eng + ' '))
-        }
-    }
-
-    if (ocs?.professional) {
-        formattedMessage = ' ' + formattedMessage + ' '
-        for (let index = 0; index < professionalism.length; index++) {
-            const pro = professionalism[index]
-            formattedMessage = formattedMessage.replaceAll((' ' + pro.m + ' '), (' ' + pro.e + ' '))
-        }
-        formattedMessage = mcl.uppercaseFirstLetter(formattedMessage.trimStart())
-    }
-
-
-    /**@type {Array<string>} */
-    const tags = player.getTags()
-    let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => {
-
-        if (specialRanks[tag]) return `§r${specialRanks[tag]}`
-
-        return tag.replace('rank:', '')
-    })
-    let nameColors = tags.filter(tag => tag.startsWith('namecolor:')).map(tag => tag.replace('namecolor:', ''))
-    let chatColors = tags.filter(tag => tag.startsWith('chatcolor:')).map(tag => tag.replace('chatcolor:', ''))
+    let ranks = mcl.getChatModifiers(player)
 
     let cr = mcl.jsonWGet('darkoak:chatranks') || {
         start: '[',
@@ -195,41 +117,10 @@ export function chatSystem(evd = undefined, player, message) {
         cEnd: ')',
     }
 
-    let clanS = cr.cStart
-    let clanE = cr.cEnd
-    let clan = tags.find(tag => tag.startsWith('clan:'))?.replace('clan:', '') || ''
-    if (clan.length == 0) {
-        clanS = ''
-        clanE = ''
-    }
+    let clan = ''
+    if (ranks.clan) clan = cr.cStart + ranks.clan + cr.cEnd
 
-    ranks = ranks.length ? ranks : [cr.defaultRank]
-    nameColors = nameColors.length ? nameColors : [``]
-    chatColors = chatColors.length ? chatColors : [``]
-
-    let pName = player.name
-    const nick = mcl.jsonPGet(player, 'darkoak:nickname')
-    if (nick && mcl.jsonWGet('darkoak:nicknamesettings')?.enabled) {
-        // const colorNum = Math.abs(world.getAllPlayers().findIndex(e => e.name === player.name)) % 10
-        const colorNum = (mcl.stringToNumber(player.name) % 9) + 1
-        pName = `<§${colorNum}${player.name.slice(0, 4)}§f>${nick?.nick}`
-    }
-
-    if (d?.antistreamermode) {
-        pName = pName
-            .replace('B', 'Β')
-            .replace('A', 'Α')
-            .replace('E', 'Ε')
-            .replace('H', 'ʜ')
-            .replace('H', 'Η')
-            .replace('I', 'ɪ')
-            .replace('Y', 'ʏ')
-            .replace('K', 'Κ')
-            .replace('M', 'Μ')
-            .replace('N', 'Ν')
-    }
-
-    const text = `${clanS}${clan}${clanE}${cr.start}${replacer(player, ranks.join(cr.middle))}${cr.end}§r§f${nameColors.join('')}${pName}§r§f${cr.bridge} §r§f${chatColors.join('')}${formattedMessage.trim()}`
+    const text = `${clan}${cr.start}${replacer(player, (ranks.ranks.join(cr.middle) || cr.defaultRank))}${cr.end}§r§f${ranks.namecolors.join('')}%REFER%${chat.name}§r§f${cr.bridge} §r§f${ranks.chatColors.join('')}${chat.message}`
 
     if (ocs?.proximity) {
         system.runTimeout(() => {
@@ -242,17 +133,23 @@ export function chatSystem(evd = undefined, player, message) {
         }, 1)
     } else {
         if (ocs?.discordstyle) {
-            if (lastSender === player.name) {
-                world.sendMessage({ rawtext: [{ text: `| §r§f${chatColors.join('')}${formattedMessage}` }] })
+            if (lastSender === chat.name) {
+                world.sendMessage({ rawtext: [{ text: `| §r§f${chatColors.join('')}${chat.message}` }] })
             } else {
-                world.sendMessage({ rawtext: [{ text: text }] })
+                mcl.sendMessagesByTag([
+                    { tag: 'darkoak:admin', message: text.replace('%REFER%', chat.reference) },
+                    { tag: undefined, message: text.replace('%REFER%', '') }
+                ])
             }
         } else {
-            world.sendMessage({ rawtext: [{ text: text }] })
+            mcl.sendMessagesByTag([
+                { tag: 'darkoak:admin', message: text.replace('%REFER%', chat.reference) },
+                { tag: undefined, message: text.replace('%REFER%', '') }
+            ])
         }
     }
 
-    lastSender = player.name
+    lastSender = chat.name
 }
 
 /**
@@ -496,13 +393,126 @@ export function chatCommand(player, p) {
 }
 
 /**
+ * @param {Player} player 
+ * @param {string} message 
+ */
+function chatPreventives(player, message) {
+    // mutes
+    if (player.hasTag('darkoak:muted')) return true
+    const canChat = mcl.roleCheck(player)?.chat
+    if (canChat && canChat === false) return true
+
+    // censoring
+    /**@type {string[]} */
+    let censor = mcl.jsonWGet('darkoak:censor')
+    if (censor && censor.length != 0 && !mcl.isDOBAdmin(player)) {
+        for (let index = 0; index < censor.length; index++) {
+            if (mcl.deleteFormatting(message).toLowerCase().includes(censor[index].toLowerCase())) return true
+        }
+    }
+
+    const d = mcl.jsonWGet('darkoak:anticheat')
+
+    // anti spam
+    if (d?.antispam) {
+        const trimmed = message.trim()
+        if ((messageMap.get(player.name) || '') === trimmed && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return true
+        if (
+            trimmed.includes('Horion - the best minecraft bedrock utility mod - horion.download') ||
+            trimmed.includes('horion.download') ||
+            trimmed.includes('lumineproxy') ||
+            trimmed.includes('packet.sell.app')
+        ) {
+            log(player, `hack client message`)
+            return true
+        }
+        if (d?.antispam2) {
+            if (trimmed.split('|')[1]?.trim().length === 8) {
+                return true
+            }
+        }
+    }
+    if (d?.antispamactive) {
+        if (player.isJumping || player.isSprinting) {
+            log(player, `anti-spam-active`)
+            return true
+        }
+    }
+
+    // anti crasher 1
+    if (d?.anticrasher1 && (message.includes(crasherSymbol) || message.includes(crasherSymbol2))) return true
+
+    messageMap.set(player.name, message.trim())
+}
+
+/**
+ * @param {object} ocs 
+ * @param {object} chat 
+ * @param {Player} player 
+ * @param {{antistreamermode: boolean}} d 
+ */
+function messageModifiers(ocs, chat, player, d) {
+    if (mcl.jsonWGet('darkoak:community:general').emojisenabled) {
+        for (let index = 0; index < emojis.length; index++) {
+            const e = emojis[index]
+            chat.message = chat.message.replaceAll(e.m, e.e)
+        }
+        const matchAmount = mcl.findMatchingAmount(chat.message, '§?')
+        for (let index = 0; index < matchAmount; index++) {
+            chat.message = chat.message.replace('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
+        }
+    }
+
+    if (ocs?.translateToEng) {
+        chat.message = ' ' + chat.message + ' '
+        for (let index = 0; index < spanishToEnglish.length; index++) {
+            const word = spanishToEnglish[index]
+            chat.message = chat.message.replaceAll((' ' + word.spa + ' '), (' ' + word.eng + ' '))
+        }
+        chat.message = chat.message.trim()
+    }
+
+    if (ocs?.professional) {
+        chat.message = ' ' + chat.message + ' '
+        for (let index = 0; index < professionalism.length; index++) {
+            const pro = professionalism[index]
+            chat.message = chat.message.replaceAll((' ' + pro.m + ' '), (' ' + pro.e + ' '))
+        }
+        chat.message = chat.message.trim()
+        chat.message = mcl.uppercaseFirstLetter(chat.message)
+    }
+
+    const nick = mcl.jsonPGet(player, 'darkoak:nickname')
+    if (nick && mcl.jsonWGet('darkoak:nicknamesettings')?.enabled) {
+        // const colorNum = Math.abs(world.getAllPlayers().findIndex(e => e.name === player.name)) % 10
+        const colorNum = (mcl.stringToNumber(chat.name) % 9) + 1
+        chat.reference = `<§${colorNum}${chat.name.slice(0, 4)}§f>`
+        chat.name = nick?.nick
+    }
+
+    if (d?.antistreamermode) {
+        chat.name = chat.name
+            .replace('B', 'Β')
+            .replace('A', 'Α')
+            .replace('E', 'Ε')
+            .replace('H', 'ʜ')
+            .replace('H', 'Η')
+            .replace('I', 'ɪ')
+            .replace('Y', 'ʏ')
+            .replace('K', 'Κ')
+            .replace('M', 'Μ')
+            .replace('N', 'Ν')
+    }
+}
+
+/**
  * 
  * @param {Player} player 
  * @param {string} message 
  */
 export function messageLog(player, message) {
     /**@type {{name: string, message: string, time: number}[]} */
-    let logs2 = mcl.jsonWGet('darkoak:messagelogs:v2') || [{name: 'Default', message: 'Default', time: Date.now()}]
+    let logs2 = mcl.jsonWGet('darkoak:messagelogs:v2') || [{ name: 'Default', message: 'Default', time: Date.now() }]
     while (logs2.length > 500) {
         logs2.shift()
     }

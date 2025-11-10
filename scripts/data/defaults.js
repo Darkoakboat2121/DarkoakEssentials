@@ -14,12 +14,28 @@ system.runTimeout(() => {
 })
 
 export function updateData(initial = false) {
-    const d = mcl.jsonWGet('darkoak:scriptsettings')
-    if (!mcl.tickTimer(((d?.updateinterval || 1) * 20)) && !initial) return
+
     const properties = world.getDynamicPropertyIds()
-    for (let index = 0; index < properties.length; index++) {
-        const pro = properties[index]
-        cd.set(pro, dataGet(pro))
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    let num = (d?.updateinterval || 1)
+    if (num == 0) num = 1
+
+    if (initial) {
+        for (let index = 0; index < properties.length; index++) {
+            const pro = properties[index]
+            cd.set(pro, dataGet(pro))
+        }
+    } else {
+        if (!mcl.tickTimer((num * 20))) return
+        const interval = num * 1000
+        const step = properties.length > 0 ? interval / properties.length : interval
+
+        for (let index = 0; index < properties.length; index++) {
+            const pro = properties[index]
+            system.runTimeout(() => {
+                cd.set(pro, dataGet(pro))
+            }, Math.floor(step * index / 50))
+        }
     }
 }
 

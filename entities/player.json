@@ -41,6 +41,121 @@
                         "target": "self"
                     }
                 }
+            },
+            "darkoak:size0.1": {
+                "minecraft:scale": {
+                    "value": 0.1
+                }
+            },
+            "darkoak:size0.5": {
+                "minecraft:scale": {
+                    "value": 0.5
+                }
+            },
+            "darkoak:size0.7": {
+                "minecraft:scale": {
+                    "value": 0.7
+                }
+            },
+            "darkoak:size1.0": {
+                "minecraft:scale": {
+                    "value": 1.0
+                }
+            },
+            "darkoak:size1.5": {
+                "minecraft:scale": {
+                    "value": 1.5
+                }
+            },
+            "darkoak:size2.0": {
+                "minecraft:scale": {
+                    "value": 2.0
+                }
+            },
+            "darkoak:health1": {
+                "minecraft:health": {
+                    "value": 2,
+                    "max": 2
+                }
+            },
+            "darkoak:health5": {
+                "minecraft:health": {
+                    "value": 10,
+                    "max": 10
+                }
+            },
+            "darkoak:health10": {
+                "minecraft:health": {
+                    "value": 20,
+                    "max": 20
+                }
+            },
+            "darkoak:damage1": {
+                "minecraft:attack": {
+                    "damage": 1
+                }
+            },
+            "darkoak:damage2": {
+                "minecraft:attack": {
+                    "damage": 2
+                }
+            },
+            "darkoak:damage5": {
+                "minecraft:attack": {
+                    "damage": 5
+                }
+            },
+            "darkoak:damage10": {
+                "minecraft:attack": {
+                    "damage": 10
+                }
+            },
+            "darkoak:movement1": {
+                "minecraft:movement": {
+                    "value": 0.1
+                }
+            },
+            "darkoak:movement2": {
+                "minecraft:movement": {
+                    "value": 0.2
+                }
+            },
+            "darkoak:movement5": {
+                "minecraft:movement": {
+                    "value": 0.5
+                }
+            },
+            "darkoak:movement10": {
+                "minecraft:movement": {
+                    "value": 1.0
+                }
+            },
+            "darkoak:pushablefalse": {
+                "minecraft:pushable": {
+                    "is_pushable": false,
+                    "is_pushable_by_piston": true
+                }
+            },
+            "darkoak:pushabletrue": {
+                "minecraft:pushable": {
+                    "is_pushable": true,
+                    "is_pushable_by_piston": true
+                }
+            },
+            "darkoak:reset": {
+                "minecraft:scale": {
+                    "value": 1.0
+                },
+                "minecraft:health": {
+                    "value": 20,
+                    "max": 20
+                },
+                "minecraft:attack": {
+                    "damage": 1
+                },
+                "minecraft:movement": {
+                    "value": 0.1
+                }
             }
         },
         "components": {
@@ -254,6 +369,13 @@
                     }
                 ]
             },
+            "minecraft:scale": {
+                "value": 1.0
+            },
+            "minecraft:health": {
+                "value": 20,
+                "max": 20
+            },
             "minecraft:conditional_bandwidth_optimization": {},
             "minecraft:block_climber": {},
             "minecraft:environment_sensor": {
@@ -307,6 +429,146 @@
                 "remove": {
                     "component_groups": [
                         "minecraft:raid_trigger"
+                    ]
+                }
+            },
+            "darkoak:size0.1": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size0.1"
+                    ]
+                }
+            },
+            "darkoak:size0.5": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size0.5"
+                    ]
+                }
+            },
+            "darkoak:size0.7": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size0.7"
+                    ]
+                }
+            },
+            "darkoak:size1.0": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size1.0"
+                    ]
+                }
+            },
+            "darkoak:size1.5": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size1.5"
+                    ]
+                }
+            },
+            "darkoak:size2.0": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size2.0"
+                    ]
+                }
+            },
+            "darkoak:health1": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:health1"
+                    ]
+                }
+            },
+            "darkoak:health5": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:health5"
+                    ]
+                }
+            },
+            "darkoak:health10": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:health10"
+                    ]
+                }
+            },
+            "darkoak:damage1": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:damage1"
+                    ]
+                }
+            },
+            "darkoak:damage2": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:damage2"
+                    ]
+                }
+            },
+            "darkoak:damage5": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:damage5"
+                    ]
+                }
+            },
+            "darkoak:damage10": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:damage10"
+                    ]
+                }
+            },
+            "darkoak:movement1": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:movement1"
+                    ]
+                }
+            },
+            "darkoak:movement2": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:movement2"
+                    ]
+                }
+            },
+            "darkoak:movement5": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:movement5"
+                    ]
+                }
+            },
+            "darkoak:movement10": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:movement10"
+                    ]
+                }
+            },
+            "darkoak:pushablefalse": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:pushabletrue"
+                    ]
+                }
+            },
+            "darkoak:pushabletrue": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:pushabletrue"
+                    ]
+                }
+            },
+            "darkoak:reset": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:reset"
                     ]
                 }
             }

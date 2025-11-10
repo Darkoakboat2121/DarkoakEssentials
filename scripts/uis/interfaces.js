@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, itemGiverUI, itemSettingsUI, messageLogUI, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, rolesMainUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
+import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, invSeeUI, itemGiverUI, itemSettingsUI, messageLogUI, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, rolesMainUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 import { transferPlayer } from "@minecraft/server-admin"
 
@@ -310,6 +310,7 @@ export function playerSettingsUI(player) {
     bui.body(f, 'Manage Player Settings')
 
     bui.button(f, 'Player Data\n§7View A Player\'s Data', arrays.icons.whitePlayer)
+    bui.button(f, 'Player Invsee')
     bui.button(f, 'Punishments\n§7Punish A Player', arrays.icons.cancel)
     bui.button(f, 'Player Tracking\n§7Modify Tracking Settings')
     bui.button(f, 'Giftcodes\n§7Add A Redeemable Giftcode')
@@ -322,26 +323,30 @@ export function playerSettingsUI(player) {
             mainUI(player)
             return
         }
+        let i = 0
         switch (evd.selection) {
-            case 0:
+            case i++:
                 playerDataMainUI(player)
                 break
-            case 1:
+            case i++:
+                invSeeUI(player)
+                break
+            case i++:
                 playerPunishmentsMainUI(player)
                 break
-            case 2:
+            case i++:
                 playerTrackingUI(player)
                 break
-            case 3:
+            case i++:
                 addGiftcode(player)
                 break
-            case 4:
+            case i++:
                 addRankUI(player)
                 break
-            case 5:
+            case i++:
                 removeRankUI(player)
                 break
-            case 6:
+            case i++:
                 otherPlayerSettingsUI(player)
                 break
             default:

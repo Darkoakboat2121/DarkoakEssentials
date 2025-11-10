@@ -130,7 +130,7 @@ export function lockedChestProtection(evd) {
     for (let index = 0; index < locks.length; index++) {
         const parts = JSON.parse(locks[index].value)
         const loc = evd.block.location
-        if (mcl.compareLocations(loc, {x: parts.x, y: parts.y, z: parts.z})) {
+        if (mcl.compareLocations(loc, { x: parts.x, y: parts.y, z: parts.z })) {
             if (evd.player.name != parts.player) {
                 evd.cancel = true
                 return
@@ -152,7 +152,7 @@ export function dimensionBan(player) {
     if ((d?.nether && player.dimension.id == 'minecraft:nether') || (d?.end && player.dimension.id == 'minecraft:the_end')) {
         if (d?.tp) {
             const loc = player.getSpawnPoint()
-            player.teleport({x: loc.x, y: loc.y, z: loc.z}, {
+            player.teleport({ x: loc.x, y: loc.y, z: loc.z }, {
                 dimension: world.getDimension('minecraft:overworld')
             })
         } else {
@@ -194,16 +194,23 @@ export function dimensionBan(player) {
 /**
  * @param {Player} player 
  */
-export function worldProtectionOther(player, d) {
+export function worldProtectionOther(player) {
     if (mcl.isCreating(player)) return
     const item = mcl.getHeldItem(player)
-    if (d?.water && item) {
-        const wpw = worldProtectionWater
-        if (wpw.includes(item.typeId)) mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
-    }
 
-    if (d?.pearls && item && item.typeId === 'minecraft:ender_pearl') {
-        mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
+    const d = mcl.jsonWGet('darkoak:worldprotection')
+    /**@type {{type: string}[]} */
+    const bans = mcl.jsonWGet('darkoak:banneditems') || []
+
+    if (item) {
+        if (d?.water) {
+            const wpw = worldProtectionWater
+            if (wpw.includes(item.typeId)) mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
+        }
+
+        if (d?.pearls && item.typeId === 'minecraft:ender_pearl') {
+            mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
+        }
     }
 
     if (d?.boats) {
@@ -211,5 +218,10 @@ export function worldProtectionOther(player, d) {
         for (let index = 0; index < boats.length; index++) {
             boats[index].kill()
         }
+    }
+
+    for (let index = 0; index < bans.length; index++) {
+        const b = bans[index]
+        player.runCommand(`clear @s ${b?.type || 'minecraft:air'}`)
     }
 }

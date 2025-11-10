@@ -1,6 +1,7 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel } from "@minecraft/server"
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel, CustomCommandOrigin } from "@minecraft/server"
 import { transferPlayer } from "@minecraft/server-admin"
 import { cd } from "./data/defaults"
+import { specialRanks } from "./data/arrays"
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting API*/
 export class mcl {
@@ -600,15 +601,15 @@ export class mcl {
     }
 
     /**Advanced container inventory
-     * @param {Player} player 
+     * @param {Entity} player 
      * @returns {Container}
      */
     static getItemContainer(player) {
         return player.getComponent(EntityComponentTypes.Inventory).container
     }
 
-    /**Returns a players inventory in its entirety
-     * @param {Player} player 
+    /**Returns a entities inventory in its entirety
+     * @param {Entity} player 
      */
     static getInventory(player) {
         return player.getComponent(EntityComponentTypes.Inventory)
@@ -1159,16 +1160,127 @@ export class mcl {
         return entities
     }
 
-    /**Returns the hour/minute/second difference between 'time' and when this is ran
+    /**Returns the time difference between 'time' and when this is ran
      * @param {number} time
      */
     static timeDifference(time) {
         const now = Date.now()
-        const timeDiff = now - time 
+        const timeDiff = now - time
         return {
             hours: Math.floor(timeDiff / (1000 * 60 * 60)),
             minutes: Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60)),
-            seconds: Math.floor((timeDiff % (1000 * 60)) / 1000)
+            seconds: Math.floor((timeDiff % (1000 * 60)) / 1000),
+            milliseconds: timeDiff % 1000
         }
+    }
+
+    static distance(loc1, loc2) {
+        if (!loc1 || !loc2) return undefined
+        const distance = Math.sqrt(
+            Math.pow(loc1.x - loc2.x, 2) +
+            Math.pow(loc1.y - loc2.y, 2) +
+            Math.pow(loc1.z - loc2.z, 2)
+        )
+        return distance
+    }
+
+    /**
+     * @param {Player} player 
+     */
+    static getChatModifiers(player) {
+        const tags = player.getTags()
+        let ranks = tags.filter(tag => tag.startsWith('rank:')).map(tag => {
+            if (specialRanks[tag]) return `§r${specialRanks[tag]}`
+
+            return tag.replace('rank:', '')
+        })
+        let nameColors = tags.filter(tag => tag.startsWith('namecolor:')).map(tag => tag.replace('namecolor:', ''))
+        let chatColors = tags.filter(tag => tag.startsWith('chatcolor:')).map(tag => tag.replace('chatcolor:', ''))
+        let clan = tags.find(tag => tag.startsWith('clan:'))?.replace('clan:', '') || ''
+
+        return {
+            ranks: ranks,
+            namecolors: nameColors,
+            chatColors: chatColors,
+            clan: clan
+        }
+    }
+
+    /**
+     * @param {{tag: string | undefined, message: string}[]} types 
+     */
+    static sendMessagesByTag(types) {
+        const sentList = new Set()
+        for (let index = 0; index < types.length; index++) {
+            const type = types[index]
+            const tagToFind = type?.tag
+            let sp = {}
+            if (tagToFind) sp = {
+                tags: [tagToFind]
+            }
+            const players = world.getPlayers(sp)
+            for (let index = 0; index < players.length; index++) {
+                const player = players[index]
+                if (sentList.has(player.name)) continue
+                player.sendMessage(type?.message)
+                sentList.add(player.name)
+            }
+        }
+    }
+
+    /**
+     * @param {string} dimen 
+     * @param {{x: number, y: number, z: number}} loc1 
+     * @param {{x: number, y: number, z: number}} loc2 
+     * @returns {Block[]}
+     */
+    static getBlocksByVolume(dimen, loc1, loc2) {
+        const d = world.getDimension(dimen)
+        const minX = Math.min(loc1.x, loc2.x)
+        const maxX = Math.max(loc1.x, loc2.x)
+        const minY = Math.min(loc1.y, loc2.y)
+        const maxY = Math.max(loc1.y, loc2.y)
+        const minZ = Math.min(loc1.z, loc2.z)
+        const maxZ = Math.max(loc1.z, loc2.z)
+
+        const blocks = []
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                for (let z = minZ; z <= maxZ; z++) {
+                    try {
+                        const block = d.getBlock({ 
+                            x: x, 
+                            y: y, 
+                            z: z,
+                        })
+                        if (block) blocks.push(block)
+                    } catch {
+                        
+                    }
+                }
+            }
+        }
+        return blocks
+    }
+
+    /**Gets a dimension of origin from a custom slash command
+     * @param {CustomCommandOrigin} evd 
+     */
+    static customSlashDimen(evd) {
+        return evd?.initiator?.dimension || evd?.sourceBlock?.dimension || evd?.sourceEntity?.dimension || world.getDimension('overworld')
+    }
+
+    /**Does not take location into account
+     * @param {Block} block1 
+     * @param {Block} block2 
+     */
+    static blocksMatch(block1, block2) {
+        if (
+            block1.type === block2.type &&
+            block1.typeId === block2.typeId &&
+            block1.getRedstonePower() === block2.getRedstonePower()
+        ) {
+            return true
+        } else return false
     }
 }

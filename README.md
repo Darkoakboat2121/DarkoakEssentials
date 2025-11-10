@@ -64,16 +64,13 @@ changelog:
         plots *
         dynamic shops *
         animated builds * (help soul please when we make this)
-        item banning ui *
-
-        script settings:
-            customization options
-            world edit toggle
-            world border toggle
-            tracking toggle
-            cui toggle
-        fake player command(string) command
-
+        vertical slabs!!!! *
+        money and score linkage system *
+        more punishments (make them like trolling) *
+        sitting *
+        
+        better clone command /darkoak:clone
+        more options to /attribute
 
         we circle maker /wecircle *
 
@@ -92,8 +89,7 @@ changelog:
 
 
     fixed:
-        rank adding and removing ui (i really shouldn't code while tired)
-        radio tag duplicate send bug
+        
 
         anti-velocity *
         owner fix *
@@ -101,13 +97,14 @@ changelog:
 
         
     changes:
-        the anticheat log now has time stamps
-        doubled the max size of both the anticheat log and the chat log
+        the update interval now updates within the time frame rather than at the interval (more performant)
 
+        /attribute having a growth / shrinkage instead of instant, it should be togglable *
         more stuff to profiles *
 
     experimental:
-        
+        anti-zd
+        invsee
 
         http requests *
 
@@ -128,6 +125,12 @@ announcement system
 leaderboards
 tags to have pariticles
 cosmetics system
+
+for misty:
+crates
+nicks only have references for admins
+nametags have nicks
+player grabbing
 
 i do have some ideas to improve them though:
 adding them to the roles editor (so you can give roles permission to break the certain gens)

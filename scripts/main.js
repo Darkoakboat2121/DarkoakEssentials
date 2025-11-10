@@ -24,8 +24,11 @@ import * as worldSettings from "./world/worldSettings"
 import * as worldProtection from "./world/worldProtection"
 import * as worldEdit from "./world/worldEdit"
 import * as roles from "./world/roles"
+
 import { combatManager, fakePlayerCommand } from "./entityHandlers/fakeplayers"
 import { scoreboardHandler } from "./entityHandlers/floatingtext"
+import { invSeeLinker, invSeeLocker } from "./entityHandlers/invAccessor"
+// import { customSizeViews } from "./entityHandlers/players"
 
 // seventh set up external uis / commands
 import * as external from "./external/external"
@@ -101,6 +104,7 @@ world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
     anticheat.antiNpc(evd)
     dataEditor(evd)
     worldSettings.interactCommand(evd)
+    invSeeLocker(evd)
 
     // system.sendScriptEvent('darkoak:beforeplayerinteractwithentity', JSON.stringify({
     //     itemStack: evd.itemStack,
@@ -118,6 +122,10 @@ world.afterEvents.entityHurt.subscribe((evd) => {
     //     damageSource: evd.damageSource,
     //     hurtEntity: evd.hurtEntity
     // }))
+})
+
+world.afterEvents.projectileHitEntity.subscribe((evd) => {
+
 })
 
 // Entity Die
@@ -280,6 +288,8 @@ system.runInterval(() => {
     timers()
     defaultData()
 
+    invSeeLinker()
+
 
     const players = world.getAllPlayers()
     bans(players, cd.get('darkoak:anticheat'))
@@ -288,7 +298,7 @@ system.runInterval(() => {
 
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
-        worldProtection.worldProtectionOther(player, cd.get('darkoak:worldprotection'))
+        worldProtection.worldProtectionOther(player)
         worldSettings.borderAndTracking(player, mcl.jsonWGet('darkoak:worldborder'), mcl.jsonWGet('darkoak:tracking'))
         enchantOnJump(player, cd.get('darkoak:scriptsettings'))
         actionBar(player)
@@ -1271,6 +1281,7 @@ function customSlashCommands(evd) {
     worldEdit.WEcommands(evd)
     roles.roleCommand(evd)
     fakePlayerCommand(evd)
+    worldEdit.betterVanillaCommands(evd)
 
 
     evd.customCommandRegistry.registerEnum('darkoak:dimensions', ['overworld', 'nether', 'end'])
@@ -1899,7 +1910,7 @@ function customSlashCommands(evd) {
             player.sendMessage('§cNicknames Are Disabled§r')
             return
         }
-
+        
         system.runTimeout(() => {
             switch (nicktypes) {
                 case 'reset':
@@ -1909,7 +1920,7 @@ function customSlashCommands(evd) {
                 case 'set':
                     player.sendMessage(`§aNickname Set To §r§f${nickname || ''}`)
                     mcl.jsonPSet(player, 'darkoak:nickname', {
-                        nick: nickname || ''
+                        nick: nickname.substring(0, 20) || ''
                     })
                     break
                 case 'toggle':
@@ -2041,7 +2052,7 @@ function customSlashCommands(evd) {
         // evd?.sourceEntity?.sendMessage('§cCurrently Not Working')
         // return
 
-        const dimen = evd.initiator?.dimension || evd.sourceBlock?.dimension || evd.sourceEntity?.dimension
+        const dimen = mcl.customSlashDimen(evd)
 
         system.runTimeout(() => {
             for (let index = 0; index < players.length; index++) {
@@ -2052,15 +2063,17 @@ function customSlashCommands(evd) {
                     case 'save':
 
                         // entity creation
-                        player.runCommand('summon darkoak:inv_accessor ~ ~ ~')
+                        const inv = dimen.spawnEntity('darkoak:inv_accessor54', player.location)
+
                         // duping
                         const invenP = mcl.getInventory(player)
+                        const invenA = mcl.getInventory(inv)
                         console.log(invenP.inventorySize)
                         for (let index = 0; index < invenP.inventorySize; index++) {
-                            const element = 0
-                            return
-
+                            const item = invenP.container.getItem(index)
+                            invenA.container.setItem(index, item)
                         }
+
                         // saving section
                         world.structureManager.createFromWorld(`darkoak:inventory_${nameInven}`, player.dimension, player.location, {
                             x: player.location.x,
@@ -2473,6 +2486,75 @@ function customSlashCommands(evd) {
                     message: `You\'ve Voted For Option ${type}, It Is Now ${newAmount}`
                 }
                 break
+        }
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:attributes', ['reset', 'size', 'health', 'damage', 'movement', 'pushable'])
+    // ['0.1s', '0.5s', '1.0s', '1.5s', '2.0s']
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:attribute',
+        description: 'Changes A Players Attributes',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'players',
+            },
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:attributes'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'value'
+            },
+        ]
+    }, (evd, players, attribute, val, view) => {
+        /**@type {string[]} */
+        let modified = []
+        let r = 0
+        for (let index = 0; index < players.length; index++) {
+            /**@type {Player} */
+            const player = players[index]
+
+            if (attribute === 'reset') {
+                trigger(player, 'darkoak:reset')
+            } else {
+                trigger(player, `darkoak:${attribute}${val}`)
+            }
+            modified.push(player.name)
+
+        }
+        if (modified.length === players.length) {
+            r = 1
+        } else if (modified.length > 0) {
+            r = 2
+        } else if (modified.length < 1) {
+            r = 3
+        }
+
+        switch (r) {
+            case 1:
+                return {
+                    status: CustomCommandStatus.Success,
+                    message: `All Players Were Modified`
+                }
+            case 2:
+                return {
+                    status: CustomCommandStatus.Success,
+                    message: `Some Players Were Modified: ${modified.join()}`
+                }
+            case 3:
+                return {
+                    status: CustomCommandStatus.Failure,
+                    message: `No Players Were Modified`
+                }
+        }
+
+        function trigger(player, event) {
+            system.runTimeout(() => {
+                player.triggerEvent(event)
+            })
         }
     })
 }

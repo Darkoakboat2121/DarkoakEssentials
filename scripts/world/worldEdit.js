@@ -1,4 +1,4 @@
-import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis } from "@minecraft/server"
+import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 
@@ -375,4 +375,75 @@ export function WEselector(evd) {
             mcl.jsonPUpdate(player, 'darkoak:worldedit', 'id', idadder)
         }
     }
+}
+
+/**Better vanilla commands, in world edit cause i didnt want to make another file
+ * @param {StartupEvent} evd 
+ */
+export function betterVanillaCommands(evd) {
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:dobclone',
+        description: 'Better Clone Command (Less Laggy)',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Location,
+                name: 'begin'
+            },
+            {
+                type: CustomCommandParamType.Location,
+                name: 'end'
+            },
+            {
+                type: CustomCommandParamType.Location,
+                name: 'destination'
+            },
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'time'
+            },
+        ]
+    }, (evd, begin, end, destination, time) => {
+        const dimen = mcl.customSlashDimen(evd)
+        const blocks = mcl.getBlocksByVolume(dimen.id, begin, end)
+
+        const offset = {
+            x: destination.x - begin.x,
+            y: destination.y - begin.y,
+            z: destination.z - begin.z
+        }
+
+        let amount = 0
+
+        for (let index = 0; index < blocks.length; index++) {
+            const block = blocks[index]
+            const src = block.location
+            const dest = {
+                x: src.x + offset.x,
+                y: src.y + offset.y,
+                z: src.z + offset.z,
+            }
+            if (mcl.blocksMatch(dimen.getBlock(dest), block)) continue
+
+            let delay = 0
+            if (time && time != 0) {
+                delay = Math.abs((index / 5) - time)
+            }
+
+            try {
+                system.runTimeout(() => {
+                    dimen.runCommand(`clone ${src.x} ${src.y} ${src.z} ${src.x} ${src.y} ${src.z} ${dest.x} ${dest.y} ${dest.z}`)
+                }, delay)
+                amount++
+            } catch (e) {
+                console.log(String(e))
+            }
+        }
+        return {
+            status: CustomCommandStatus.Success,
+            message: `Cloned ${amount} Blocks`
+        }
+    })
 }

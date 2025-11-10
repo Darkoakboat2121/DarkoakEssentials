@@ -11,5 +11,9 @@ export function plotGenerator(set) {
 }
 
 export function plotAdder(player) {
+    const d = mcl.jsonWGet('darkoak:plotsettings')
+    const plot = mcl.jsonPGet(player, 'darkoak:plot')
+    if (plot?.id) return
+
     
 }

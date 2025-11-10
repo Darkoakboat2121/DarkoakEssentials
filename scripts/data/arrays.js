@@ -137,6 +137,11 @@ export const preBannedList = [
     'insane bypasses', //Alt
     'Chiika Fujiwara', //Alt
     'ANSHUL MASTER', //Basic
+    'Kinghud12345', //Racism
+    'SternStraw11678', //Racism (quote: "its casual racism")
+    'FreezeEngine', //Client dev
+    'EntityEngine', //Alt
+    'alteik', //Client dev
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
