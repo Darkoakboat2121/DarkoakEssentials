@@ -8,7 +8,7 @@ import { getPlayerSkin, SimulatedPlayer, spawnSimulatedPlayer } from "@minecraft
 import { mcl } from "./logic"
 
 // third is setting defaults
-import { timers, defaultData, cd, updateData } from "./data/defaults" // defaults finally has a use lets gooooo
+import { timers, defaultData, cd, updateData, playerDataLogger } from "./data/defaults" // defaults finally has a use lets gooooo
 import * as arrays from "./data/arrays"
 
 // fourth initialize the interfaces
@@ -28,7 +28,7 @@ import * as roles from "./world/roles"
 import { combatManager, fakePlayerCommand } from "./entityHandlers/fakeplayers"
 import { scoreboardHandler } from "./entityHandlers/floatingtext"
 import { invSeeLinker, invSeeLocker } from "./entityHandlers/invAccessor"
-// import { customSizeViews } from "./entityHandlers/players"
+import { magicItem, magicSlotter, sitCheck } from "./entityHandlers/players"
 
 // seventh set up external uis / commands
 import * as external from "./external/external"
@@ -43,6 +43,7 @@ world.afterEvents.itemUse.subscribe((evd) => {
     itemOpeners(evd)
     enchantOnUse(evd, cd.get('darkoak:scriptsettings'))
     worldSettings.bindedItems(evd)
+    magicItem(evd)
 
     // system.sendScriptEvent('darkoak:afteritemuse', JSON.stringify({
     //     itemStack: evd.itemStack,
@@ -78,6 +79,10 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
     // }))
 })
 
+world.afterEvents.playerInteractWithBlock.subscribe((evd) => {
+    
+})
+
 // chest lock, world interact settings, landclaims, data editor, data editor block
 world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
     chestLock(evd)
@@ -86,6 +91,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
     dataEditorBlock(evd)
     worldSettings.interactCommandBlock(evd)
     worldEdit.WEselector(evd)
+    worldSettings.cratesOpener(evd)
 
     // system.runTimeout(() => {
     //     system.sendScriptEvent('darkoak:beforeplayerinteractwithblock', JSON.stringify({
@@ -115,7 +121,7 @@ world.beforeEvents.playerInteractWithEntity.subscribe((evd) => {
 
 // Entity hurt
 world.afterEvents.entityHurt.subscribe((evd) => {
-    enchantOnDamaged(evd, cd.get('darkoak:scriptsettings'))
+    enchantOnDamaged(evd, mcl.jsonWGet('darkoak:scriptsettings'))
 
     // system.sendScriptEvent('darkoak:afterentityhurt', JSON.stringify({
     //     damage: evd.damage,
@@ -153,6 +159,7 @@ world.beforeEvents.chatSend.subscribe((evd) => {
 
 // Player break block
 world.afterEvents.playerBreakBlock.subscribe((evd) => {
+    worldSettings.breakBlockTracking(evd)
     worldSettings.signFixer(evd)
     worldSettings.autoPickup(evd)
 
@@ -183,6 +190,10 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
     //         player: mcl.playerToData(evd.player)
     //     }))
     // })
+})
+
+world.afterEvents.playerPlaceBlock.subscribe((evd) => {
+    worldSettings.placeBlockTracking(evd)
 })
 
 // Breakprotection & Landclaim
@@ -299,7 +310,7 @@ system.runInterval(() => {
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
         worldProtection.worldProtectionOther(player)
-        worldSettings.borderAndTracking(player, mcl.jsonWGet('darkoak:worldborder'), mcl.jsonWGet('darkoak:tracking'))
+        worldSettings.borderAndTracking(player, mcl.jsonWGet('darkoak:worldborder'))
         enchantOnJump(player, cd.get('darkoak:scriptsettings'))
         actionBar(player)
         anticheat.anticheatMain(player)
@@ -311,6 +322,9 @@ system.runInterval(() => {
         anticheat.dupeIDChecker(player, cd.get('darkoak:anticheat'))
         worldSettings.verify(player)
         combatManager(player)
+        sitCheck(player)
+        playerDataLogger(player)
+        magicSlotter(player)
         // mcl.particleOutline({x: -167, y: 62, z: -76}, {x: -171, y: 66, z: -80}, undefined, 0.1, player.dimension.id)
     }
 
@@ -322,6 +336,10 @@ system.runInterval(() => {
     //     sentTime: Date.now(),
     //     currentTick: system.currentTick
     // }))
+
+    // mcl.archimedesSpiral(2, 1, 1, (x, z) => {
+    //     world.getDimension('overworld').runCommand(`setblock ${-204 + x} 88 ${36 + z} grass_block`)
+    // })
 })
 
 /**
@@ -602,7 +620,7 @@ function gens() {
         const block = world.getDimension(b?.dimension || 'overworld')
 
         if (!b?.coords2) {
-            if (!mcl.tickTimer(b?.delay || 0)) continue
+            if (!mcl.tickTimer(b?.delay || 1)) continue
             const parts = b?.coords.split(' ')
             try {
                 const coords = {
@@ -1216,7 +1234,7 @@ function actionBar(player) {
     /**@type {{lines: string[], ticks: number}} */
     const text = mcl.jsonWGet('darkoak:actionbar:v2')
     const lines = text?.lines.filter(e => e.length > 0)
-    if (text && !d?.actionbarmaster) player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, lines[act].replaceAll('\\n', '\n') || '')}"}]}`)
+    if (text && !d?.actionbarmaster) player.runCommand(`titleraw @s actionbar {"rawtext":[{"text":"${arrays.replacer(player, lines[act]?.replaceAll('\\n', '\n') || '')}"}]}`)
 
     /**@type {{lines: [string, string, string]}} */
     const text2 = mcl.jsonWGet('darkoak:sidebar')
@@ -2063,37 +2081,44 @@ function customSlashCommands(evd) {
                     case 'save':
 
                         // entity creation
-                        const inv = dimen.spawnEntity('darkoak:inv_accessor54', player.location)
+                        const inv = player.dimension.spawnEntity('darkoak:inv_accessor54', player.location)
 
                         // duping
                         const invenP = mcl.getInventory(player)
                         const invenA = mcl.getInventory(inv)
-                        console.log(invenP.inventorySize)
-                        for (let index = 0; index < invenP.inventorySize; index++) {
-                            const item = invenP.container.getItem(index)
-                            invenA.container.setItem(index, item)
+                        for (let index1 = 0; index1 < invenP.inventorySize; index1++) {
+                            const item = invenP.container.getItem(index1)
+                            invenA.container.setItem(index1, item)
                         }
 
                         // saving section
+                        if (world.structureManager.getWorldStructureIds().includes(`darkoak:inventory_${nameInven}`)) world.structureManager.delete(`darkoak:inventory_${nameInven}`)
                         world.structureManager.createFromWorld(`darkoak:inventory_${nameInven}`, player.dimension, player.location, {
                             x: player.location.x,
                             y: player.location.y + 1,
-                            z: player.location.z
+                            z: player.location.z,
                         }, {
                             includeBlocks: false,
                             includeEntities: true,
-                            saveMode: StructureSaveMode.World
+                            saveMode: StructureSaveMode.World,
                         })
+                        inv.remove()
                         break
                     case 'load':
-
                         // loading section
-                        world.structureManager.place(`darkoak:inventory_${nameInven}`, dimen, player.location, {
+                        world.structureManager.place(`darkoak:inventory_${nameInven}`, player.dimension, player.location, {
                             includeBlocks: false,
-                            includeEntities: true
+                            includeEntities: true,
                         })
 
                         // clear, copy, and kill
+                        const inv2 = player.dimension.getEntitiesAtBlockLocation(player.location).filter(e => e.typeId === 'darkoak:inv_accessor54')[0]
+                        const invenP2 = mcl.getInventory(player)
+                        const invenA2 = mcl.getInventory(inv2)
+                        for (let index2 = 0; index2 < invenP2.inventorySize; index2++) {
+                            invenA2.container.swapItems(index2, index2, invenP2.container)
+                        }
+                        inv2.remove()
 
                         break
                 }

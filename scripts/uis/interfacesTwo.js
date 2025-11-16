@@ -229,7 +229,7 @@ export function genModifyUI(player, gen) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
-        mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, {
+        mcl.jsonWSet(gen, {
             block: e[0].trim(),
             coords: e[1].trim(),
             coords2: e[2].trim(),
@@ -1372,6 +1372,12 @@ export function chatGamesSettings(player) {
     bui.toggle(f, 'Boat-Catcher Enabled?', d?.catcherEnabled, 'Toggles Whether The Game Runs')
     bui.slider(f, 'Boat-Catcher Interval', 1, 10, d?.catcherInterval, 1, 'Interval In Minutes Between Games')
 
+    bui.divider(f)
+
+    bui.toggle(f, 'Spammer Enabled?', d?.spammerEnabled, 'Toggles Whether The Game Runs')
+    bui.slider(f, 'Spammer Interval', 1, 10, d?.spammerInterval, 1, 'Interval In Minutes Between Games')
+    bui.textField(f, 'Reward Command:', 'Example: give @s diamond 1', d?.spammerCommand, 'Command To Run On Successful Guess, Runs From The Guesser')
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             interfaces.chatSettingsUI(player)
@@ -1379,13 +1385,18 @@ export function chatGamesSettings(player) {
         }
         const e = bui.formValues(evd)
         if (!e[0]) mcl.wRemove('darkoak:chatgame1:word')
+
+        let i = 0
         mcl.jsonWSet('darkoak:chatgames', {
-            unscrambleEnabled: e[0],
-            unscrambleWords: e[1],
-            unscrambleInterval: e[2],
-            unscrambleCommand: e[3],
-            catcherEnabled: e[4],
-            catcherInterval: e[5],
+            unscrambleEnabled: e[i++],
+            unscrambleWords: e[i++],
+            unscrambleInterval: e[i++],
+            unscrambleCommand: e[i++],
+            catcherEnabled: e[i++],
+            catcherInterval: e[i++],
+            spammerEnabled: e[i++],
+            spammerInterval: e[i++],
+            spammerCommand: e[i++],
         })
     }).catch()
 }
@@ -1402,7 +1413,7 @@ export function scriptSettings(player) {
     bui.divider(f)
     bui.header(f, 'Main')
 
-    bui.slider(f, 'Seconds Between Data Updates', 1, 10, d?.updateinterval, 1, 'The Higher The Amount, The Less Laggy The Addon Will Be')
+    bui.slider(f, 'Seconds Between Data Updates', 1, 15, d?.updateinterval, 1, 'The Higher The Amount, The Less Laggy The Addon Will Be')
 
     bui.divider(f)
     bui.header(f, 'Feature Toggles')
@@ -2045,26 +2056,18 @@ export function crashPlayerUI(player) {
         const p = mcl.getPlayer(u[bui.formValues(evd)[0]])
         if (mcl.isDOBAdmin(p)) {
             mcl.adminMessage(`${player.name} Attempted To Crash Admin: ${p.name}`)
-            // return
+            return
         }
-        let o = 0
-        while (o++ < 100) {
-            if (p) {
-                p.addEffect('minecraft:instant_health', 10, {
-                    amplifier: 255,
-                    showParticles: true
-                })
-                p.sendMessage(`§a§k`)
-                p.sendMessage(`§a§k`)
-                p.sendMessage(`§a§k`)
-                p.sendMessage(`§a§k`)
-                p.sendMessage(`§a§k`)
-                p.sendMessage(`§a§k`)
-                p.sendMessage(`§a§k`)
-                p.sendMessage(`§a§k`)
-                p.sendMessage(`§a§k`)
-            }
-        }
+        let o = true
+        // while (o) {
+        //     if (mcl.tickTimer(3)) {
+        //         try {
+        //             p.sendMessage(`§a§k ${mcl.timeUuid()}`)
+        //         } catch {
+        //             o = false
+        //         }
+        //     }
+        // }
     })
 }
 
@@ -2076,6 +2079,7 @@ export function otherPlayerSettingsUI(player) {
     bui.button(f, 'Whitelist / Verfication')
     bui.button(f, 'Item Banning')
     bui.button(f, 'Plots')
+    bui.button(f, 'Magic system')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2093,6 +2097,11 @@ export function otherPlayerSettingsUI(player) {
                 itemBanningUI(player)
                 break
             case 3:
+                plotSettingsUI(player)
+                break
+            case 4:
+                magicSettingsUI(player)
+                break
 
         }
     })
@@ -3008,6 +3017,158 @@ export function invSeeUI(player) {
         player.sendMessage('§aPress Interact!§r')
     })
 }
+
+export function crateUI(player, num) {
+    let f = new ActionFormData()
+    const d = mcl.jsonWGet(`darkoak:crate:${num}`)
+    bui.title(f, d?.name || `Crate: ${num}`)
+
+    bui.header(f, d?.rewards || '')
+
+    bui.button(f, d?.opentext || `§aOpen!§r`)
+
+    if (mcl.isDOBAdmin(player)) {
+        bui.button(f, 'settings')
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+    })
+}
+
+export function crateEditUI(player, num) {
+    let f = new ActionFormData()
+    const d = mcl.jsonWGet(`darkoak:crate:${num}`)
+    bui.title(f, `Edit Crate ${num}`)
+
+    bui.textField(f, 'Crate Name:', 'Example: Super Crate!', d?.name) // 0
+
+    bui.textField(f, 'Open Text:', 'Example: Open!', d?.opentext) // 1
+
+
+    let amountToAdd = 0
+    for (let index = 0; index < 10; index++) {
+        bui.textField(f, `Reward ${index + 1}:`, 'Example: give @s 1', d?.rewards[index - 1])
+        amountToAdd++
+    }
+
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            crateUI(player, num)
+            return
+        }
+        const e = bui.formValues(evd)
+
+        let rewards = []
+        for (let index = 0; index < amountToAdd; index++) {
+            rewards.push(e[2 + index])
+        }
+
+        let i = 0
+        mcl.jsonWSet(`darkoak:crate:${num}`, {
+            name: e[i++],
+            opentext: e[i++],
+            rewards: rewards,
+
+        })
+    })
+}
+
+export function magicSettingsUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Magic Settings')
+    const d = mcl.jsonWGet('darkoak:magic')
+
+    bui.toggle(f, 'Magic System Enabled?', d?.enabled)
+    bui.slider(f, 'Max Mana', 10, 50, d?.maxmana, 1)
+    bui.slider(f, 'Cost Per Spell', 1, 50, d?.cost, 1)
+    bui.slider(f, 'Mana Regen Rate Per Second', 1, 10, d?.regenrate, 1)
+
+    bui.toggle(f, 'Use Actionbar For Spell Slots?', d?.showaction)
+    bui.toggle(f, 'Show Spell Usage Messages?', d?.messages)
+
+    bui.divider(f)
+    bui.toggle(f, 'Teleport (1111) Enabled?', d?.teleport?.enabled)
+    bui.slider(f, 'Teleport Distance', 1, 20, d?.teleport?.distance, 1)
+    bui.toggle(f, 'Can Teleport Through Blocks?', d?.teleport?.blocks)
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.toggle(f, 'Jump (1112) Enabled?', d?.jump?.enabled)
+    bui.slider(f, 'Jump Height', 10, 20, d?.jump?.height, 1, 'Tens Place = Ones Place')
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.toggle(f, 'Fire Ball (3222) Enabled?', d?.fireball?.enabled)
+    bui.slider(f, 'Max Distance', 1, 30, d?.fireball?.distance, 1)
+    bui.slider(f, 'Flame Time', 1, 20, d?.fireball?.time, 1)
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.toggle(f, 'Fire Spew (3332) Enabled?', d?.firespew?.enabled)
+    bui.slider(f, 'Max Distance', 1, 10, d?.firespew?.distance, 1)
+    bui.slider(f, 'Spew Size', 1, 3, d?.firespew?.size, 1)
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.toggle(f, 'Earthquake (4411) Enabled?', d?.earthquake?.enabled)
+    bui.slider(f, 'Earthquake Length', 1, 10, d?.earthquake?.length, 1)
+    bui.divider(f)
+
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            otherPlayerSettingsUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        let i = 0
+
+        mcl.jsonWSet('darkoak:magic', {
+            enabled: e[i++],
+            maxmana: e[i++],
+            cost: e[i++],
+            regenrate: e[i++],
+            showaction: e[i++],
+            messages: e[i++],
+            teleport: {
+                enabled: e[i++],
+                distance: e[i++],
+                blocks: e[i++],
+            },
+            jump: {
+                enabled: e[i++],
+                height: e[i++],
+            },
+            fireball: {
+                enabled: e[i++],
+                distance: e[i++],
+                time: e[i++],
+            },
+            firespew: {
+                enabled: e[i++],
+                distance: e[i++],
+                size: e[i++],
+            },
+            earthquake: {
+                enabled: e[i++],
+                length: e[i++],
+            }
+        })
+    })
+}
+
+
+
+
+
+
+
+
+
+
+
 
 export function darkoakboatBio(player) {
     let f = new ActionFormData()

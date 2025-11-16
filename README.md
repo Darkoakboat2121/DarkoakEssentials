@@ -67,10 +67,18 @@ changelog:
         vertical slabs!!!! *
         money and score linkage system *
         more punishments (make them like trolling) *
-        sitting *
+        lifesteal system *
+        trading system * (between p to p and p to e)
+        censor warning system *
         
+        sitting
         better clone command /darkoak:clone
         more options to /attribute
+        more tracking options (breaking blocks, placing blocks, changing the slot, moving)
+        spammer chat game
+        /inventory
+        player data logging, its much more performant than before
+        a dynamic casting magic system
 
         we circle maker /wecircle *
 
@@ -81,7 +89,7 @@ changelog:
         hole filler *
         afk timer *
         /boats leaderboard with @a *
-        crates *
+        crates * (rewards should be commands)
         signs+ * (spinning signs, rainbow text, bad apple lol, delays, slideshows)
         kits! *
         owner system *
@@ -98,6 +106,7 @@ changelog:
         
     changes:
         the update interval now updates within the time frame rather than at the interval (more performant)
+        world protected areas dont affect gens
 
         /attribute having a growth / shrinkage instead of instant, it should be togglable *
         more stuff to profiles *

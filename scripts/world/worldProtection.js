@@ -23,12 +23,16 @@ export function placeBreakProtection(evd) {
         const x = block.location.x
         const z = block.location.z
 
-        const minX = Math.min(area.p1.x, area.p2.x)
-        const maxX = Math.max(area.p1.x, area.p2.x)
-        const minZ = Math.min(area.p1.z, area.p2.z)
-        const maxZ = Math.max(area.p1.z, area.p2.z)
-
-        if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+        if (mcl.locationInside({
+            x: x,
+            z: z,
+        }, area?.p1, area?.p2)) {
+            const blocks = mcl.listGetValues('darkoak:gen:')
+            for (let ind = 0; ind < blocks.length; ind++) {
+                const b = blocks[ind]
+                console.log('ggg')
+                if (mcl.locationInside({ x: x, z: z }, b.coords, (b?.coords2 || b?.coords))) return
+            }
             evd.cancel = true
             evd.player.sendMessage('§cThis Land Is Protected!§r')
             return
@@ -55,12 +59,10 @@ export function placeBreakLandclaim(evd) {
         const x = block.location.x
         const z = block.location.z
 
-        const minX = Math.min(area.p1.x, area.p2.x)
-        const maxX = Math.max(area.p1.x, area.p2.x)
-        const minZ = Math.min(area.p1.z, area.p2.z)
-        const maxZ = Math.max(area.p1.z, area.p2.z)
-
-        if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+        if (mcl.locationInside({
+            x: x,
+            z: z,
+        }, area.p1, area.p2)) {
             evd.cancel = true
             evd.player.sendMessage(`§cThis Land Is Owned By ${area.owner}§r`)
             return
@@ -86,12 +88,10 @@ export function explosionProtectionLandclaim(evd) {
             const x = blocks[index].location.x
             const z = blocks[index].location.z
 
-            const minX = Math.min(area.p1.x, area.p2.x)
-            const maxX = Math.max(area.p1.x, area.p2.x)
-            const minZ = Math.min(area.p1.z, area.p2.z)
-            const maxZ = Math.max(area.p1.z, area.p2.z)
-
-            if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+            if (mcl.locationInside({
+                x: x,
+                z: z
+            }, area.p1, area.p2)) {
                 evd.cancel = true
                 return
             }

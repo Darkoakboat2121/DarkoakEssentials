@@ -14,6 +14,9 @@ import { cd } from "./data/defaults"
 let messageMap = new Map()
 let lastSender = ''
 
+/**@type {Map<string, {name: string, score: number}>} */
+let spammerMap = new Map()
+
 /**
  * @param {ChatSendBeforeEvent} evd
  * @param {string} message 
@@ -56,8 +59,6 @@ export function chatSystem(evd = undefined, player, message) {
         }
     }
 
-    if (chatPreventives(player, message)) return
-
     // chat games
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string}} */
     const game = mcl.jsonWGet('darkoak:chatgames')
@@ -86,6 +87,17 @@ export function chatSystem(evd = undefined, player, message) {
             return
         }
     }
+
+    const spammerGame = mcl.jsonWGet('darkoak:spammer:game')
+    if (spammerGame?.enabled && message === 'SPAM') {
+        spammerMap.set(player.name, {
+            name: player.name,
+            score: (spammerMap.get(player.name)?.score || 0) + 1
+        })
+        return
+    }
+
+    if (chatPreventives(player, message)) return
 
     // auto response
     const res = mcl.listGetValues('darkoak:autoresponse:')
@@ -263,6 +275,35 @@ export function chatGames(chat) {
             mcl.wSet('darkoak:boatcatcher:boat', btc)
         }
     }
+
+    if (d?.spammerEnabled && mcl.tickTimer((d?.spammerInterval * 60) * 20)) {
+        world.sendMessage(`§aSpammer! Type 'SPAM' As Fast As You Can! You Only Have 10 Seconds!`)
+        mcl.jsonWSet('darkoak:spammer:game', {
+            enabled: true
+        })
+        system.runTimeout(() => {
+            mcl.jsonWSet('darkoak:spammer:game', {
+                enabled: false
+            })
+
+            let spammerArray = Array.from(spammerMap).map(([key, value]) => ({
+                name: value?.name,
+                score: value?.score
+            }))
+            spammerArray.sort((a, b) => b.score - a.score)
+            spammerMap.clear()
+
+            const w = spammerArray[0]
+
+            if (w?.score > 0) {
+                world.sendMessage(`§a${w?.name} Has Won With ${w?.score || 0} Spams!§r`)
+                const winner = mcl.getPlayer(w?.name)
+                if (d?.spammerCommand) winner.runCommand(d?.spammerCommand)
+            } else {
+                world.sendMessage('§iNobody Spammed.§r')
+            }
+        }, mcl.secondsToTicks(10))
+    }
 }
 
 /**Interval event for nametags
@@ -418,7 +459,6 @@ function chatPreventives(player, message) {
         const trimmed = message.trim()
         if ((messageMap.get(player.name) || '') === trimmed && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return true
         if (
-            trimmed.includes('Horion - the best minecraft bedrock utility mod - horion.download') ||
             trimmed.includes('horion.download') ||
             trimmed.includes('lumineproxy') ||
             trimmed.includes('packet.sell.app')

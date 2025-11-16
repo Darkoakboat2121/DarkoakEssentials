@@ -18,9 +18,8 @@ export function updateData(initial = false) {
     const properties = world.getDynamicPropertyIds()
     const d = mcl.jsonWGet('darkoak:scriptsettings')
     let num = (d?.updateinterval || 1)
-    if (num == 0) num = 1
 
-    if (initial) {
+    if (initial || num === 0) {
         for (let index = 0; index < properties.length; index++) {
             const pro = properties[index]
             cd.set(pro, dataGet(pro))
@@ -48,17 +47,19 @@ function dataGet(id) {
     if (t == undefined) {
         return undefined
     } else {
-        return JSON.parse(t)
+        try {
+            return JSON.parse(t)
+        } catch {
+            return undefined
+        }
     }
 }
 
 let lastTime = Date.now()
 let sessionSeconds = 0
-let tickcount = 0
 /**Gets tps, seconds, and minutes */
 export function timers() {
-    tickcount++
-    if (tickcount % 20 === 0) {
+    if (mcl.tickTimer(20)) {
         sessionSeconds++
         mcl.wSet('darkoak:sseconds', sessionSeconds)
         mcl.wSet('darkoak:sminutes', (sessionSeconds / 60))
@@ -70,8 +71,14 @@ export function timers() {
         mcl.wSet('darkoak:tps', tps.toFixed(0))
         lastTime = currentTime
     }
+    
 }
 
+/**@type {Map<string, {name: string}>} */
+export const playerLog = new Map()
+export function playerDataLogger(player) {
+    playerLog.set(player.name, mcl.playerToData(player))
+}
 
 export function defaultData() {
     if (mcl.wGet('darkoak:scriptsettings') === undefined) {

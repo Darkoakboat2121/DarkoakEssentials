@@ -5,6 +5,7 @@ import { mcl } from "../logic"
 import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, invSeeUI, itemGiverUI, itemSettingsUI, messageLogUI, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, rolesMainUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 import { transferPlayer } from "@minecraft/server-admin"
+import { playerLog } from "../data/defaults"
 
 // This file holds all the functions containing UI
 
@@ -361,7 +362,10 @@ export function playerDataMainUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Player Data')
     
-    let u = bui.namePicker(f, undefined, 'Player:', false)
+    let u = bui.namePicker(f, undefined, 'Player:', true)
+
+    const offline = Array.from(playerLog.values()).map(e => e.name).filter(r => u.includes(r) != true)
+    if (offline.length > 0) bui.dropdown(f, 'Offline Player:', offline)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -370,7 +374,10 @@ export function playerDataMainUI(player) {
         }
         const e = bui.formValues(evd)
         const p = mcl.getPlayer(u[e[0]])
-        if (p) playerDataViewUI(player, p)
+        if (p) {
+            playerDataViewUI(player, p)
+        } else playerDataOfflineUI(player, offline[e[1]])
+        
     }).catch()
 }
 
@@ -390,7 +397,6 @@ export function playerDataViewUI(playerToShow, playerToView) {
     bui.label(f, `Effects: ${mcl.playerEffectsArray(player)}`)
     bui.label(f, `Tags: ${mcl.playerTagsArray(player).join(', §r§f')}`)
 
-    bui.button(f, 'Reload')
     bui.divider(f)
     bui.label(f, 'Items:')
     // doesnt view armor or offhand, not considered inventory slots??
@@ -402,14 +408,13 @@ export function playerDataViewUI(playerToShow, playerToView) {
         bui.divider(f)
     }
 
-    bui.button(f, 'Reload')
 
     bui.divider(f)
     bui.label(f, 'Player Data:')
     const data = mcl.pListGetBoth(player)
     for (let index = 0; index < data.length; index++) {
         const d = data[index]
-        bui.label(f, `${d.id} -> ${d.value}`)
+        bui.button(f, `${d.id} -> ${d.value}`)
         bui.divider(f)
     }
 
@@ -419,62 +424,81 @@ export function playerDataViewUI(playerToShow, playerToView) {
 
     f.show(playerToShow).then((evd) => {
         if (evd.canceled) return
-        playerDataViewUI(playerToShow, playerToView)
+        if (evd.selection === data.length) {
+            playerDataViewUI(playerToShow, playerToView)
+        } else mcl.pRemove(player, data[evd.selection].id)
     }).catch((e) => {
         mcl.adminMessage(`Error Viewing Player, Message: ${String(e)}`)
     })
 }
 
-export function playerDataOfflineUI(playerToShow, playerToView) {
+export function playerDataOfflineUI(playerToShow, toView) {
     let f = new ActionFormData()
-    const player = mcl.jsonWGet(`darkoak:playerdata:${playerToView}`)
-    if (!player) {
-        playerToShow.sendMessage('§cError Viewing Player§r')
-        return
-    }
-    bui.title(f, `${player.name}`)
+    bui.title(f, 'Offline Player Data Viewer')
+    const player = playerLog.get(toView)
 
     bui.label(f, `Name: ${player.name}, Nametag: [${player.nameTag}]`)
-    bui.label(f, `ID: ${player.id}, Is Host: ${mcl.isHost(player)}`)
-    bui.label(f, `Gamemode: ${player.getGameMode()}`)
+    bui.label(f, `ID: ${player.id}`)
+    bui.label(f, `Gamemode: ${player.getGameMode}`)
     bui.label(f, `Location: ${parseInt(player.location.x)} ${parseInt(player.location.y)} ${parseInt(player.location.z)}, Dimension: ${player.dimension.id}`)
     bui.label(f, `Effects: ${mcl.playerEffectsArray(player)}`)
     bui.label(f, `Tags: ${mcl.playerTagsArray(player).join(', §r§f')}`)
 
-    bui.button(f, 'Reload')
-    bui.divider(f)
-    bui.label(f, 'Items:')
-    // doesnt view armor or offhand, not considered inventory slots??
-    const items = player.items
-    for (let index = 0; index < items.size; index++) {
-        const item = items[index]
-        bui.label(f, `Type: ${item.typeId}, Amount: ${item.amount}`)
-        bui.label(f, `Name: ${item.nameTag || ''}`)
-        bui.divider(f)
-    }
-
-    bui.button(f, 'Reload')
-
-    bui.divider(f)
-    bui.label(f, 'Player Data:')
-    const data = player.dynamicProperties
-    for (let index = 0; index < data.length; index++) {
-        const d = data[index]
-        bui.label(f, `${d.id} -> ${d.value}`)
-        bui.divider(f)
-    }
-
-    bui.button(f, 'Reload')
-
-    bui.divider(f)
-
-    f.show(playerToShow).then((evd) => {
+    f.show(player).then((evd) => {
         if (evd.canceled) return
-        playerDataOfflineUI(playerToShow, playerToView)
-    }).catch((e) => {
-        mcl.adminMessage(`Error Viewing Player, Message: ${String(e)}`)
     })
 }
+
+// export function playerDataOfflineUI(playerToShow, playerToView) {
+//     let f = new ActionFormData()
+//     const player = mcl.jsonWGet(`darkoak:playerdata:${playerToView}`)
+//     if (!player) {
+//         playerToShow.sendMessage('§cError Viewing Player§r')
+//         return
+//     }
+//     bui.title(f, `${player.name}`)
+
+//     bui.label(f, `Name: ${player.name}, Nametag: [${player.nameTag}]`)
+//     bui.label(f, `ID: ${player.id}, Is Host: ${mcl.isHost(player)}`)
+//     bui.label(f, `Gamemode: ${player.getGameMode()}`)
+//     bui.label(f, `Location: ${parseInt(player.location.x)} ${parseInt(player.location.y)} ${parseInt(player.location.z)}, Dimension: ${player.dimension.id}`)
+//     bui.label(f, `Effects: ${mcl.playerEffectsArray(player)}`)
+//     bui.label(f, `Tags: ${mcl.playerTagsArray(player).join(', §r§f')}`)
+
+//     bui.button(f, 'Reload')
+//     bui.divider(f)
+//     bui.label(f, 'Items:')
+//     // doesnt view armor or offhand, not considered inventory slots??
+//     const items = player.items
+//     for (let index = 0; index < items.size; index++) {
+//         const item = items[index]
+//         bui.label(f, `Type: ${item.typeId}, Amount: ${item.amount}`)
+//         bui.label(f, `Name: ${item.nameTag || ''}`)
+//         bui.divider(f)
+//     }
+
+//     bui.button(f, 'Reload')
+
+//     bui.divider(f)
+//     bui.label(f, 'Player Data:')
+//     const data = player.dynamicProperties
+//     for (let index = 0; index < data.length; index++) {
+//         const d = data[index]
+//         bui.label(f, `${d.id} -> ${d.value}`)
+//         bui.divider(f)
+//     }
+
+//     bui.button(f, 'Reload')
+
+//     bui.divider(f)
+
+//     f.show(playerToShow).then((evd) => {
+//         if (evd.canceled) return
+//         playerDataOfflineUI(playerToShow, playerToView)
+//     }).catch((e) => {
+//         mcl.adminMessage(`Error Viewing Player, Message: ${String(e)}`)
+//     })
+// }
 
 export function playerPunishmentsMainUI(player) {
 
@@ -700,36 +724,52 @@ export function playerTrackingUI(player) {
     bui.title(f, 'Player Tracking')
     const d = mcl.jsonWGet('darkoak:tracking')
 
-    bui.toggle(f, 'Flying', d.flying)
-    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d.flyingC)
+    bui.toggle(f, 'Flying', d?.flying)
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.flyingC)
     bui.divider(f)
 
-    bui.toggle(f, 'Gliding', d.gliding)
-    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d.glidingC)
+    bui.toggle(f, 'Gliding', d?.gliding)
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.glidingC)
     bui.divider(f)
 
-    bui.toggle(f, 'Climbing', d.climbing)
-    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d.climbingC)
+    bui.toggle(f, 'Climbing', d?.climbing)
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.climbingC)
     bui.divider(f)
 
-    bui.toggle(f, 'Emoting', d.emoting)
-    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d.emotingC)
+    bui.toggle(f, 'Emoting', d?.emoting)
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.emotingC)
     bui.divider(f)
 
-    bui.toggle(f, 'Falling', d.falling)
-    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d.fallingC)
+    bui.toggle(f, 'Falling', d?.falling)
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.fallingC)
     bui.divider(f)
 
-    bui.toggle(f, 'In Water', d.inwater)
-    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d.inwaterC)
+    bui.toggle(f, 'In Water', d?.inwater)
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.inwaterC)
     bui.divider(f)
 
-    bui.toggle(f, 'Jumping', d.jumping)
-    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d.jumpingC)
+    bui.toggle(f, 'Jumping', d?.jumping)
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.jumpingC)
     bui.divider(f)
 
-    bui.toggle(f, 'On Ground', d.onground)
-    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d.ongroundC)
+    bui.toggle(f, 'On Ground', d?.onground)
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.ongroundC)
+    bui.divider(f)
+
+    bui.toggle(f, 'Breaking Blocks', d?.breakblock, 'Tag & Score: darkoak:broken')
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.breakblockC)
+    bui.divider(f)
+
+    bui.toggle(f, 'Placing Blocks', d?.placeblock, 'Tag & Score: darkoak:placed')
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.placeblockC)
+    bui.divider(f)
+
+    bui.toggle(f, 'Current Slot', d?.slot, 'Score: darkoak:slot')
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.slotC)
+    bui.divider(f)
+
+    bui.toggle(f, 'Moving', d?.moving, 'Tag & Score: darkoak:moving')
+    bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.movingC)
     bui.divider(f)
 
     f.show(player).then((evd) => {
@@ -738,23 +778,32 @@ export function playerTrackingUI(player) {
             return
         }
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:tracking', {
-            flying: e[0],
-            flyingC: e[1],
-            gliding: e[2],
-            glidingC: e[3],
-            climbing: e[4],
-            climbingC: e[5],
-            emoting: e[6],
-            emotingC: e[7],
-            falling: e[8],
-            fallingC: e[9],
-            inwater: e[10],
-            inwaterC: e[11],
-            jumping: e[12],
-            jumpingC: e[13],
-            onground: e[14],
-            ongroundC: e[15],
+            flying: e[i++],
+            flyingC: e[i++],
+            gliding: e[i++],
+            glidingC: e[i++],
+            climbing: e[i++],
+            climbingC: e[i++],
+            emoting: e[i++],
+            emotingC: e[i++],
+            falling: e[i++],
+            fallingC: e[i++],
+            inwater: e[i++],
+            inwaterC: e[i++],
+            jumping: e[i++],
+            jumpingC: e[i++],
+            onground: e[i++],
+            ongroundC: e[i++],
+            breakblock: e[i++],
+            breakblockC: e[i++],
+            placeblock: e[i++],
+            placeblockC: e[i++],
+            slot: e[i++],
+            slotC: e[i++],
+            moving: e[i++],
+            movingC: e[i++],
         })
     }).catch()
 }
@@ -1766,6 +1815,8 @@ export function communityGeneralUI(player) {
     bui.slider(f, 'Landclaim Size', 8, 32, settings?.landclaimSize || 16, 4)
     bui.toggle(f, 'Emojis Are Enabled?', settings?.emojisenabled)
     bui.toggle(f, 'Players Auto-Pickup Blocks They Break?', settings?.autopickup)
+    bui.toggle(f, 'Players Can Sit?', settings?.sittingenabled)
+    bui.slider(f, 'Seconds To Sit', 1, 5, settings?.sittingtime, 1)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1782,6 +1833,8 @@ export function communityGeneralUI(player) {
             landclaimSize: e[i++],
             emojisenabled: e[i++],
             autopickup: e[i++],
+            sittingenabled: e[i++],
+            sittingtime: e[i++],
         })
     }).catch()
 }

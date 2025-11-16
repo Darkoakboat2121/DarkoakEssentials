@@ -142,6 +142,7 @@ export const preBannedList = [
     'FreezeEngine', //Client dev
     'EntityEngine', //Alt
     'alteik', //Client dev
+    'RadWolf514', //Likes WW2 germans
 ]
 
 /**List of blocks that shouldnt be placed by non-admins*/
@@ -257,6 +258,8 @@ export function replacer(player, string) {
     // } else {
     //     block = 'Undefined'
     // }
+
+    // try making it work on blocks to with ?. and || parts ------------------
     let formattedString = string
         .replaceAll('#name#', player.name)
         .replaceAll('#health#', Math.ceil(mcl.healthValue(player)).toString())

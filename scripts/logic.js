@@ -1248,14 +1248,14 @@ export class mcl {
             for (let y = minY; y <= maxY; y++) {
                 for (let z = minZ; z <= maxZ; z++) {
                     try {
-                        const block = d.getBlock({ 
-                            x: x, 
-                            y: y, 
+                        const block = d.getBlock({
+                            x: x,
+                            y: y,
                             z: z,
                         })
                         if (block) blocks.push(block)
                     } catch {
-                        
+
                     }
                 }
             }
@@ -1282,5 +1282,64 @@ export class mcl {
         ) {
             return true
         } else return false
+    }
+
+    /**
+     * @param {Dimension} dimen 
+     * @param {{x: number, y: number, z: number}} loc 
+     */
+    static getNearestPlayer(dimen, loc) {
+        const players = world.getAllPlayers()
+        let distances = players.map(player => ({
+            player,
+            distance: mcl.distance(player.location, loc)
+        }))
+
+        distances.sort((a, b) => a.distance - b.distance)
+
+        return distances.map(pd => pd.player)[0]
+    }
+
+    /**If 'check' is inside an area (loc1 and loc2), returns true
+     * @param {{x: number, z: number}} check 
+     * @param {{x: number, z: number}} loc1 
+     * @param {{x: number, z: number}} loc2 
+     */
+    static locationInside(check, loc1, loc2) {
+        const minX = Math.min(loc1?.x, loc2?.x)
+        const maxX = Math.max(loc1?.x, loc2?.x)
+        const minZ = Math.min(loc1?.z, loc2?.z)
+        const maxZ = Math.max(loc1?.z, loc2?.z)
+
+        if (check.x >= minX && check.x <= maxX && check.z >= minZ && check.z <= maxZ) {
+            return true
+        } else return false
+    }
+
+    /**Runs a command without command feedback
+     * @param {Player} player 
+     * @param {string} command 
+     */
+    static pCommand(player, command) {
+        if (world.gameRules.sendCommandFeedback) {
+            world.gameRules.sendCommandFeedback = false
+            player.runCommand(command)
+            world.gameRules.sendCommandFeedback = true
+        } else player.runCommand(command)
+    }
+
+    /**
+     * @param {number} size How many times it should rotate around itself
+     * @param {number} interval How many loops between every callback
+     * @param {number} scale How tight the spiral is, make the number smaller to make it more tight
+     * @param {(x: number, z: number) => {}} callback Code to run
+     */
+    static archimedesSpiral(size, interval, scale, callback) {
+        for (let index = 0; index < 360 * size; index += interval) {
+            const angle = 0.05 * index
+            const x = scale * (1 + angle) * Math.cos(angle)
+            const z = scale * (1 + angle) * Math.sin(angle)
+            callback(x, z)
+        }
     }
 }
