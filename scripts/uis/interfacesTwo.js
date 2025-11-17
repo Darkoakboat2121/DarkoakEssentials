@@ -938,17 +938,20 @@ export function worldProtection(player) {
 
     const data = mcl.jsonWGet('darkoak:worldprotection')
 
-    bui.toggle(f, 'Ban Boats?', data.boats)
-    bui.toggle(f, 'Ban Ender Pearls?', data.pearls)
-    bui.toggle(f, 'Ban Water Buckets?', data.water)
+    bui.toggle(f, 'Ban Boats?', data?.boats)
+    bui.toggle(f, 'Ban Ender Pearls?', data?.pearls)
+    bui.toggle(f, 'Ban Water Buckets?', data?.water)
+    bui.toggle(f, 'Ban Pistons?', data?.pistons)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:worldprotection', {
-            boats: e[0],
-            pearls: e[1],
-            water: e[2]
+            boats: e[i++],
+            pearls: e[i++],
+            water: e[i++],
+            pistons: e[i++],
         })
     }).catch()
 }
@@ -1733,12 +1736,12 @@ export function mobGenAddUI(player) {
             return
         }
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet(`darkoak:mobgen:${mcl.timeUuid()}`, {
-            mob: e[0],
+            mob: e[i++],
             loc: player.location,
-            interval: (e[1] * 60) * 20,
-            current: 0,
-            max: e[2],
+            interval: e[i++],
+            max: e[i++],
             dimension: player.dimension.id,
         })
     }).catch()
@@ -1751,8 +1754,8 @@ export function mobGenRemoveUI(player) {
     const gens = mcl.listGetBoth('darkoak:mobgen:')
     for (let index = 0; index < gens.length; index++) {
         const gen = JSON.parse(gens[index].value)
-        bui.label(f, `Location: ${gen.location}, Dimension: ${gen.dimension}`)
-        bui.label(f, `Mob: ${gen.mob}, Interval: ${gen.interval}, Max Amount: ${gen.max}`)
+        bui.label(f, `Location: ${gen?.loc?.x} ${gen?.loc?.y} ${gen?.loc?.z}, Dimension: ${gen?.dimension}`)
+        bui.label(f, `Mob: ${gen?.mob}, Interval: ${gen?.interval}, Max Amount: ${gen?.max}`)
         bui.button(f, 'Delete?')
         bui.divider(f)
     }
@@ -1773,7 +1776,7 @@ export function mobGenModifyUI(player) {
     const gens = mcl.listGetBoth('darkoak:mobgen:')
     for (let index = 0; index < gens.length; index++) {
         const gen = JSON.parse(gens[index].value)
-        bui.label(f, `Location: ${gen?.location}, Dimension: ${gen?.dimension}`)
+        bui.label(f, `Location: ${gen?.loc?.x} ${gen?.loc?.y} ${gen?.loc?.z}, Dimension: ${gen?.dimension}`)
         bui.label(f, `Mob: ${gen?.mob}, Interval: ${gen?.interval}, Max Amount: ${gen?.max}`)
         bui.button(f, 'Modify?')
         bui.divider(f)
@@ -1814,8 +1817,7 @@ export function mobGenModifyNotPickerUI(player, data) {
         mcl.jsonWSet(data.id, {
             mob: e[0],
             loc: player.location,
-            interval: (e[1] * 60) * 20,
-            current: 0,
+            interval: e[1],
             max: e[2],
             dimension: player.dimension.id,
         })

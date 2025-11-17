@@ -651,14 +651,12 @@ function gens() {
     for (let index = 0; index < mobs.length; index++) {
         const m = JSON.parse(mobs[index].value)
         try {
-            if (m.current == 0) {
-                const spawn = world.getDimension(m.dimension || 'overworld')
-                mcl.jsonWUpdate(mobs[index].id, 'current', m.interval)
-                if (spawn.runCommand(`execute positioned ${m.loc.x} ${m.loc.y} ${m.loc.z} run testfor @e [type=${m.mob},r=10]`).successCount <= m.max) {
-                    spawn.spawnEntity(m.mob, m.loc)
+            if (mcl.tickTimer(((m?.interval || 0.1) * 60) * 20)) {
+                const spawn = world.getDimension(m?.dimension || 'overworld')
+                
+                if (spawn.runCommand(`execute positioned ${m.loc.x} ${m.loc.y} ${m.loc.z} run testfor @e [type=${m.mob},r=10]`).successCount < m.max) {
+                    spawn.spawnEntity(m?.mob, m?.loc)
                 }
-            } else {
-                mcl.jsonWUpdate(mobs[index].id, 'current', m.current - 1)
             }
         } catch (e) {
             mcl.adminMessage(`Failed To Spawn Mob ${m.mob} At ${m.loc.x} ${m.loc.y} ${m.loc.z}`)

@@ -33,6 +33,7 @@ export function chatSystem(evd = undefined, player, message) {
         message: message,
         reference: ''
     }
+    console.log('1')
 
     const commands = mcl.listGetValues('darkoak:command:')
     for (let index = 0; index < commands.length; index++) {
@@ -58,6 +59,7 @@ export function chatSystem(evd = undefined, player, message) {
             }
         }
     }
+    console.log('2')
 
     // chat games
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string}} */
@@ -97,7 +99,10 @@ export function chatSystem(evd = undefined, player, message) {
         return
     }
 
+    console.log('3')
     if (chatPreventives(player, message)) return
+
+    console.log('4')
 
     // auto response
     const res = mcl.listGetValues('darkoak:autoresponse:')
@@ -134,6 +139,8 @@ export function chatSystem(evd = undefined, player, message) {
 
     const text = `${clan}${cr.start}${replacer(player, (ranks.ranks.join(cr.middle) || cr.defaultRank))}${cr.end}§r§f${ranks.namecolors.join('')}%REFER%${chat.name}§r§f${cr.bridge} §r§f${ranks.chatColors.join('')}${chat.message}`
 
+    console.log('5')
+
     if (ocs?.proximity) {
         system.runTimeout(() => {
             if (player.hasTag('darkoak:radio')) {
@@ -162,6 +169,7 @@ export function chatSystem(evd = undefined, player, message) {
     }
 
     lastSender = chat.name
+    console.log('6')
 }
 
 /**

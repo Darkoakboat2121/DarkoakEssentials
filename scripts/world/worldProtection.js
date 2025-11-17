@@ -29,9 +29,22 @@ export function placeBreakProtection(evd) {
         }, area?.p1, area?.p2)) {
             const blocks = mcl.listGetValues('darkoak:gen:')
             for (let ind = 0; ind < blocks.length; ind++) {
-                const b = blocks[ind]
-                console.log('ggg')
-                if (mcl.locationInside({ x: x, z: z }, b.coords, (b?.coords2 || b?.coords))) return
+                const b = JSON.parse(blocks[ind])
+                const parts1 = b?.coords?.split(' ')
+                const coords1 = {
+                    x: parseInt(parts1[0]),
+                    y: parseInt(parts1[1]),
+                    z: parseInt(parts1[2])
+                }
+                const parts2 = b?.coords2?.split(' ')
+                const coords2 = {
+                    x: parseInt(parts2[0]),
+                    y: parseInt(parts2[1]),
+                    z: parseInt(parts2[2])
+                }
+                if (mcl.locationInside({ x: x, z: z }, coords1, (coords2 || coords1))) {
+                    return
+                }
             }
             evd.cancel = true
             evd.player.sendMessage('§cThis Land Is Protected!§r')
@@ -209,6 +222,10 @@ export function worldProtectionOther(player) {
         }
 
         if (d?.pearls && item.typeId === 'minecraft:ender_pearl') {
+            mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
+        }
+
+        if (d?.pistons && item.typeId === 'minecraft:piston' || item.typeId === 'minecraft:sticky_piston') {
             mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
         }
     }

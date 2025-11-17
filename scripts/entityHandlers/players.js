@@ -146,7 +146,7 @@ export function magicItem(evd) {
                 let o = 0
                 mcl.archimedesSpiral(2, 10, 0.35, (x, z) => {
                     o++
-                    if (o > 4) mcl.pCommand(player, `summon evocation_fang ~${x} ~ ~${z}`)
+                    if (o > 7) mcl.pCommand(player, `summon evocation_fang ~${x} ~ ~${z}`)
                 })
                 type = 'Rumble'
                 break
