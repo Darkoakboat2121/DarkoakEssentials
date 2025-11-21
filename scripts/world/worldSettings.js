@@ -1,4 +1,4 @@
-import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent, EntityHitEntityAfterEvent, PlayerPlaceBlockBeforeEvent, PlayerPlaceBlockAfterEvent } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent, EntityHitEntityAfterEvent, PlayerPlaceBlockBeforeEvent, PlayerPlaceBlockAfterEvent, GameMode, ItemComponentTypes } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
@@ -409,5 +409,46 @@ export function cratesOpener(evd) {
         system.runTimeout(() => {
             crateUI(evd.player, evd.block.typeId.split('e')[1])
         })
+    }
+}
+
+/**
+ * @param {PlayerBreakBlockBeforeEvent} evd 
+ */
+export function veinminer(evd) {
+    const d = mcl.jsonWGet('darkoak:veinminer')
+    const block = evd.block
+    const player = evd.player
+    if (player.getGameMode() === GameMode.Creative) return
+    const held = mcl.getHeldItem(player)
+    if (!held) return
+
+    if (d?.trees?.enabled && block.typeId.endsWith('_log') && !block.typeId.startsWith('stripped_') && held.typeId.endsWith('_axe')) {
+        vein((d?.trees?.max || 0))
+    } else if (d?.ores?.enabled && block.typeId.endsWith('_ore') && held.typeId.endsWith('_pickaxe')) {
+        vein((d?.ores?.max || 0))
+    }
+
+    function vein(max) {
+        const visited = new Set()
+        const queue = [block]
+        let am = 0
+
+        while (queue.length > 0 && am < max) {
+            const b = queue.pop()
+            if (!b) continue
+            const loc = b.location
+            const key = `${loc.x},${loc.y},${loc.z}`
+            if (visited.has(key)) continue
+            visited.add(key)
+
+            if (b.typeId === block.typeId) {
+                system.runTimeout(() => {
+                    mcl.pCommand(player, `setblock ${loc.x} ${loc.y} ${loc.z} air destroy`)
+                })
+                am++
+                queue.push(b.above(), b.below(), b.north(), b.south(), b.east(), b.west())
+            }
+        }
     }
 }

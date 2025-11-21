@@ -70,26 +70,20 @@ changelog:
         lifesteal system *
         trading system * (between p to p and p to e)
         censor warning system *
+        dynamic lightning system *
         
-        sitting
-        better clone command /darkoak:clone
-        more options to /attribute
-        more tracking options (breaking blocks, placing blocks, changing the slot, moving)
-        spammer chat game
-        /inventory
-        player data logging, its much more performant than before
-        a dynamic casting magic system
+        
+        veinminer stuff for both trees and ores
+        crates (rewards should be commands) -----still needs work
+
 
         we circle maker /wecircle *
-
-
         spawn protection settings *
         extra ui to community ui, has creatable buttons with commands *
         uis should have references to uis that it came from, allows all uis to have back buttons with only one length *
         hole filler *
         afk timer *
         /boats leaderboard with @a *
-        crates * (rewards should be commands)
         signs+ * (spinning signs, rainbow text, bad apple lol, delays, slideshows)
         kits! *
         owner system *
@@ -97,17 +91,18 @@ changelog:
 
 
     fixed:
-        world protection
-        gens
+        shop
+        mob gens (its for real this time)
+        sidebar bug where it would accept two usages of the score replacer
 
+        lava / water bucket use on world protected areas ***
         anti-velocity *
         owner fix *
         landclaims * (interactions with entities and admin claims)
 
         
     changes:
-        the update interval now updates within the time frame rather than at the interval (more performant)
-        world protected areas dont affect gens
+        
 
         /attribute having a growth / shrinkage instead of instant, it should be togglable *
         more stuff to profiles *
@@ -138,7 +133,6 @@ cosmetics system
 
 for misty:
 crates
-nicks only have references for admins
 nametags have nicks
 player grabbing
 

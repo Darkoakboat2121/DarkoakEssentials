@@ -2081,7 +2081,8 @@ export function otherPlayerSettingsUI(player) {
     bui.button(f, 'Whitelist / Verfication')
     bui.button(f, 'Item Banning')
     bui.button(f, 'Plots')
-    bui.button(f, 'Magic system')
+    bui.button(f, 'Magic System')
+    bui.button(f, 'Veinminer Settings')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2103,6 +2104,9 @@ export function otherPlayerSettingsUI(player) {
                 break
             case 4:
                 magicSettingsUI(player)
+                break
+            case 5:
+                veinminerSettings(player)
                 break
 
         }
@@ -3020,26 +3024,60 @@ export function invSeeUI(player) {
     })
 }
 
+/**
+ * @param {Player} player 
+ * @param {number} num 
+ */
 export function crateUI(player, num) {
     let f = new ActionFormData()
+    /**@type {{rewards: string[], itemtype: string, itemamount: number}} */
     const d = mcl.jsonWGet(`darkoak:crate:${num}`)
     bui.title(f, d?.name || `Crate: ${num}`)
 
-    bui.header(f, d?.rewards || '')
+    bui.label(f, `Rewards: ${d?.rewards.join() || 'None'}`)
 
     bui.button(f, d?.opentext || `§aOpen!§r`)
 
     if (mcl.isDOBAdmin(player)) {
-        bui.button(f, 'settings')
+        bui.button(f, 'Settings')
     }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
+
+        switch (evd.selection) {
+            case 0:
+                let flags = {usemoney: false, useitem: false}
+                if (d?.moneycost) {
+                    if (mcl.getScore(player) < d?.moneycost) {
+                        player.sendMessage(`§cNot Enough Money!§r`)
+                        return
+                    }
+                    flags.usemoney = true
+                }
+                if (d?.itemtype) {
+                    if (mcl.pCommand(player, `testfor @s [hasitem={item=${d?.itemtype},quantity=${d?.itemamount}..}]`) > 0) {
+                        player.sendMessage(`§cNot Enough ${d?.itemtype}!§r`)
+                        return
+                    }
+                    flags.useitem = true
+                }
+
+                if (flags.useitem) mcl.pCommand(player, `clear @s ${d?.itemtype} 0 ${d?.itemamount}`)
+                if (flags.usemoney) mcl.removeScore(player, d?.moneycost)
+
+                const picked = d?.rewards[mcl.ranNumInRange2(0, d?.rewards?.length - 1)]
+                mcl.pCommand(player, picked)
+                break
+            case 1:
+                crateEditUI(player, num)
+                break
+        }
     })
 }
 
 export function crateEditUI(player, num) {
-    let f = new ActionFormData()
+    let f = new ModalFormData()
     const d = mcl.jsonWGet(`darkoak:crate:${num}`)
     bui.title(f, `Edit Crate ${num}`)
 
@@ -3047,10 +3085,14 @@ export function crateEditUI(player, num) {
 
     bui.textField(f, 'Open Text:', 'Example: Open!', d?.opentext) // 1
 
+    bui.textField(f, 'Required Money Amount:', 'Example: 1000', d?.moneycost) // 2
+    bui.textField(f, 'Required Item:', 'Example: minecraft:diamond', d?.itemtype) // 3
+    bui.slider(f, 'Required Item Amount', 0, 64, d?.itemamount, 1) // 4
+
 
     let amountToAdd = 0
     for (let index = 0; index < 10; index++) {
-        bui.textField(f, `Reward ${index + 1}:`, 'Example: give @s 1', d?.rewards[index - 1])
+        bui.textField(f, `Reward ${index + 1}:`, 'Example: give @s 1', d?.rewards[index])
         amountToAdd++
     }
 
@@ -3064,15 +3106,17 @@ export function crateEditUI(player, num) {
 
         let rewards = []
         for (let index = 0; index < amountToAdd; index++) {
-            rewards.push(e[2 + index])
+            rewards.push(e[5 + index])
         }
 
         let i = 0
         mcl.jsonWSet(`darkoak:crate:${num}`, {
             name: e[i++],
             opentext: e[i++],
-            rewards: rewards,
-
+            moneycost: e[i++],
+            itemtype: e[i++],
+            itemamount: e[i++],
+            rewards: rewards.filter(e => e.length > 0),
         })
     })
 }
@@ -3102,6 +3146,12 @@ export function magicSettingsUI(player) {
     bui.divider(f)
 
     bui.divider(f)
+    bui.toggle(f, 'Heal (1166) Enabled?', d?.heal?.enabled)
+    bui.slider(f, 'Heal Size', 1, 10, d?.heal?.size, 1, 'Radius')
+    bui.slider(f, 'Heal Amount', 1, 20, d?.heal?.amount, 1)
+    bui.divider(f)
+
+    bui.divider(f)
     bui.toggle(f, 'Fire Ball (3222) Enabled?', d?.fireball?.enabled)
     bui.slider(f, 'Max Distance', 1, 30, d?.fireball?.distance, 1)
     bui.slider(f, 'Flame Time', 1, 20, d?.fireball?.time, 1)
@@ -3116,6 +3166,12 @@ export function magicSettingsUI(player) {
     bui.divider(f)
     bui.toggle(f, 'Earthquake (4411) Enabled?', d?.earthquake?.enabled)
     bui.slider(f, 'Earthquake Length', 1, 10, d?.earthquake?.length, 1)
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.toggle(f, 'Sneak (5552) Enabled?', d?.sneak?.enabled)
+    bui.slider(f, 'Sneak Duration In Seconds', 1, 30, d?.sneak?.time, 1)
+    bui.toggle(f, 'Show Particles?', d?.sneak?.particles)
     bui.divider(f)
 
 
@@ -3143,6 +3199,11 @@ export function magicSettingsUI(player) {
                 enabled: e[i++],
                 height: e[i++],
             },
+            heal: {
+                enabled: e[i++],
+                size: e[i++],
+                amount: e[i++],
+            },
             fireball: {
                 enabled: e[i++],
                 distance: e[i++],
@@ -3156,6 +3217,45 @@ export function magicSettingsUI(player) {
             earthquake: {
                 enabled: e[i++],
                 length: e[i++],
+            },
+            sneak: {
+                enabled: e[i++],
+                time: e[i++],
+                particles: e[i++],
+            },
+        })
+    })
+}
+
+export function veinminerSettings(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Veinminer Settings')
+
+    const d = mcl.jsonWGet('darkoak:veinminer')
+
+    bui.toggle(f, 'Tree Capitator Enabled?', d?.trees?.enabled)
+    bui.slider(f, 'Max Amount', 1, 32, d?.trees?.max)
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Ore Veinminer Enabled?', d?.ores?.enabled)
+    bui.slider(f, 'Max Amount', 1, 32, d?.ores?.max)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            otherPlayerSettingsUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        let i = 0
+        mcl.jsonWSet('darkoak:veinminer', {
+            trees: {
+                enabled: e[i++],
+                max: e[i++],
+            },
+            ores: {
+                enabled: e[i++],
+                max: e[i++],
             }
         })
     })

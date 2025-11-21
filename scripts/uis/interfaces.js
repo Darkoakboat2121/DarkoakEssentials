@@ -2445,11 +2445,11 @@ export function shopUI(player) {
         }
         /** @type {{ sell: boolean, item: string, amount: number, price: number }} */
         const parts = JSON.parse(value.at(evd.selection))
-        if (parts.sell === true) {
-            if (!mcl.sell(player, parts.price, parts.item, parts.amount)) player.sendMessage('§cNot Enough To Sell§r')
+        if (parts?.sell) {
+            if (!mcl.sell(player, parseInt(parts?.price), parts?.item, parseInt(parts?.amount))) player.sendMessage('§cNot Enough To Sell§r')
         } else {
-            if (!mcl.buy(player, parts.price, parts.item, parts.amount)) player.sendMessage('§cNot Enough Money§r')
+            if (!mcl.buy(player, parseInt(parts?.price), parts?.item, parseInt(parts?.amount))) player.sendMessage('§cNot Enough Money§r')
         }
     }).catch()
 }
-// 2265 lines in one file
+// 2455 lines in one file

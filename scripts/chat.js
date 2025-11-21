@@ -33,7 +33,6 @@ export function chatSystem(evd = undefined, player, message) {
         message: message,
         reference: ''
     }
-    console.log('1')
 
     const commands = mcl.listGetValues('darkoak:command:')
     for (let index = 0; index < commands.length; index++) {
@@ -59,7 +58,6 @@ export function chatSystem(evd = undefined, player, message) {
             }
         }
     }
-    console.log('2')
 
     // chat games
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string}} */
@@ -99,10 +97,8 @@ export function chatSystem(evd = undefined, player, message) {
         return
     }
 
-    console.log('3')
     if (chatPreventives(player, message)) return
 
-    console.log('4')
 
     // auto response
     const res = mcl.listGetValues('darkoak:autoresponse:')
@@ -139,7 +135,6 @@ export function chatSystem(evd = undefined, player, message) {
 
     const text = `${clan}${cr.start}${replacer(player, (ranks.ranks.join(cr.middle) || cr.defaultRank))}${cr.end}§r§f${ranks.namecolors.join('')}%REFER%${chat.name}§r§f${cr.bridge} §r§f${ranks.chatColors.join('')}${chat.message}`
 
-    console.log('5')
 
     if (ocs?.proximity) {
         system.runTimeout(() => {
@@ -169,7 +164,6 @@ export function chatSystem(evd = undefined, player, message) {
     }
 
     lastSender = chat.name
-    console.log('6')
 }
 
 /**
@@ -351,7 +345,7 @@ export function nametag(p, ocs, d) {
     let lines = [p.name]
     if (ocs?.nonametags) lines = []
 
-    if (ocs?.healthDisplay) lines.push(`§aHealth: ${mcl.healthValue(p)}§r§f`)
+    if (ocs?.healthDisplay) lines.push(`§aHealth: ${Math.round(mcl.healthValue(p))}§r§f`)
     if (ocs?.nametag) lines.push(mcl.jsonPGet(p, 'darkoak:antispam').message)
     if (ocs?.nametag) lines.push((messageMap.get(p.name) || ''))
     if (ocs?.nametagRanks) lines.push(`${cr.start}${replacer(p, ranks.join(cr.middle))}${cr.end}`)
@@ -446,51 +440,59 @@ export function chatCommand(player, p) {
  * @param {string} message 
  */
 function chatPreventives(player, message) {
-    // mutes
-    if (player.hasTag('darkoak:muted')) return true
-    const canChat = mcl.roleCheck(player)?.chat
-    if (canChat && canChat === false) return true
+    try {
+        // mutes
+        if (player.hasTag('darkoak:muted')) return true
+        const canChat = mcl.roleCheck(player)?.chat
+        if (canChat && canChat === false) return true
 
-    // censoring
-    /**@type {string[]} */
-    let censor = mcl.jsonWGet('darkoak:censor')
-    if (censor && censor.length != 0 && !mcl.isDOBAdmin(player)) {
-        for (let index = 0; index < censor.length; index++) {
-            if (mcl.deleteFormatting(message).toLowerCase().includes(censor[index].toLowerCase())) return true
+        // censoring
+        /**@type {string[]} */
+        let censor = mcl.jsonWGet('darkoak:censor')
+        if (censor && censor.length != 0 && !mcl.isDOBAdmin(player)) {
+            for (let index = 0; index < censor.length; index++) {
+                if (mcl.deleteFormatting(message).toLowerCase().includes(censor[index].toLowerCase())) return true
+            }
         }
-    }
 
-    const d = mcl.jsonWGet('darkoak:anticheat')
+        const d = mcl.jsonWGet('darkoak:anticheat')
 
-    // anti spam
-    if (d?.antispam) {
-        const trimmed = message.trim()
-        if ((messageMap.get(player.name) || '') === trimmed && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return true
-        if (
-            trimmed.includes('horion.download') ||
-            trimmed.includes('lumineproxy') ||
-            trimmed.includes('packet.sell.app')
-        ) {
-            log(player, `hack client message`)
-            return true
+        // anti spam
+        if (d?.antispam) {
+            const trimmed = message.trim()
+            if ((messageMap.get(player.name) || '') === trimmed && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return true
+            if (
+                trimmed.includes('horion.download') ||
+                trimmed.includes('lumineproxy') ||
+                trimmed.includes('packet.sell.app')
+            ) {
+                log(player, `hack client message`)
+                return true
+            }
+            if (d?.antispam2) {
+                if (trimmed.split('|')[1]?.trim().length === 8) {
+                    return true
+                }
+            }
         }
-        if (d?.antispam2) {
-            if (trimmed.split('|')[1]?.trim().length === 8) {
+        if (d?.antispamactive) {
+            if (player.isJumping || player.isSprinting) {
+                log(player, `anti-spam-active`)
                 return true
             }
         }
-    }
-    if (d?.antispamactive) {
-        if (player.isJumping || player.isSprinting) {
-            log(player, `anti-spam-active`)
-            return true
-        }
-    }
 
-    // anti crasher 1
-    if (d?.anticrasher1 && (message.includes(crasherSymbol) || message.includes(crasherSymbol2))) return true
+        // anti crasher 1
+        if (d?.anticrasher1 && (message.includes(crasherSymbol) || message.includes(crasherSymbol2))) return true
 
-    messageMap.set(player.name, message.trim())
+        messageMap.set(player.name, message.trim())
+        return false
+    } catch {
+        system.runTimeout(() => {
+            mcl.adminMessage(`Chat Preventatives Failed For: ${player.name}`)
+        })
+        return false
+    }
 }
 
 /**
@@ -561,7 +563,7 @@ function messageModifiers(ocs, chat, player, d) {
 export function messageLog(player, message) {
     /**@type {{name: string, message: string, time: number}[]} */
     let logs2 = mcl.jsonWGet('darkoak:messagelogs:v2') || [{ name: 'Default', message: 'Default', time: Date.now() }]
-    while (logs2.length > 500) {
+    while (logs2.length > 250) {
         logs2.shift()
     }
     if (logs2.length > 0 && logs2[logs2.length - 1].name === player.name) {

@@ -28,6 +28,16 @@ export class mcl {
         return mcl.randomNumber(high) + low
     }
 
+    /**
+     * @param {number} low 
+     * @param {number} high 
+     * @returns 
+     */
+    static ranNumInRange2(low, high) {
+        const ran = Math.floor(Math.random() * (high - low + 1)) + low
+        return ran
+    }
+
     /**Returns a random string based on the inputted length and whether to include numbers
      * @param {boolean} numbers Whether to include numbers in the string, defaults to false
      * @param {number} length 
@@ -589,7 +599,11 @@ export class mcl {
      * @returns {number}
      */
     static getScoreOld(player, objective) {
-        return world.scoreboard.getObjective(objective)?.getScore(player) || 0
+        try {
+            return world.scoreboard.getObjective(objective)?.getScore(player) || 0
+        } catch {
+            return 0
+        }
     }
 
     /**Returns the held item
@@ -889,12 +903,12 @@ export class mcl {
      * @returns {boolean} Whether the player successfully bought the item
      */
     static buy(player, price, result, amount) {
-        if (isNaN(price)) return false
-        if (mcl.getScore(player) < price) return false
+        if (isNaN(price) || isNaN(amount)) return false
 
-        const mscore = mcl.jsonWGet('darkoak:moneyscore')
-        const taxAmount = Math.floor(price * mscore.tax / 100)
-        const total = price + taxAmount
+        const tax = Math.floor(price * ((mcl.jsonWGet('darkoak:moneyscore')?.tax || 0) / 100))
+        const total = price + tax
+
+        if (mcl.getScore(player) < total) return false
         mcl.removeScore(player, total)
         player.runCommand(`give @s ${result} ${amount}`)
         return true
@@ -913,9 +927,10 @@ export class mcl {
         if (isNaN(price) || isNaN(amount)) return false
         if (player.runCommand(`testfor @s [hasitem={item=${itemToSell},quantity=${amount}..}]`).successCount == 0) return false
 
-        const mscore = mcl.jsonWGet('darkoak:moneyscore')
-        player.runCommand(`clear @s ${itemToSell} ${amount}`)
-        mcl.addScore(player, Math.floor(price * (1 - mscore.tax / 100)))
+        const t = (mcl.jsonWGet('darkoak:moneyscore')?.tax || 0) / 100
+        const tax = Math.floor(price * (t || 1))
+        player.runCommand(`clear @s ${itemToSell} 0 ${amount}`)
+        mcl.addScore(player, tax)
 
         if (returnItem) player.runCommand(`give @s ${returnItem} ${returnAmount}`)
         return true
@@ -1032,8 +1047,9 @@ export class mcl {
      * @param {{x: number, y: number, z: number}} loc1 
      * @param {{x: number, y: number, z: number}} loc2 
      * @param {number} [amount=1] Amount of space (in blocks) between particles, defaults to 1
+     * @param {undefined | Player} [player=undefined] If defined, only shows the particles to that player
      */
-    static particleOutline(loc1, loc2, particle = 'minecraft:endrod', amount = 1, dimension = 'overworld') {
+    static particleOutline(loc1, loc2, particle = 'minecraft:endrod', amount = 1, dimension = 'overworld', player = undefined) {
         if (system.currentTick % 10 != 0) return
 
         const minX = Math.min(loc1.x, loc2.x) - 0.5
@@ -1042,7 +1058,7 @@ export class mcl {
         const maxY = Math.max(loc1.y, loc2.y) + 0.5
         const minZ = Math.min(loc1.z, loc2.z) - 0.5
         const maxZ = Math.max(loc1.z, loc2.z) + 0.5
-        const dimen = world.getDimension(dimension)
+        const dimen = world.getDimension(dimension || player.dimension.id)
 
         const seen = new Set()
 
@@ -1051,7 +1067,9 @@ export class mcl {
             if (seen.has(key)) return
             seen.add(key)
             try {
-                dimen.spawnParticle(particle, { x: x + 0.5, y: y + 0.5, z: z + 0.5 })
+                if (player) {
+                    player.spawnParticle(particle, { x: x + 0.5, y: y + 0.5, z: z + 0.5 })
+                } else dimen.spawnParticle(particle, { x: x + 0.5, y: y + 0.5, z: z + 0.5 })
             } catch {
 
             }
@@ -1108,6 +1126,7 @@ export class mcl {
      * @param {number} ticks 
      */
     static tickTimer(ticks) {
+        if (ticks === 0) return true
         return (system.currentTick % ticks == 0)
     }
 
@@ -1323,9 +1342,10 @@ export class mcl {
     static pCommand(player, command) {
         if (world.gameRules.sendCommandFeedback) {
             world.gameRules.sendCommandFeedback = false
-            player.runCommand(command)
+            let r = player.runCommand(command).successCount
             world.gameRules.sendCommandFeedback = true
-        } else player.runCommand(command)
+            return r
+        } else return player.runCommand(command).successCount
     }
 
     /**

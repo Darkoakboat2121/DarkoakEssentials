@@ -601,7 +601,7 @@ export function log(player, message) {
 
     /**@type {{name: string, message: string, time: number}[]} */
     let logs = mcl.jsonWGet('darkoak:anticheatlogs:v2') || [{name: 'Default', message: 'Default', time: Date.now()}]
-    while (logs.length > 500) {
+    while (logs.length > 250) {
         logs.shift()
     }
     let name = player?.name || player?.nameTag || 'EMPTY'

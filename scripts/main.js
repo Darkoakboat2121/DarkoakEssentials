@@ -80,7 +80,7 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
 })
 
 world.afterEvents.playerInteractWithBlock.subscribe((evd) => {
-    
+
 })
 
 // chest lock, world interact settings, landclaims, data editor, data editor block
@@ -181,6 +181,7 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
     anticheat.antiNuker(evd)
     worldProtection.lockedChestProtection(evd)
     roles.roleBreak(evd)
+    worldSettings.veinminer(evd)
 
     // system.runTimeout(() => {
     //     system.sendScriptEvent('darkoak:beforeplayerbreakblock', JSON.stringify({
@@ -651,16 +652,22 @@ function gens() {
     for (let index = 0; index < mobs.length; index++) {
         const m = JSON.parse(mobs[index].value)
         try {
-            if (mcl.tickTimer(((m?.interval || 0.1) * 60) * 20)) {
+            if (mcl.tickTimer(((m?.interval || 0) * 60) * 20)) {
                 const spawn = world.getDimension(m?.dimension || 'overworld')
-                
-                if (spawn.runCommand(`execute positioned ${m.loc.x} ${m.loc.y} ${m.loc.z} run testfor @e [type=${m.mob},r=10]`).successCount < m.max) {
-                    spawn.spawnEntity(m?.mob, m?.loc)
+                const entities = spawn.getEntities({
+                    location: m?.loc,
+                    maxDistance: 10
+                })
+                if (entities.length < parseInt(m?.max)) {
+                    try {
+                        spawn.spawnEntity(m?.mob, m?.loc)
+                    } catch {
+
+                    }
                 }
             }
         } catch (e) {
-            mcl.adminMessage(`Failed To Spawn Mob ${m.mob} At ${m.loc.x} ${m.loc.y} ${m.loc.z}`)
-            console.error(`Error: ${String(e)}`)
+            mcl.adminMessage(`Failed To Spawn Mob ${m?.mob} At ${m?.loc.x} ${m?.loc.y} ${m?.loc.z}`)
         }
     }
 
@@ -809,7 +816,7 @@ function landclaimBorders(players, community) {
                     x: area.p2.x,
                     y: l.y,
                     z: area.p2.z
-                }, undefined, 8.4)
+                }, undefined, 8.4, undefined, player)
             }
         }
     }
@@ -1236,7 +1243,12 @@ function actionBar(player) {
 
     /**@type {{lines: [string, string, string]}} */
     const text2 = mcl.jsonWGet('darkoak:sidebar')
-    if (text2 && text2.lines.join('').length > 0) player.runCommand(`titleraw @s title {"rawtext":[{"text":"${arrays.replacer(player, text2.lines.join('\n').trim())}"}]}`)
+    let tts = []
+    for (let index = 0; index < text2.lines.length; index++) {
+        const t = text2.lines[index]
+        if (t.trim()) tts.push(arrays.replacer(player, t.trim()))
+    }
+    if (text2 && text2.lines.join('').length > 0) player.runCommand(`titleraw @s title {"rawtext":[{"text":"${tts.join('\n')}"}]}`)
 
     if (mcl.tickTimer(text?.ticks)) {
         act++
@@ -1926,7 +1938,7 @@ function customSlashCommands(evd) {
             player.sendMessage('§cNicknames Are Disabled§r')
             return
         }
-        
+
         system.runTimeout(() => {
             switch (nicktypes) {
                 case 'reset':
@@ -1934,9 +1946,12 @@ function customSlashCommands(evd) {
                     mcl.pRemove(player, 'darkoak:nickname')
                     break
                 case 'set':
-                    player.sendMessage(`§aNickname Set To §r§f${nickname || ''}`)
+                    /**@type {string} */
+                    let nick = nickname
+                    if (nick.includes(arrays.crasherSymbol) || nick.includes(arrays.crasherSymbol2) || nick.includes('§k')) return
+                    player.sendMessage(`§aNickname Set To §r§f${nick || ''}`)
                     mcl.jsonPSet(player, 'darkoak:nickname', {
-                        nick: nickname.substring(0, 20) || ''
+                        nick: nick.substring(0, 20).replaceAll(arrays.crasherSymbol, '#').trim() || ''
                     })
                     break
                 case 'toggle':
@@ -2005,6 +2020,16 @@ function customSlashCommands(evd) {
                             return
                         }
                     }
+                    let places2 = mcl.listGetValues('darkoak:protection:')
+                    for (let index = 0; index < places2.length; index++) {
+                        const area = JSON.parse(places2[index])
+                        if (area.p1 && area.p2 && chat.landclaimCheck(newClaim, area)) {
+                            player.sendMessage(`§cThis Land Is Protected lol§r`)
+                            return
+                        }
+                    }
+
+
                     if (landclaimtype === 'empty') {
                         const INVALID_NAME = 'INVALIDINVALIDINVALIDINVALIDINVALIDINVALIDINVALIDINVALID'
                         if (!mcl.isDOBAdmin(player)) {

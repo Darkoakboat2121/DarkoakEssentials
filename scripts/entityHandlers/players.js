@@ -14,7 +14,7 @@ export function sitCheck(player) {
             const ls = s.location
             mcl.getNearestPlayer(s.dimension, ls).teleport({
                 x: ls.x,
-                y: ls.y + 0.2,
+                y: ls.y + 0.3,
                 z: ls.z,
             })
             s.remove()
@@ -102,6 +102,12 @@ export function magicItem(evd) {
                 }, 5)
                 type = 'Fire Wave'
                 break
+            case '1166':
+                if (d?.heal?.enabled) {
+                    mcl.pCommand(player, `effect @a [r=${d?.heal?.size || 5}] regeneration 0 ${d?.heal?.amount || 10}`)
+                    type = 'Heal'
+                }
+                break
             case '2222':
                 mcl.knockback(player, vd.x * 2, vd.z * 2, vd.y)
                 type = 'Dash'
@@ -149,6 +155,15 @@ export function magicItem(evd) {
                     if (o > 7) mcl.pCommand(player, `summon evocation_fang ~${x} ~ ~${z}`)
                 })
                 type = 'Rumble'
+                break
+            case '5552':
+                if (d?.sneak?.enabled) {
+                    player.addEffect('invisibility', ((d?.sneak?.time || 5) * 20), {
+                        amplifier: 1,
+                        showParticles: (d?.sneak?.particles || false)
+                    })
+                    type = 'Sneak'
+                }
                 break
             case '5556':
                 player.dimension.createExplosion({
