@@ -51,14 +51,10 @@ Plots are similar but build structures in a co-ord space. This will get a tutori
 <b>f</b>
 changelog:
     added:
-        save/load inventory commands *? (methods: structure saving with: [chests, entities])
         leveling system *?
-
 
         trivia chat game ***
         animated action forms ***
-
-        more feature toggles **
 
         arrow border killer *
         plots *
@@ -69,14 +65,30 @@ changelog:
         more punishments (make them like trolling) *
         lifesteal system *
         trading system * (between p to p and p to e)
-        censor warning system *
-        dynamic lightning system *
+        dynamic lighting system *
+        anti combat log system *
+        lag clear system *
+        personal settings command (to disable sitting, tpa, other optional stuff) *
+        anti-invis-skins module *
+        thrices math idea *
         
         
-        veinminer stuff for both trees and ores
+        summonable fireballs (cant remember if this was added before this update)
+        /darkoak:dobsummon (/summon but better)
+        anti chat crasher
         crates (rewards should be commands) -----still needs work
+        /me is disabled automatically to help fight against lumine hackers and the chat screen no longer has a max amount of messages
+        many new items to the illegal item giver ui (slates!)
+        hit & kill tracking
+        quick chat buttons
+        /wesphere
+        customizibility option, large or normal ui sizes
+        custom combat system
+        a new spell (figure out what it is)
 
 
+        rideable attribute *
+        dev tools: emulated packet reading, error messages *
         we circle maker /wecircle *
         spawn protection settings *
         extra ui to community ui, has creatable buttons with commands *
@@ -91,10 +103,14 @@ changelog:
 
 
     fixed:
-        shop
-        mob gens (its for real this time)
-        sidebar bug where it would accept two usages of the score replacer
+        nicknames interactions with namecolors
+        random data issue
+        world border
+        sidebar fading issue
+        variables
+        some anticheat unreliablity *
 
+        sitting and wind charges *
         lava / water bucket use on world protected areas ***
         anti-velocity *
         owner fix *
@@ -102,8 +118,15 @@ changelog:
 
         
     changes:
-        
+        clear chat has no scroll now
+        /inventory now saves the armor and offhand slots
+        the world protected areas now have additional options
+        the ban, prebans, and whitelist systems have been reworked
+        chat commands now have dynamic replacements for commands, type: !test @s 1, command: tp $1$ $2$ $2$ $2$
+        /darkoak:dobclone is now more performant
+        the replacer system has been completely reworked
 
+        /wepaste should have axis rotation *
         /attribute having a growth / shrinkage instead of instant, it should be togglable *
         more stuff to profiles *
 
@@ -124,6 +147,26 @@ IDEA NOTE: for things that constantly get data, delay each by 20 ticks for retri
 
 IDEA NOTE: "minecraft:entity_created" listen for this event, might use component system idk, datadrivenentitytrigger?
 
+IDEA NOTE: using the message limit json and the message filter json, you can spam 100 messages of a string to clear chat
+
+BOT PROBLEM:
+i have an idea
+i should make a chat verification render system
+basically, for a chat message to show, it must contain an invisible key, then i can make custom messages for vanilla actions, so messages like beds still show
+that'll make it so mutes can work for any chat type, regardless of origin
+and for the actual user bots, i have a good idea for those as well, i should try .remove() on them, which doesnt work on players (confirmed on thrices that fakeplayers can bypass player amount limits)
+BOT INFO: 
+    uses type 0 auth, minimal auth type
+    the bots have no name or nametag properties
+    "/join" dc command just joins the player
+    What you can check server‑side:
+        Xbox Live token validity
+        Minecraft access token validity
+        Profile signature validity
+        Skin/cape signature validity
+        UUID ↔ token binding
+
+
 IDEAS:
 clean up option
 announcement system
@@ -133,7 +176,6 @@ cosmetics system
 
 for misty:
 crates
-nametags have nicks
 player grabbing
 
 i do have some ideas to improve them though:

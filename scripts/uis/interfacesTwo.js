@@ -1,4 +1,4 @@
-import { world, system, Player, Entity, ItemStack, Block, ItemTypes } from "@minecraft/server"
+import { world, system, Player, Entity, ItemStack, Block, ItemTypes, ItemComponentTypes } from "@minecraft/server"
 import { ActionFormData, MessageFormData, ModalFormData, uiManager, UIManager } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
@@ -7,6 +7,7 @@ import { hashtags, preBannedList, icons, compress, decompress, replacer, crasher
 import { bui } from "./baseplateUI"
 import * as modal from "./modalUI"
 import { chatSystem } from "../chat"
+import { crashSet } from "../entityHandlers/players"
 
 
 /**UI for data editor item
@@ -565,6 +566,7 @@ export function anticheatSettings(player) {
 
     bui.toggle(f, 'Anti-Invalid 4', d?.antiinvalid4)
     bui.label(f, 'Checks If Certain Values Like A Hotbar Slot Are Above Or Below Normal Limits. Only Logs Certain Things And Attempts To Set To Normal')
+    bui.toggle(f, 'Kick On Specific Detections?', d?.antiinvalid4kick, 'Only Kicks If The Players Render Distance Is 0')
 
     bui.divider(f)
 
@@ -628,7 +630,17 @@ export function anticheatSettings(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Anti-ZD', d?.antizd)
-    bui.label(f, 'Checks If A Player Is Joining Without A Name And Kicks Them')
+    bui.label(f, 'Prevents Known Bots From Joining The Game')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Invis-Skins', d?.antiinvisskins)
+    bui.label(f, 'Checks If A Players Skin Is Invisible')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Bot', d?.antibot)
+    bui.label(f, 'Checks If A Player Is Deletable. Normally Players CANNOT Be Deleted, Bots CAN Be Deleted')
 
     bui.divider(f)
 
@@ -677,6 +689,7 @@ export function anticheatSettings(player) {
             antistreamermode: e[i++],
             anticrasher2: e[i++],
             antiinvalid4: e[i++],
+            antiinvalid4kick: e[i++],
             antispamactive: e[i++],
             antiphase: e[i++],
             antiphasesense: e[i++],
@@ -691,6 +704,8 @@ export function anticheatSettings(player) {
             antiairjump: e[i++],
             antifly4: e[i++],
             antizd: e[i++],
+            antiinvisskins: e[i++],
+            antibot: e[i++],
         })
     }).catch()
 }
@@ -913,18 +928,23 @@ export function protectedAreasMain(player) {
 
     bui.button(f, 'World Protection')
     bui.button(f, 'Add New Area')
+    bui.button(f, 'Modify An Area')
     bui.button(f, 'Remove An Area')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
+        let i = 0
         switch (evd.selection) {
-            case 0:
+            case i++:
                 worldProtection(player)
                 break
-            case 1:
+            case i++:
                 protectedAreasAddUI(player)
                 break
-            case 2:
+            case i++:
+                protectedAreasModifyUI(player)
+                break
+            case i++:
                 protectedAreasRemoveUI(player)
                 break
         }
@@ -956,29 +976,73 @@ export function worldProtection(player) {
     }).catch()
 }
 
+export function protectedAreasModifyUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Protected Area Picker')
+
+    const both = mcl.listGetBoth('darkoak:protection:')
+
+    if (both === undefined || both.length === 0) {
+        player.sendMessage('§cNo Protected Areas Found§r')
+        return
+    }
+
+    for (let index = 0; index < both.length; index++) {
+        const p = JSON.parse(both[index].value)
+        bui.button(f, `${p.p1.x} ${p.p1.z} to ${p.p2.x} ${p.p2.z}`)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            protectedAreasMain(player)
+            return
+        }
+        protectedAreasAddUI(player, both[evd.selection])
+    })
+}
+
 /**
  * @param {Player} player 
  */
-export function protectedAreasAddUI(player) {
+export function protectedAreasAddUI(player, both) {
     let f = new ModalFormData()
-    bui.title(f, 'Add Protected Area')
-    const loc = player.location
+    bui.title(f, 'Add / Modify Protected Area')
 
-    bui.textField(f, '\n(x z)\nCoordinates 1:', 'Example: 0 0')
-    bui.textField(f, '\n(x z)\nCoordinates 2:', 'Example: 10 20', `${loc.x.toFixed(0)} ${loc.z.toFixed(0)}`)
+    const loc = player.location
+    let d = undefined
+    if (both?.value) d = JSON.parse(both?.value)
+    let auto = `${d?.p2?.x || ''} ${d?.p2?.z || ''}`
+    if (auto.trim().length == 0) auto = `${loc.x.toFixed(0)} ${loc.z.toFixed(0)}`
+
+    bui.textField(f, '\n(x z)\nCoordinates 1:', 'Example: 0 0', `${d?.p1?.x || ''} ${d?.p1?.z || ''}`)
+    bui.textField(f, '\n(x z)\nCoordinates 2:', 'Example: 10 20', auto, 'This Is Autofilled With Your Current Location If You Aren\'t Modifying It')
+    
+    bui.toggle(f, 'Players Can Break Blocks?', d?.break)
+    bui.toggle(f, 'Ignore Breaking Rule if Above Allow?', d?.breakallow)
+    bui.toggle(f, 'Players Can Build Blocks?', d?.build)
+    bui.toggle(f, 'Ignore Building Rule if Above Allow?', d?.buildallow)
+    bui.toggle(f, 'Players Can Interact With Blocks?', d?.interactblocks)
+    bui.toggle(f, 'Ignore Interaction Rule if Above Allow?', d?.interactblocksallow)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
 
         const e = bui.formValues(evd)
-        const coords1 = e[0].trim().split(' ')
-        const coords2 = e[1].trim().split(' ')
+        let i = 0
+        const coords1 = e[i++].trim().split(' ')
+        const coords2 = e[i++].trim().split(' ')
 
-        const pa = {
+        const id = both?.id || `darkoak:protection:${mcl.timeUuid()}`
+        mcl.jsonWSet(id, {
             p1: { x: coords1[0], z: coords1[1] },
-            p2: { x: coords2[0], z: coords2[1] }
-        }
-        mcl.jsonWSet(`darkoak:protection:${mcl.timeUuid()}`, pa)
+            p2: { x: coords2[0], z: coords2[1] },
+            break: e[i++],
+            breakallow: e[i++],
+            build: e[i++],
+            buildallow: e[i++],
+            interactblocks: e[i++],
+            interactblocksallow: e[i++],
+        })
     }).catch()
 }
 
@@ -1432,6 +1496,8 @@ export function scriptSettings(player) {
     bui.divider(f)
     bui.header(f, 'Customization')
 
+    bui.toggle(f, 'Normal Size UI?', d?.normalsize)
+
     const cc = colorCodes.map(e => e + 'Example')
     bui.dropdown(f, 'Label Color:', cc, SSColorIndex(d?.labelcolor))
     bui.dropdown(f, 'Body Color:', cc, SSColorIndex(d?.bodycolor))
@@ -1466,6 +1532,8 @@ export function scriptSettings(player) {
             trackingmaster: e[i++], // working
             cuimaster: e[i++], // idk
             actionbarmaster: e[i++], // idk
+
+            normalsize: e[i++],
 
             labelcolor: colorCodes[e[i++]], // working
             bodycolor: colorCodes[e[i++]], // working
@@ -2060,16 +2128,7 @@ export function crashPlayerUI(player) {
             mcl.adminMessage(`${player.name} Attempted To Crash Admin: ${p.name}`)
             return
         }
-        let o = true
-        // while (o) {
-        //     if (mcl.tickTimer(3)) {
-        //         try {
-        //             p.sendMessage(`§a§k ${mcl.timeUuid()}`)
-        //         } catch {
-        //             o = false
-        //         }
-        //     }
-        // }
+        crashSet.add(p.name)
     })
 }
 
@@ -2080,9 +2139,9 @@ export function otherPlayerSettingsUI(player) {
     bui.button(f, 'Bounty Settings')
     bui.button(f, 'Whitelist / Verfication')
     bui.button(f, 'Item Banning')
-    bui.button(f, 'Plots')
     bui.button(f, 'Magic System')
     bui.button(f, 'Veinminer Settings')
+    bui.button(f, 'Custom Combat System')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2100,15 +2159,14 @@ export function otherPlayerSettingsUI(player) {
                 itemBanningUI(player)
                 break
             case 3:
-                plotSettingsUI(player)
-                break
-            case 4:
                 magicSettingsUI(player)
                 break
-            case 5:
+            case 4:
                 veinminerSettings(player)
                 break
-
+            case 5:
+                customCombatSettingsUI(player)
+                break
         }
     })
 }
@@ -2583,7 +2641,11 @@ export function itemGiverUI(player) {
     bui.title(f, 'Item Giver')
 
     bui.button(f, 'End Gateway')
-    bui.button(f, '')
+    bui.button(f, 'Slate')
+    bui.button(f, 'Camera')
+    bui.button(f, 'Stonecutter')
+    bui.button(f, 'Glowing Obsidian')
+    bui.button(f, 'Nether Reactor')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2598,12 +2660,29 @@ export function itemGiverUI(player) {
                 name = 'End Gateway'
                 break
             case 1:
-                type = ''
+                type = 'board'
+                name = 'Slate'
+                break
+            case 2:
+                type = 'camera'
+                name = 'Camera'
+                break
+            case 3:
+                type = 'stonecutter'
+                name = 'Stonecutter'
+                break
+            case 4:
+                type = 'glowingobsidian'
+                name = 'Glowing Obsidian'
+                break
+            case 5:
+                type = 'netherreactor'
+                name = 'Nether Reactor'
                 break
         }
         let newItem = new ItemStack('minecraft:' + type, 1)
         newItem.nameTag = '§r' + name
-        player.dimension.spawnItem(newItem, player.location)
+        mcl.getInventory(player)?.container.addItem(newItem)
     })
 }
 
@@ -2977,14 +3056,6 @@ export function removeItemBanUI(player) {
     })
 }
 
-export function plotSettingsUI(player) {
-    let f = new ModalFormData()
-
-    bui.title(f, 'Plot Settings')
-
-    bui.textField(f, '')
-}
-
 /**
  * @param {Player} player 
  */
@@ -3047,7 +3118,7 @@ export function crateUI(player, num) {
 
         switch (evd.selection) {
             case 0:
-                let flags = {usemoney: false, useitem: false}
+                let flags = { usemoney: false, useitem: false }
                 if (d?.moneycost) {
                     if (mcl.getScore(player) < d?.moneycost) {
                         player.sendMessage(`§cNot Enough Money!§r`)
@@ -3146,9 +3217,21 @@ export function magicSettingsUI(player) {
     bui.divider(f)
 
     bui.divider(f)
+    bui.toggle(f, 'Fire Wave (1132) Enabled?', d?.firewave?.enabled)
+    bui.slider(f, 'Fire Wave Size', 1, 10, d?.firewave?.size, 1)
+    bui.divider(f)
+
+    bui.divider(f)
     bui.toggle(f, 'Heal (1166) Enabled?', d?.heal?.enabled)
     bui.slider(f, 'Heal Size', 1, 10, d?.heal?.size, 1, 'Radius')
     bui.slider(f, 'Heal Amount', 1, 20, d?.heal?.amount, 1)
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.toggle(f, 'Domain Expansion (1341) Enabled?', d?.domainexpansion?.enabled)
+    bui.slider(f, 'Domain Size', 4, 15, d?.domainexpansion?.size, 1, 'Radius')
+    bui.textField(f, 'Block Type To Place:', 'Example: minecraft:obsidian', d?.domainexpansion?.type)
+    bui.label(f, 'Places A Sphere Around The Caster And Gives Caster Strength While Giving Others In The Sphere Weakness. The Sphere Disappears After 15 Seconds')
     bui.divider(f)
 
     bui.divider(f)
@@ -3199,10 +3282,19 @@ export function magicSettingsUI(player) {
                 enabled: e[i++],
                 height: e[i++],
             },
+            firewave: {
+                enabled: e[i++],
+                size: e[i++],
+            },
             heal: {
                 enabled: e[i++],
                 size: e[i++],
                 amount: e[i++],
+            },
+            domainexpansion: {
+                enabled: e[i++],
+                size: e[i++],
+                type: e[i++],
             },
             fireball: {
                 enabled: e[i++],
@@ -3257,6 +3349,114 @@ export function veinminerSettings(player) {
                 enabled: e[i++],
                 max: e[i++],
             }
+        })
+    })
+}
+
+export function lagClearSettingsUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Lag Clear System')
+
+    const d = mcl.jsonWGet('darkoak:lagclear')
+
+    bui.toggle(f, 'Enabled?', d?.enabled)
+
+    bui.toggle(f, 'Item Stacking Enabled?', d?.stackingenabled)
+
+    bui.toggle(f, 'Item Chest Packaging Enabled?', d?.chestenabled)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            interfaces.worldSettingsUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        let i = 0
+        mcl.jsonWSet('darkoak:lagclear', {
+            enabled: e[i++],
+            stackingenabled: e[i++],
+            chestenabled: e[i++],
+        })
+    })
+}
+
+export function plotSettingsUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Plot Settings')
+
+    const d = mcl.jsonWGet('darkoak:plotsettings')
+
+    bui.toggle(f, 'Enabled?', d?.enabled)
+    bui.textField(f, 'Start Coords:', 'Example: 100 0 0', d?.start)
+    bui.dropdown(f, 'Direction:', ['X+', 'X-', 'Z+', 'Z-'], d?.direction)
+    bui.slider(f, 'Size Of Plot', 4, 28, d?.size, 4)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        const e = bui.formValues(evd)
+        let i = 0
+        mcl.jsonWSet('darkoak:plotsettings', {
+            enabled: e[i++],
+            start: e[i++],
+            direction: e[i++],
+            size: e[i++],
+        })
+    })
+}
+
+export function plotPlayersUI(player) {
+    
+}
+
+export function debugLog(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Debug Log')
+
+    /**@type {{title: string, message: string, time: number}[]} */
+    const d = mcl.jsonWGet('darkoak:debuglog')
+    for (let index = 0; index < d.length; index++) {
+        const l = d[index]
+        const td = mcl.timeDifference(l.time)
+        bui.label(f, `${l?.title}\n${l?.message}\n${td.hours}:${td.minutes}:${td.seconds} Ago`)
+        bui.divider(f)
+    }
+
+    bui.button(f, 'Dismiss')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+    })
+}
+
+export function customCombatSettingsUI(player, errorMessage = '') {
+    let f = new ModalFormData()
+    bui.title(f, 'Custom Combat Settings')
+
+    const d = mcl.jsonWGet('darkoak:customcombat')
+
+    bui.label(f, errorMessage)
+    bui.toggle(f, 'Enabled?', d?.enabled)
+    bui.textField(f, 'Delay Inbetween Strikes:', 'Example: 1.5', d?.delay, 'In Seconds. Use 0 For No Delay')
+    bui.textField(f, 'Max Damage In A Strike:', 'Example: 10', d?.maxdamage, 'Use 0 For No Max, Or Just A Massive Number')
+    bui.toggle(f, 'Use Custom Knockback?', d?.customknockback)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            otherPlayerSettingsUI(player)
+            return
+        }
+        let i = 0
+        let e = bui.formValues(evd)
+        if (isNaN(e[1])) {
+            customCombatSettingsUI(player, `§cDelay Was Invalid§r`)
+            return
+        }
+        mcl.jsonWSet('darkoak:customcombat', {
+            enabled: e[i++],
+            delay: e[i++],
+            maxdamage: e[i++],
         })
     })
 }
@@ -3330,6 +3530,15 @@ But let's be real, most of the time I'm just throwing my keyboard across the roo
 Update: I wrote this from the very foundation of the code that is right I am the code now I am one with the code jk but it is funny that I got here now how do I leave the real question! hahaha
 - Wertwert3612
 `)
+
+    bui.show(f, player)
+}
+
+export function mistyBio(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Afro Misty')
+
+    bui.label(f, `Hi im misty, i helped dark with ideas and beta testing for the lumine anti bot system, and with custom gamertags in game! If you ever see me in game, i do have a pretty cool afro. ^-^`)
 
     bui.show(f, player)
 }

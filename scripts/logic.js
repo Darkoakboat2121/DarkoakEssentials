@@ -1,4 +1,4 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel, CustomCommandOrigin } from "@minecraft/server"
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel, CustomCommandOrigin, EquipmentSlot } from "@minecraft/server"
 import { transferPlayer } from "@minecraft/server-admin"
 import { cd } from "./data/defaults"
 import { specialRanks } from "./data/arrays"
@@ -36,6 +36,23 @@ export class mcl {
     static ranNumInRange2(low, high) {
         const ran = Math.floor(Math.random() * (high - low + 1)) + low
         return ran
+    }
+
+    /**
+     * @param {number} low 
+     * @param {number} high 
+     * @returns 
+     */
+    static xorRandomNum(low, high) {
+        let seed = Date.now()
+        let state = seed >>> 0
+
+        state ^= state << 13
+        state ^= state >>> 17
+        state ^= state << 5
+
+        const range = high - low + 1
+        return (state >>> 0) % range + low
     }
 
     /**Returns a random string based on the inputted length and whether to include numbers
@@ -331,7 +348,7 @@ export class mcl {
     /**
      * @param {string} name
      */
-    static getPlayer(name) {
+    static getPlayer(name = undefined) {
         const player = world.getPlayers({ name: name })
         if (player.length != 0) {
             return player[0]
@@ -450,7 +467,7 @@ export class mcl {
 
         let u = []
         for (let index = 0; index < players.length; index++) {
-            u.push(players[index].name)
+            u.push(players[index]?.name || 'EMPTY')
         }
         return u
     }
@@ -578,15 +595,17 @@ export class mcl {
     /**Sends a private message to admins
      * @param {string} message 
      */
-    static adminMessage(message) {
+    static adminMessage(message, prefix = true) {
         const players = world.getPlayers({ tags: ['darkoak:admin'] })
+        let pf = ''
+        if (prefix) pf = '§cAdmin Message:§r§f '
         for (let index = 0; index < players.length; index++) {
-            players[index].sendMessage(`§cAdmin Message:§r§f ${message}`)
+            players[index].sendMessage(`${pf}${message}`)
         }
     }
 
     /**Returns the players health
-     * @param {Player} player 
+     * @param {Entity} player 
      * @returns {number}
      */
     static healthValue(player) {
@@ -611,7 +630,7 @@ export class mcl {
      * @returns {ItemStack | undefined}
      */
     static getHeldItem(player) {
-        return player.getComponent(EntityComponentTypes.Inventory).container.getItem(player.selectedSlotIndex)
+        return player.getComponent(EntityComponentTypes.Inventory)?.container?.getItem(player.selectedSlotIndex)
     }
 
     /**Advanced container inventory
@@ -627,6 +646,32 @@ export class mcl {
      */
     static getInventory(player) {
         return player.getComponent(EntityComponentTypes.Inventory)
+    }
+
+    /**
+     * @param {Player} player 
+     */
+    static getEquipmentArray(player) {
+        const eq = player.getComponent(EntityComponentTypes.Equippable)
+        if (!eq) return []
+        const slots = [EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet, EquipmentSlot.Offhand]
+        let result = []
+        for (let index = 0; index < slots.length; index++) {
+            result.push(eq.getEquipment(slots[index]))
+        }
+        return result
+    }
+
+    /**
+     * @param {Player} player 
+     * @param {(ItemStack | undefined)[]} equipment 
+     */
+    static setEquipment(player, equipment) {
+        const eq = player.getComponent(EntityComponentTypes.Equippable)
+        const slots = [EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet, EquipmentSlot.Offhand]
+        for (let index = 0; index < slots.length; index++) {
+            eq.setEquipment(slots[index], equipment[index])
+        }
     }
 
     /**WIP
@@ -829,8 +874,8 @@ export class mcl {
         return u
     }
 
-    /**Stops a players movements
-     * @param {Player} player 
+    /**Stops an entities movements
+     * @param {Entity} player 
      */
     static stopPlayer(player) {
         const v = player.getVelocity()
@@ -859,7 +904,9 @@ export class mcl {
     static addLore(item, container, lore) {
         let newItem = new ItemStack(item.type, item.amount)
         newItem = item
-        newItem.setLore(lore)
+        let ogLore = item.getLore()
+        ogLore.push(lore)
+        newItem.setLore(ogLore)
         container.setItem(container.find(item), newItem)
     }
 
@@ -941,32 +988,34 @@ export class mcl {
      */
     static playerToData(player) {
         return {
-            clientSystemInfo: player.clientSystemInfo,
+            clientSystemInfo: player?.clientSystemInfo,
             dimension: {
-                heightRange: player.dimension.heightRange,
-                id: player.dimension.id
+                heightRange: player?.dimension.heightRange,
+                id: player?.dimension.id
             },
-            xpEarnedAtCurrentLevel: player.xpEarnedAtCurrentLevel,
-            graphicsMode: player.graphicsMode,
-            id: player.id,
+            xpEarnedAtCurrentLevel: player?.xpEarnedAtCurrentLevel,
+            graphicsMode: player?.graphicsMode,
+            id: player?.id,
             inputInfo: {
-                getMovementVector: player.inputInfo.getMovementVector(),
-                lastInputModeUsed: player.inputInfo.lastInputModeUsed,
-                touchOnlyAffectsHotbar: player.inputInfo.touchOnlyAffectsHotbar
+                getMovementVector: player?.inputInfo.getMovementVector(),
+                lastInputModeUsed: player?.inputInfo.lastInputModeUsed,
+                touchOnlyAffectsHotbar: player?.inputInfo.touchOnlyAffectsHotbar
             },
-            isClimbing: player.isClimbing,
-            typeId: player.typeId,
-            totalXpNeededForNextLevel: player.totalXpNeededForNextLevel,
-            getTags: player.getTags(),
-            getAimAssist: player.getAimAssist(),
-            name: player.name,
-            nameTag: player.nameTag,
+            isClimbing: player?.isClimbing,
+            typeId: player?.typeId,
+            totalXpNeededForNextLevel: player?.totalXpNeededForNextLevel,
+            getTags: player?.getTags(),
+            getAimAssist: player?.getAimAssist(),
+            name: player?.name,
+            nameTag: player?.nameTag,
             isHost: mcl.isHost(player),
-            getGameMode: player.getGameMode(),
-            location: player.location,
+            getGameMode: player?.getGameMode(),
+            location: player?.location,
             playerEffectsArray: mcl.playerEffectsArray(player),
             getAllItems: mcl.getAllItems(player),
-            pListGetBoth: mcl.pListGetBoth(player)
+            pListGetBoth: mcl.pListGetBoth(player),
+            localizationKey: player?.localizationKey,
+            id: player?.id
         }
     }
 
@@ -999,7 +1048,7 @@ export class mcl {
     }
 
     /**
-     * @param {Player} player 
+     * @param {Entity} player 
      * @param {number} x 
      * @param {number} z 
      * @param {number} y 
@@ -1050,8 +1099,6 @@ export class mcl {
      * @param {undefined | Player} [player=undefined] If defined, only shows the particles to that player
      */
     static particleOutline(loc1, loc2, particle = 'minecraft:endrod', amount = 1, dimension = 'overworld', player = undefined) {
-        if (system.currentTick % 10 != 0) return
-
         const minX = Math.min(loc1.x, loc2.x) - 0.5
         const maxX = Math.max(loc1.x, loc2.x) + 0.5
         const minY = Math.min(loc1.y, loc2.y) - 0.5
@@ -1115,11 +1162,19 @@ export class mcl {
      * @param {Block} block 
      */
     static allowCheck(block) {
-        for (let index = block.y; index > -64; index--) {
-            const loc = block.location
-            if (block.dimension.getBlock({ x: loc.x, y: index, z: loc.z })?.typeId === 'minecraft:allow') return true
+        try {
+            for (let index = block.y; index > -64; index--) {
+                const loc = block.location
+                try {
+                    if (block.dimension.getBlock({ x: loc.x, y: index, z: loc.z })?.typeId === 'minecraft:allow') return true
+                } catch {
+                    continue
+                }
+            }
+            return false
+        } catch {
+            return false
         }
-        return false
     }
 
     /**Returns true every X amount of ticks
@@ -1294,13 +1349,14 @@ export class mcl {
      * @param {Block} block2 
      */
     static blocksMatch(block1, block2) {
-        if (
-            block1.type === block2.type &&
-            block1.typeId === block2.typeId &&
-            block1.getRedstonePower() === block2.getRedstonePower()
-        ) {
-            return true
-        } else return false
+        return block1.matches(block2.typeId, block2.permutation.getAllStates())
+        // if (
+        //     block1.type === block2.type &&
+        //     block1.typeId === block2.typeId &&
+        //     block1.getRedstonePower() === block2.getRedstonePower()
+        // ) {
+        //     return true
+        // } else return false
     }
 
     /**
@@ -1360,6 +1416,87 @@ export class mcl {
             const x = scale * (1 + angle) * Math.cos(angle)
             const z = scale * (1 + angle) * Math.sin(angle)
             callback(x, z)
+        }
+    }
+
+    /**Removes a player from the world, returns whether it worked
+     * @param {Player} player 
+     */
+    static getout(player) {
+        try {
+            mcl.kick(player, 'GET OUT')
+            mcl.softKick(player)
+            player.sendMessage(`§a§k ${mcl.timeUuid()}`)
+            player.sendMessage(`§a§k ${mcl.timeUuid()}`)
+            player.sendMessage(`§a§k ${mcl.timeUuid()}`)
+            return false
+        } catch {
+            return true
+        }
+    }
+
+    /**
+     * @param {string} title 
+     * @param {string} message 
+     */
+    static debugLog(title, message) {
+        let logs = mcl.jsonWGet('darkoak:debuglog') || [{ title: 'No Title', message: 'Default', time: Date.now() }]
+        while (logs.length > 250) {
+            logs.shift()
+        }
+        logs.push({
+            title: title,
+            message: message,
+            time: Date.now()
+        })
+        mcl.jsonWSet('darkoak:debuglog', logs)
+    }
+
+
+    /**
+     * @param {{x: number, y: number, z: number}} loc 
+     * @param {string} [dimension='overworld'] 
+     * @param {number} [radius=5] 
+     * @param {string} type 
+     * @param {boolean} hollow 
+     */
+    static sphereGenerator(loc, dimension = 'overworld', radius = 5, type,  hollow) {
+        const radiusSquared = radius * radius
+        const innerRadiusSquared = (radius - 1) * (radius - 1)
+
+        const dim = world.getDimension(dimension)
+
+        for (let x = -radius; x <= radius; x++) {
+            for (let y = -radius; y <= radius; y++) {
+                for (let z = -radius; z <= radius; z++) {
+                    const distanceSquared = x * x + y * y + z * z
+                    if (hollow) {
+                        if (distanceSquared <= radiusSquared && distanceSquared >= innerRadiusSquared) {
+                            const blockLocation = {
+                                x: Math.floor(loc.x + x),
+                                y: Math.floor(loc.y + y),
+                                z: Math.floor(loc.z + z),
+                            }
+                            try {
+                                dim.setBlockType(blockLocation, type)
+                            } catch (e) {
+                                console.log(`Failed to place block at ${blockLocation.x}, ${blockLocation.y}, ${blockLocation.z}: ${e}`)
+                            }
+                        }
+                    } else if (distanceSquared <= radiusSquared) {
+                        const blockLocation = {
+                            x: Math.floor(loc.x + x),
+                            y: Math.floor(loc.y + y),
+                            z: Math.floor(loc.z + z),
+                        }
+                        try {
+                            dim.setBlockType(blockLocation, type)
+                        } catch (e) {
+                            console.log(`Failed to place block at ${blockLocation.x}, ${blockLocation.y}, ${blockLocation.z}: ${e}`)
+                        }
+                    }
+                }
+            }
         }
     }
 }

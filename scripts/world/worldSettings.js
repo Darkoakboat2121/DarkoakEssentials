@@ -1,9 +1,9 @@
-import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent, EntityHitEntityAfterEvent, PlayerPlaceBlockBeforeEvent, PlayerPlaceBlockAfterEvent, GameMode, ItemComponentTypes } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent, EntityHitEntityAfterEvent, PlayerPlaceBlockBeforeEvent, PlayerPlaceBlockAfterEvent, GameMode, ItemComponentTypes, EntityComponentTypes, Entity, EntityDieAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
 import { bui } from "../uis/baseplateUI"
-import { transferPlayer } from "@minecraft/server-admin"
+import { AsyncPlayerJoinBeforeEvent, transferPlayer } from "@minecraft/server-admin"
 import { crateUI } from "../uis/interfacesTwo"
 
 // This file holds world settings and player tracking
@@ -161,10 +161,11 @@ export function interactCommandBlock(evd) {
 }
 
 /**
- * @param {PlayerSpawnAfterEvent | PlayerLeaveBeforeEvent} evd 
- * @param {{welcome: string, welcomeS: boolean, bye: string, byeS: boolean}} d 
+ * @param {PlayerSpawnAfterEvent | PlayerLeaveBeforeEvent | AsyncPlayerJoinBeforeEvent} evd 
  */
-export function welcomeMessage(evd, d) {
+export function welcomeMessage(evd) {
+    /**@type {{welcome: string, welcomeS: boolean, bye: string, byeS: boolean}} */
+    const d = mcl.jsonWGet('darkoak:welcome')
     if (!d) return
     if (evd instanceof PlayerSpawnAfterEvent) {
         if (!evd.initialSpawn) return
@@ -175,11 +176,18 @@ export function welcomeMessage(evd, d) {
                 evd.player.sendMessage(arrays.replacer(evd.player, d?.welcome || ''))
             }
         }, 100)
-    } else {
+    } else if (evd instanceof PlayerLeaveBeforeEvent) {
         if (d?.byeS) {
             world.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
         } else {
             evd.player.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
+        }
+    } else {
+        const name = evd.name
+        if (d?.prejoinAdmin) {
+            mcl.adminMessage((d?.prejoin || '').replace('#name#', name), false)
+        } else {
+            world.sendMessage((d?.prejoin || '').replace('#name#', name))
         }
     }
 }
@@ -187,9 +195,9 @@ export function welcomeMessage(evd, d) {
 /**Player tracking and world border
  * @param {Player} player 
  */
-export function borderAndTracking(player, worldBorder) {
-
+export function borderAndTracking(player) {
     const c = mcl.jsonWGet('darkoak:scriptsettings')
+    const worldBorder = (mcl.jsonWGet('darkoak:worldborder')?.size) || 0
 
     const x = player.location.x
     const z = player.location.z
@@ -198,19 +206,20 @@ export function borderAndTracking(player, worldBorder) {
 
     // World border
     if (worldBorder != 0 && !c?.bordermaster) {
-
         if (Math.abs(x) > worldBorder) {
-            const k = (x / worldBorder - 1) * -1
-            player.applyDamage(Math.abs(k) * 1.5, { cause: EntityDamageCause.magic })
-            // player.applyKnockback(k, 0, Math.abs(k) * 2, 0)
-            player.applyKnockback({ x: k * Math.abs(k / 2.5), z: 0 }, 0)
+            const k = (x / worldBorder)
+            if (mcl.tickTimer(20)) player.applyDamage(Math.abs(k), {
+                cause: EntityDamageCause.override
+            })
+            mcl.knockback(player, k * -1, 0, 0.1)
         }
 
         if (Math.abs(z) > worldBorder) {
-            const k = (z / worldBorder - 1) * -1
-            player.applyDamage(Math.abs(k) * 1.5, { cause: EntityDamageCause.magic })
-            // player.applyKnockback(0, k, Math.abs(k) * 2, 0)
-            player.applyKnockback({ x: 0, z: k * Math.abs(k / 2.5) }, 0)
+            const k = (z / worldBorder)
+            if (mcl.tickTimer(20)) player.applyDamage(Math.abs(k), {
+                cause: EntityDamageCause.override
+            })
+            mcl.knockback(player, 0, k * -1, 0.1)
         }
 
     }
@@ -322,11 +331,69 @@ export function placeBlockTracking(evd) {
 }
 
 /**
+ * @param {EntityHitEntityAfterEvent} evd 
+ */
+export function hitTracking(evd) {
+    const c = mcl.jsonWGet('darkoak:scriptsettings')
+    if (c?.trackingmaster) return
+    const d = mcl.jsonWGet('darkoak:tracking')
+    if (!d?.hit) return
+
+    const type1 = 'darkoak:gothit'
+    let gothitSB = world.scoreboard.getObjective(type1)
+    if (!gothitSB) gothitSB = world.scoreboard.addObjective(type1)
+    gothitSB.addScore(evd.hitEntity, 1)
+    if (d?.gotHitC) evd.hitEntity.runCommand(d?.gotHitC)
+    evd.hitEntity.addTag(type1)
+    system.runTimeout(() => {
+        evd.hitEntity.removeTag(type1)
+    }, 1)
+
+    const type2 = 'darkoak:onhit'
+    let onhitSB = world.scoreboard.getObjective(type2)
+    if (!onhitSB) onhitSB = world.scoreboard.addObjective(type2)
+    onhitSB.addScore(evd.damagingEntity, 1)
+    if (d?.onHitC) evd.damagingEntity.runCommand(d?.onHitC)
+    evd.damagingEntity.addTag(type2)
+    system.runTimeout(() => {
+        evd.damagingEntity.removeTag(type2)
+    }, 1)
+}
+
+/**
+ * @param {EntityDieAfterEvent} evd 
+ */
+export function killTracking(evd) {
+    const c = mcl.jsonWGet('darkoak:scriptsettings')
+    if (c?.trackingmaster) return
+    const d = mcl.jsonWGet('darkoak:tracking')
+    if (!d?.kill) return
+    trackerHelper('darkoak:deaths', evd.deadEntity, d?.deathC)
+    if (evd?.damageSource?.damagingEntity) trackerHelper('darkoak:kills', evd?.damageSource?.damagingEntity, d?.killsC)
+}
+
+/**
+ * @param {string} type 
+ * @param {Entity} entity 
+ * @param {string} [command=undefined] 
+ */
+function trackerHelper(type, entity, command = undefined) {
+    let SB = world.scoreboard.getObjective(type)
+    if (!SB) SB = world.scoreboard.addObjective(type)
+    SB.addScore(entity, 1)
+    if (command) entity.runCommand(command)
+    entity.addTag(type)
+    system.runTimeout(() => {
+        entity.removeTag(type)
+    }, 1)
+}
+
+/**
  * @param {ItemReleaseUseAfterEvent} evd 
  */
 export function pacifistArrowFix(evd) {
     if (!evd.itemStack) return
-    if (evd.itemStack.typeId != 'minecraft:bow' || evd.itemStack.typeId != 'minecraft:crossbow') return
+    if (evd.itemStack.typeId != 'minecraft:bow' && evd.itemStack.typeId != 'minecraft:crossbow') return
     const tags = ['darkoak:pacifist', 'darkoak:team1', 'darkoak:team2', 'darkoak:team3', 'darkoak:team4']
     for (let index = 0; index < tags.length; index++) {
         if (evd.source.hasTag(tags[index])) evd.source.runCommand(`tag @e [type=arrow,r=0.5,c=1] add ${tags[index]}`)
@@ -351,7 +418,7 @@ export function bindedItems(evd) {
  * @param {Player} player 
  */
 export function verify(player, old = '') {
-    if (system.currentTick % 2 != 0) return
+    if (mcl.tickTimer(2)) return
 
     const d = mcl.jsonWGet('darkoak:whitelist')
     if (player.hasTag('darkoak:verified') || !d?.venabled) return
@@ -375,8 +442,9 @@ export function verify(player, old = '') {
         if (e[0] === arrays.replacer(player, d?.vcode)) {
             player.addTag('darkoak:verified')
             uiManager.closeAllForms(player)
+            return
         }
-        if (e[1]) transferPlayer(player, { hostname: '127.0.0.0', port: 0 })
+        if (e[1]) mcl.softKick(player)
     }).catch()
 }
 
@@ -450,5 +518,16 @@ export function veinminer(evd) {
                 queue.push(b.above(), b.below(), b.north(), b.south(), b.east(), b.west())
             }
         }
+    }
+}
+
+export function lagClear() {
+    return
+    const items = mcl.getAllEntities()
+    for (let index = 0; index < items.length; index++) {
+        const e = items[index]
+        const i = e.getComponent(EntityComponentTypes.Item)?.itemStack
+        if (!i) continue
+
     }
 }

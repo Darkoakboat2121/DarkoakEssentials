@@ -118,7 +118,9 @@ export class bui {
      */
     static title(f, text = '') {
         const c = mcl.jsonWGet('darkoak:scriptsettings')
-        return f.title(`${c?.titlecolor || ''}${text.toString()}` || '')
+        let size = '§x§l§s§r'
+        if (c?.normalsize) size = ''
+        return f.title(`${size}${c?.titlecolor || ''}${text.toString()}` || '')
     }
 
     /**Generic button, there can be around 930 buttons before the UI breaks
@@ -192,5 +194,22 @@ export class bui {
      */
     static show(f, player) {
         return f.show(player)
+    }
+
+    /**Don't use - P
+     * @param {'modal' | 'action' | 'message'} type 
+     */
+    static new(type) {
+        switch (type) {
+            case 'modal':
+                return new ModalFormData()
+                break
+            case 'action':
+                return new ActionFormData()
+                break
+            case 'message':
+                return new MessageFormData()
+                break
+        }
     }
 }

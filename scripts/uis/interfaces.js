@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, invSeeUI, itemGiverUI, itemSettingsUI, messageLogUI, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, pressionUI, redeemGiftcodeUI, removeRankUI, rolesMainUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
+import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, invSeeUI, itemGiverUI, itemSettingsUI, lagClearSettingsUI, messageLogUI, mistyBio, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, plotSettingsUI, pressionUI, redeemGiftcodeUI, removeRankUI, rolesMainUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 import { transferPlayer } from "@minecraft/server-admin"
 import { playerLog } from "../data/defaults"
@@ -83,6 +83,8 @@ export function worldSettingsUI(player) {
     bui.button(f, 'Item Settings\n§7Settings For Custom Items')
     bui.button(f, 'Floating Text')
     bui.button(f, 'Dimension Bans')
+    bui.button(f, 'Lag Clear System')
+    bui.button(f, 'Plot Settings')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -113,6 +115,12 @@ export function worldSettingsUI(player) {
                 break
             case 7:
                 dimensionBansUI(player)
+                break
+            case 8:
+                lagClearSettingsUI(player)
+                break
+            case 9:
+                plotSettingsUI(player)
                 break
             default:
                 player.sendMessage('§cError§r')
@@ -238,13 +246,19 @@ export function itemBindsTextUI(player, bindNum) {
 export function welcomeMessageUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Welcome Message')
-    const d = mcl.jsonWGet('darkoak:welcome') || { welcome: '', welcomeS: false, bye: '', byeS: false }
+    const d = mcl.jsonWGet('darkoak:welcome')
 
     bui.label(f, arrays.hashtags)
-    bui.textField(f, `\nMessage:`, 'Example: Welcome to Super-Skygen!', d.welcome)
-    bui.toggle(f, 'Global Welcome?', d.welcomeS)
-    bui.textField(f, 'Goodbye Message:', 'Example: Goodbye #name#!', d.bye)
-    bui.toggle(f, 'Global Goodbye?', d.byeS)
+    bui.label(f, '')
+    bui.textField(f, `Prejoin Message:`, 'Example: Welcome to Super-Skygen!', d?.prejoin, 'The Hashtag System Does Not Work With This. Use #name# To Display The Name')
+    bui.toggle(f, 'Admin Only?', d?.prejoinAdmin)
+    bui.toggle(f, 'Only Send If The Player Is Able To Join?', d?.prejoinSend)
+    bui.divider(f)
+    bui.textField(f, `Welcome Message:`, 'Example: Welcome to Super-Skygen!', d?.welcome)
+    bui.toggle(f, 'Global Welcome?', d?.welcomeS)
+    bui.divider(f)
+    bui.textField(f, 'Goodbye Message:', 'Example: Goodbye #name#!', d?.bye)
+    bui.toggle(f, 'Global Goodbye?', d?.byeS)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -252,11 +266,15 @@ export function welcomeMessageUI(player) {
             return
         }
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet('darkoak:welcome', {
-            welcome: e[0],
-            welcomeS: e[1],
-            bye: e[2],
-            byeS: e[3]
+            prejoin: e[i++],
+            prejoinAdmin: e[i++],
+            prejoinSend: e[i++],
+            welcome: e[i++],
+            welcomeS: e[i++],
+            bye: e[i++],
+            byeS: e[i++],
         })
     }).catch()
 }
@@ -444,7 +462,7 @@ export function playerDataOfflineUI(playerToShow, toView) {
     bui.label(f, `Effects: ${mcl.playerEffectsArray(player)}`)
     bui.label(f, `Tags: ${mcl.playerTagsArray(player).join(', §r§f')}`)
 
-    f.show(player).then((evd) => {
+    f.show(playerToShow).then((evd) => {
         if (evd.canceled) return
     })
 }
@@ -623,8 +641,6 @@ export function banPlayerUI(player) {
     const names = bui.namePicker(f, undefined, '\nPlayer:')
     bui.textField(f, 'Reason / Ban Message', 'Example: Hacking')
     bui.textField(f, 'Ban Time In Hours (Leave Empty For Forever):', 'Example: 24')
-    bui.toggle(f, 'Crash Instead Of Kick?', false, 'Only Use This If You Really Don\'t Want Them Coming Back')
-    bui.toggle(f, 'Can Rejoin Immediately After Ban Has Expired?', true)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -639,15 +655,15 @@ export function banPlayerUI(player) {
         }
         let time = e[2]
         if (isNaN(time) || time === '' || parseInt(time) <= 0) {
-            time = -1
+            time = '0'
         }
         mcl.jsonWSet(`darkoak:bans:${mcl.timeUuid()}`, {
             player: names[e[0]],
             message: e[1],
-            time: parseInt(time) * 3600,
-            crash: e[3],
-            soft: e[4]
+            time: parseInt(time) * 3600000,
+            timeOfBan: Date.now(),
         })
+        mcl.softKick(gp)
         mcl.adminMessage(`${names[e[0]]} Has Been Banned!`)
     }).catch()
 }
@@ -664,7 +680,7 @@ export function unbanPlayerUI(player) {
     }
     for (let index = 0; index < bans.length; index++) {
         const data = JSON.parse(bans[index].value)
-        bui.label(f, `Player: ${data.player}, Time: ${(data.time / 3600).toFixed(2)}\nMessage: ${data.message}`)
+        bui.label(f, `Player: ${data.player}, Time: ${(data.time / 3600000).toFixed(2)}\nMessage: ${data.message}`)
         bui.button(f, `${data.player}\n${data.message}`)
 
         bui.divider(f)
@@ -772,6 +788,16 @@ export function playerTrackingUI(player) {
     bui.textField(f, 'Command On Above Action:', 'Example: kill @s', d?.movingC)
     bui.divider(f)
 
+    bui.toggle(f, 'Get Hit & On Hit', d?.hit, 'Get Hit Tag & Score: darkoak:gothit\nOn Hit Tag & Score: darkoak:onhit')
+    bui.textField(f, 'Command On Get Hit Action:', 'Example: kill @s', d?.gotHitC)
+    bui.textField(f, 'Command On On Hit Action:', 'Example: kill @s', d?.onHitC)
+    bui.divider(f)
+
+    bui.toggle(f, 'Get Killed & On Kill', d?.kill, 'Get Killed Tag & Score: darkoak:deaths\nOn Kill Tag & Score: darkoak:kills')
+    bui.textField(f, 'Command On Get Killed Action:', 'Example: kill @s', d?.deathC)
+    bui.textField(f, 'Command On On Kill Action:', 'Example: kill @s', d?.killsC)
+    bui.divider(f)
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             playerSettingsUI(player)
@@ -804,6 +830,12 @@ export function playerTrackingUI(player) {
             slotC: e[i++],
             moving: e[i++],
             movingC: e[i++],
+            hit: e[i++],
+            gotHitC: e[i++],
+            onHitC: e[i++],
+            kill: e[i++],
+            deathC: e[i++],
+            killsC: e[i++],
         })
     }).catch()
 }
@@ -949,9 +981,10 @@ export function chatCommandsAddUI(player) {
 
     bui.label(f, arrays.hashtags)
 
-    bui.textField(f, 'Message:', 'Example: !spawn', '', arrays.chatCommandSelectors)
-    bui.textField(f, `Add A Command Or Hashtag Key. Hashtag Keys Include:\n${arrays.hashtagKeys}\nCommand:`, 'Example: tp @s 0 0 0')
+    bui.textField(f, 'Message:', 'Example: !spawn', '', 'If You Use $number$ It Will Replace It With The Messages Contents, Example: !tp "@s" "0" "1" "0" -> /tp $1$ $2$ $3$ $4$')
     bui.textField(f, 'Required Tag:', 'Example: Admin')
+    bui.label(f, `Hashtag keys:\n${arrays.hashtagKeys}`)
+    bui.textField(f, `Command 1:`, 'Example: tp @s 0 0 0')
 
     bui.label(f, 'Add More Commands:')
     bui.textField(f)
@@ -963,12 +996,13 @@ export function chatCommandsAddUI(player) {
             return
         }
         const e = bui.formValues(evd)
+        let i = 0
         mcl.jsonWSet(`darkoak:command:${mcl.timeUuid()}`, {
-            message: e[0].trim(),
-            command: e[1].trim(),
-            tag: e[2].trim(),
-            command2: e[3].trim(),
-            command3: e[4].trim(),
+            message: e[i++].trim(),
+            tag: e[i++].trim(),
+            command: e[i++].trim(),
+            command2: e[i++].trim(),
+            command3: e[i++].trim(),
         })
     }).catch()
 }
@@ -1118,13 +1152,18 @@ export function censorSettingsAddUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Add New Censor')
 
-    bui.textField(f, '(Be Careful!)\nWord To Ban:', 'Example: skibidi')
+    bui.label(f, '(Be Careful!)')
+    bui.textField(f, 'Word To Ban:', 'Example: skibidi')
+    bui.textField(f, 'Warning On Send', 'Example: Don\'t Use Brainrot Here!')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
         let censors = mcl.jsonWGet('darkoak:censor') || []
-        censors.push(e[0])
+        censors.push({
+            word: e[0],
+            warning: e[1],
+        })
         mcl.jsonWSet('darkoak:censor', censors)
     }).catch()
 }
@@ -1132,13 +1171,14 @@ export function censorSettingsAddUI(player) {
 export function censorSettingsRemoveUI(player) {
     let f = new ModalFormData()
 
+    /**@type {{word: string, warning: string}[] | string[]} */
     let words = mcl.jsonWGet('darkoak:censor') || []
 
     if (words === undefined || words.length == 0) {
         player.sendMessage('§cNo Censored Words Found§r')
         return
     }
-    bui.dropdown(f, '\nWord:', words)
+    bui.dropdown(f, '\nWord:', words.map(e => e?.word || e.toString() || 'Old'))
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -1720,6 +1760,7 @@ export function actionBarUI(player) {
 
 export function sidebarUI(player) {
     let f = new ModalFormData()
+    bui.title(f, 'Sidebar Editor')
 
     const def = {
         lines: ['', '', '', '', '', '', '', '', '', '', '', '', '']
@@ -2069,7 +2110,7 @@ export function creditsUI(player) {
 
     bui.divider(f)
 
-    bui.header(f, 'Miscellaneous')
+    bui.header(f, 'Miscellaneous / Testing')
 
     bui.button(f, 'CanineYeti24175') // 2
     bui.label(f, 'Thank you canine for being cool lol')
@@ -2083,6 +2124,11 @@ export function creditsUI(player) {
 
     bui.button(f, 'Wertwert3612') // 4
     bui.label(f, 'Thank you for supplying the realm for testing')
+
+    bui.label(f)
+
+    bui.button(f, 'Afro Misty') // 4
+    bui.label(f, 'Thank you for testing things, especially the anti-ZD module')
 
     bui.divider(f)
 
@@ -2109,6 +2155,9 @@ export function creditsUI(player) {
                 break
             case 4:
                 wertwertBio(player)
+                break
+            case 5:
+                mistyBio(player)
                 break
         }
     }).catch()
@@ -2305,7 +2354,7 @@ export function payUI(player) {
             return
         }
         const e = bui.formValues(evd)
-        if (isNaN(e[1])) {
+        if (isNaN(e[1]) || e[1] < 0) {
             payUI(player)
             return
         }

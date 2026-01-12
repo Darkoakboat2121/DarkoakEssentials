@@ -74,7 +74,7 @@ export function chatSystem(evd = undefined, player, message) {
         }
     }
 
-    const boat = mcl.wGet('darkoak:boatcatcher:boat')
+    const boat = mcl.jsonWGet('darkoak:boatcatcher:boat')?.boat
     if (boat) {
         if (message.trim() == 'CATCH') {
             let bac = mcl.jsonPGet(player, 'darkoak:boatcatcher') || {}
@@ -133,7 +133,7 @@ export function chatSystem(evd = undefined, player, message) {
     let clan = ''
     if (ranks.clan) clan = cr.cStart + ranks.clan + cr.cEnd
 
-    const text = `${clan}${cr.start}${replacer(player, (ranks.ranks.join(cr.middle) || cr.defaultRank))}${cr.end}§r§f${ranks.namecolors.join('')}%REFER%${chat.name}§r§f${cr.bridge} §r§f${ranks.chatColors.join('')}${chat.message}`
+    const text = `${clan}${cr.start}${replacer(player, (ranks.ranks.join(cr.middle) || cr.defaultRank))}${cr.end}§r§f%REFER%${ranks.namecolors.join('')}${chat.name}§r§f${cr.bridge} §r§f${ranks.chatColors.join('')}${chat.message}`
 
 
     if (ocs?.proximity) {
@@ -195,15 +195,13 @@ function hashtag(hashtagKey, sender) {
             case 'cc':
                 let i = 0
                 while (i++ < 100) {
-                    world.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
-                    world.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
+                    world.sendMessage('*')
                 }
                 break
             case 'cclocal':
                 let o = 0
                 while (o++ < 100) {
-                    sender.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
-                    sender.sendMessage(' \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n ')
+                    sender.sendMessage('*')
                 }
                 break
             case 'random':
@@ -274,7 +272,9 @@ export function chatGames(chat) {
             const btc = boatTypes[mcl.randomNumber(boatTypes.length - 1)]
 
             world.sendMessage(`§a[${loops}] Boat-Catcher! Type 'CATCH' To Catch A(n) ${btc}!`)
-            mcl.wSet('darkoak:boatcatcher:boat', btc)
+            mcl.jsonWSet('darkoak:boatcatcher:boat', {
+                boat: btc
+            })
         }
     }
 
@@ -342,7 +342,13 @@ export function nametag(p, ocs, d) {
 
     ranks = ranks.length ? ranks : [cr.defaultRank]
 
-    let lines = [p.name]
+    let na = p.name
+    const nick = mcl.jsonPGet(p, 'darkoak:nickname')
+    if (nick && mcl.jsonWGet('darkoak:nicknamesettings')?.enabled) {
+        na = nick?.nick
+    }
+
+    let lines = [na]
     if (ocs?.nonametags) lines = []
 
     if (ocs?.healthDisplay) lines.push(`§aHealth: ${Math.round(mcl.healthValue(p))}§r§f`)
@@ -411,27 +417,49 @@ export function messageQueueAndPlayerList(evd) {
  * @param {{tag: string, message: string, command: string, command2: string, command3: string}} p
  */
 export function chatCommand(player, p) {
-    const mess = p.message.split(' ', 2)
 
-    const playerSelect = mess[1] ? (mcl.getStringBetweenChars(mess[1], '"', '"') || mess[1]) : undefined
+    const args = p.message.match(/"[^"]*"|\S+/g)?.map(arg => arg.replace(/"/g, '')) || []
 
-    let commandToRun = p.command
-    if (playerSelect && commandToRun.includes('[player]')) {
-        commandToRun = commandToRun.replaceAll('[player]', playerSelect)
+    function replaceArgs(command) {
+        return command.replace(/\$(\d+)\$/g, (_, index) => args[parseInt(index)] || '')
     }
-    player.runCommand(replacer(player, commandToRun))
 
-    let commandToRun2 = p.command2
-    if (playerSelect && commandToRun2.includes('[player]')) {
-        commandToRun2 = commandToRun2.replaceAll('[player]', playerSelect)
+    if (p?.command) {
+        let commandToRun = replaceArgs(p.command)
+        player.runCommand(replacer(player, commandToRun))
     }
-    player.runCommand(replacer(player, commandToRun2))
 
-    let commandToRun3 = p.command3
-    if (playerSelect && commandToRun3.includes('[player]')) {
-        commandToRun3 = commandToRun3.replaceAll('[player]', playerSelect)
+    if (p?.command2) {
+        let commandToRun2 = replaceArgs(p.command2)
+        player.runCommand(replacer(player, commandToRun2))
     }
-    player.runCommand(replacer(player, commandToRun3))
+
+    if (p?.command3) {
+        let commandToRun3 = replaceArgs(p.command3)
+        player.runCommand(replacer(player, commandToRun3))
+    }
+
+    // const mess = p.message.split(' ', 2)
+
+    // const playerSelect = mess[1] ? (mcl.getStringBetweenChars(mess[1], '"', '"') || mess[1]) : undefined
+
+    // let commandToRun = p.command
+    // if (playerSelect && commandToRun.includes('[player]')) {
+    //     commandToRun = commandToRun.replaceAll('[player]', playerSelect)
+    // }
+    // player.runCommand(replacer(player, commandToRun))
+
+    // let commandToRun2 = p.command2
+    // if (playerSelect && commandToRun2.includes('[player]')) {
+    //     commandToRun2 = commandToRun2.replaceAll('[player]', playerSelect)
+    // }
+    // player.runCommand(replacer(player, commandToRun2))
+
+    // let commandToRun3 = p.command3
+    // if (playerSelect && commandToRun3.includes('[player]')) {
+    //     commandToRun3 = commandToRun3.replaceAll('[player]', playerSelect)
+    // }
+    // player.runCommand(replacer(player, commandToRun3))
 
 }
 
@@ -447,11 +475,15 @@ function chatPreventives(player, message) {
         if (canChat && canChat === false) return true
 
         // censoring
-        /**@type {string[]} */
+        /**@type {{word: string, warning: string}[] | string[]} */
         let censor = mcl.jsonWGet('darkoak:censor')
         if (censor && censor.length != 0 && !mcl.isDOBAdmin(player)) {
             for (let index = 0; index < censor.length; index++) {
-                if (mcl.deleteFormatting(message).toLowerCase().includes(censor[index].toLowerCase())) return true
+                let c = censor[index]
+                if (mcl.deleteFormatting(message).toLowerCase().includes((c?.word || c)?.toLowerCase())) {
+                    if (c?.warning) player.sendMessage(c?.warning)
+                    return true
+                }
             }
         }
 
@@ -464,7 +496,8 @@ function chatPreventives(player, message) {
             if (
                 trimmed.includes('horion.download') ||
                 trimmed.includes('lumineproxy') ||
-                trimmed.includes('packet.sell.app')
+                trimmed.includes('packet.sell.app') ||
+                trimmed.includes('LUMINE UTILITY PROXY')
             ) {
                 log(player, `hack client message`)
                 return true
@@ -556,14 +589,13 @@ function messageModifiers(ocs, chat, player, d) {
 }
 
 /**
- * 
  * @param {Player} player 
  * @param {string} message 
  */
 export function messageLog(player, message) {
     /**@type {{name: string, message: string, time: number}[]} */
     let logs2 = mcl.jsonWGet('darkoak:messagelogs:v2') || [{ name: 'Default', message: 'Default', time: Date.now() }]
-    while (logs2.length > 250) {
+    while (logs2.length > 200) {
         logs2.shift()
     }
     if (logs2.length > 0 && logs2[logs2.length - 1].name === player.name) {

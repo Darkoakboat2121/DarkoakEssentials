@@ -1,8 +1,9 @@
-import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent, EffectTypes, InputPermissionCategory, EquipmentSlot, PlayerJoinAfterEvent, CommandPermissionLevel } from "@minecraft/server"
+import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent, EffectTypes, InputPermissionCategory, EquipmentSlot, PlayerJoinAfterEvent, CommandPermissionLevel, DataDrivenEntityTriggerAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
-import { badBlocksList, hackedItemsList, hackedItemsVanilla } from "../data/arrays"
+import { badBlocksList, hackedItemsList, hackedItemsVanilla, susNames } from "../data/arrays"
 import { transferPlayer } from "@minecraft/server-admin"
+import { getPlayerSkin } from "@minecraft/server-gametest"
 
 let nukerMap = new Map()
 
@@ -143,11 +144,29 @@ export function antiReach(evd) {
     }
 }
 
+// /**
+//  * @param {EntityHurtBeforeEvent} evd 
+//  */
+// export function antiReach2(evd) {
+//     /**@type {Player} */
+//     const player = evd.damageSource?.damagingEntity
+//     if (!player || player.typeId != 'minecraft:player') return
+//     const hit = evd.hurtEntity
+
+//     const d = mcl.jsonWGet('darkoak:anticheat')
+//     if (!d?.antireach) return
+
+//     const distance = mcl.distance(hit.location, player.location)
+//     if (distance > ((d?.antireachsense || 7.5) / 10)) {
+//         log(player, `anti-reach\nDistance: ${distance.toString()}`)
+//     }
+// }
+
 /**
  * @param {Player} player 
  */
 export function cpsTester(player) {
-    if (system.currentTick % 20 != 0) return
+    if (!mcl.tickTimer(20)) return
 
     mcl.pSet(player, 'darkoak:ac:cps', 0)
     nukerMap.set(player.name, 0)
@@ -168,7 +187,6 @@ export function antiGameMode(evd) {
 }
 
 /**
- * 
  * @param {PlayerInteractWithEntityBeforeEvent} evd 
  */
 export function antiNpc(evd) {
@@ -280,6 +298,7 @@ export function dupeIDChecker(player, d) {
             if (hv.includes(item.typeId)) {
                 log(player, `anti-nbt 1: ${item.typeId}`)
                 mcl.getItemContainer(player).setItem(index)
+                continue
             }
         }
 
@@ -289,13 +308,17 @@ export function dupeIDChecker(player, d) {
             if (hil.includes(item.nameTag)) {
                 log(player, `anti-nbt 2: ${item.nameTag}`)
                 mcl.getItemContainer(player).setItem(index)
+                continue
             }
         }
 
         // anti admin items
         if (d?.antiadminitems && !mcl.isOp(player)) {
             const bbl = badBlocksList
-            if (bbl.includes(item.typeId)) mcl.getItemContainer(player).setItem(index)
+            if (bbl.includes(item.typeId)) {
+                mcl.getItemContainer(player).setItem(index)
+                continue
+            }
         }
 
         // anti illegal enchants
@@ -310,6 +333,7 @@ export function dupeIDChecker(player, d) {
                     let item2 = new ItemStack(item.type, item.amount)
                     item2.setLore(item.getLore())
                     mcl.getItemContainer(player).setItem(index, item2)
+                    continue
                 }
             }
         }
@@ -317,9 +341,10 @@ export function dupeIDChecker(player, d) {
     }
 
     const gm = player.getGameMode()
-    if (gm != GameMode.creative && gm != GameMode.spectator) {
+    if (gm != GameMode.Creative && gm != GameMode.Spectator) {
         if (d?.antifly4 && player.isGliding && equiped?.getEquipment(EquipmentSlot.Chest)?.typeId != 'minecraft:elytra') {
             log(player, `anti-fly 4`)
+            return
         }
     }
 }
@@ -373,8 +398,9 @@ export function stackARID(player, item, inventory, index, d) {
 
 /**system interval function, player type
  * @param {Player} player 
+ * @param {Player[]} players 
  */
-export function anticheatMain(player) {
+export function anticheatMain(player, players) {
     const d = mcl.jsonWGet('darkoak:anticheat')
 
     const v = player.getVelocity()
@@ -382,7 +408,7 @@ export function anticheatMain(player) {
     const gm = player.getGameMode()
     const dot = v.x * vd.x + v.z * vd.z
 
-    const op = world.getAllPlayers().filter(e => e.commandPermissionLevel === CommandPermissionLevel.Admin)[0]
+    const op = players.filter(e => e.commandPermissionLevel === CommandPermissionLevel.Admin)[0]
 
     const ppl = mcl.jsonWGet('darkoak:fired') || []
     if (ppl.includes(player.name)) {
@@ -393,16 +419,19 @@ export function anticheatMain(player) {
         // anti fly 1
         if (player.isFlying && d?.antifly1) {
             log(player, `anti-fly 1`)
+            return
         }
 
         // anti fly 2
         if (player.isFlying && d?.antifly2 && player.isGliding) {
             log(player, `anti-fly 2`)
+            return
         }
 
         // anti fly 3
         if (d?.antifly3 && player.isGliding && v.y > 0.8 && v.x < 0.2 && v.z < 0.2 && vd.y < 1) {
             log(player, `anti-fly 3`)
+            return
         }
 
         // anti air jump
@@ -416,15 +445,19 @@ export function anticheatMain(player) {
             })
             if (block && block.typeId === 'minecraft:air') {
                 let allAir = 0
-                const blocksToCheck = [block.below(1), block.below(2), block.west(1).below(1), block.east(1).below(1), block.north(1).below(1), block.south(1).below(1)]
+                const below = block.below()
+                const bb = below.below()
+                const blocksToCheck = [below, below.west(), below.east(), below.north(), below.south(), below.east().north(), below.east().south(), below.west().north(), below.west().south(),
+                    bb, bb.west(), bb.east(), bb.north(), bb.south(), bb.east().north(), bb.east().south(), bb.west().north(), bb.west().south()]
                 for (let index = 0; index < blocksToCheck.length; index++) {
                     const b = blocksToCheck[index]
                     if (!b) continue
                     if (b.typeId === 'minecraft:air') allAir += 1
                 }
 
-                if (player.isOnGround && allAir >= 6) {
+                if (player.isOnGround && allAir >= blocksToCheck.length) {
                     log(player, `anti-air-jump`)
+                    return
                 }
             }
         }
@@ -439,16 +472,19 @@ export function anticheatMain(player) {
     // anti invalid movements 1
     if (d?.antiinvalid1 && player.isSneaking && player.isSprinting && !player.isFlying && !player.isInWater) {
         log(player, `anti-invalid 1`)
+        return
     }
 
     // anti invalid movements 2
     if (d?.antiinvalid2 && player.isSprinting && player.isOnGround && dot < -0.3) {
         log(player, `anti-invalid 2`)
+        return
     }
 
     // anti invalid movements 3
     if (d?.antiinvalid3 && player.isClimbing && v.y > (d?.antiinvalid3sense || 1)) {
         log(player, `anti-invalid 3`)
+        return
     }
 
 
@@ -457,19 +493,24 @@ export function anticheatMain(player) {
         (!player.inputPermissions.isPermissionCategoryEnabled(InputPermissionCategory.Jump) && player.isJumping)
     )) {
         log(player, `anti-anti-immobile`)
+        return
     }
 
     if (d?.antiairswim && player.isSwimming) {
         const block = player.dimension.getBlock(player.location)
-        if (!block.isLiquid) log(player, `anti-air-swim`)
+        if (!block.isLiquid) {
+            log(player, `anti-air-swim`)
+            return
+        }
     }
 
     // anti speed 1
-    const antispeedmax = d?.antispeedsense || 20
+    const antispeedmax = (d?.antispeedsense || 20)
     if ((Math.abs(v.x) >= antispeedmax || Math.abs(v.z) >= antispeedmax) && d?.antispeed) {
         if (player.getEffect(EffectTypes.get('minecraft:speed'))) return
         log(player, `speed (X${Math.abs(v.x)}-Z${Math.abs(v.z)})`)
         mcl.stopPlayer(player)
+        return
     }
 
     const mil = 1000000
@@ -484,19 +525,34 @@ export function anticheatMain(player) {
         }
         if (Math.abs(loc.x) > mil || Math.abs(loc.z) > mil || Math.abs(loc.y) > mil) {
             transferPlayer(player, { hostname: '127.0.0.0', port: 0 })
+            transferPlayer(player, {})
             crasherLog = true
         }
-        if (crasherLog) log(copy, `anti-crasher 2`)
+        if (crasherLog) {
+            log(copy, `anti-crasher 2`)
+            return
+        }
     }
 
     if (d?.antiinvalid4) {
         if (player.selectedSlotIndex > 8 || player.selectedSlotIndex < 0) player.selectedSlotIndex = 0
-        if (system.currentTick % 100 === 0) {
-            const mrd = player.clientSystemInfo
-            if (mrd.maxRenderDistance < 1) log(player, `anti-invalid 4, max-render-distance: ${mrd.maxRenderDistance.toString()}`)
-            if (mrd.memoryTier < 0 || mrd.memoryTier > 4) log(player, `anti-invalid 4, memory-tier: ${mrd.memoryTier.toString()}`)
+        const mrd = player.clientSystemInfo
+        if (mrd.maxRenderDistance < 1) {
+            if (mcl.tickTimer(20)) log(player, `anti-invalid 4, max-render-distance: ${mrd.maxRenderDistance.toString()}`)
+            if (d?.antiinvalid4kick) {
+                try {
+                    mcl.getout(player)
+                } catch {
 
+                }
+            }
+            return
         }
+        if (mrd.memoryTier < 0 || mrd.memoryTier > 4) {
+            log(player, `anti-invalid 4, memory-tier: ${mrd.memoryTier.toString()}`)
+            return
+        }
+
         if (vd.x > 1 || vd.x < -1 || vd.y > 1 || vd.y < -1 || vd.z > 1 || vd.z < -1) player.teleport(player.location, {
             facingLocation: player.location,
             keepVelocity: true
@@ -508,10 +564,34 @@ export function anticheatMain(player) {
         if (block.isSolid) mcl.knockback(player, v.x * -3, v.z * -3, v.y * -1)
     }
 
-    if (d?.antizd && player.name.length < 1) {
-        mcl.kick(player, 'ANTI-ZD 1, Please Report If This Is A Bug!')
-        mcl.softKick(player)
-        log(player, `anti-ZD`)
+    // if (d?.antizd) {
+    //     // if (mcl.deleteFormatting(player.name.trim()).length < 1) {
+    //     //     log(player, `anti-ZD, too short name`)
+    //     //     mcl.getout(player)
+    //     //     return
+    //     // }
+    //     if (player.name.trim().length < 1) {
+    //         log(player, `anti-ZD, too short name`)
+    //         mcl.getout(player)
+    //         return
+    //     }
+    //     for (let index = 0; index < susNames.length; index++) {
+    //         const n = susNames[index]
+    //         if (player.name.startsWith(n)) {
+    //             log(player, `anti-ZD, weird name: ${player.name}`)
+    //             mcl.getout(player)
+    //             return
+    //         }
+    //     }
+    //     return
+    // }
+
+    if (d?.antiinvisskins && mcl.tickTimer(100)) {
+        const skin = getPlayerSkin(player)
+        if (skin.skinColor.blue === 0 && skin.skinColor.green === 0 && skin.skinColor.red === 0) {
+            log(player, 'anti-invis-skin')
+            return
+        }
     }
 }
 
@@ -562,8 +642,15 @@ export function antiZDInterval(d) {
     })
     for (let index = 0; index < entities.length; index++) {
         const entity = entities[index]
-        
+
     }
+}
+
+/**
+ * @param {DataDrivenEntityTriggerAfterEvent} evd 
+ */
+export function antiBot(evd) {
+    
 }
 
 let strikeMap = new Map()
@@ -599,8 +686,8 @@ export function log(player, message) {
     // }
     // logcheck()
 
-    /**@type {{name: string, message: string, time: number}[]} */
-    let logs = mcl.jsonWGet('darkoak:anticheatlogs:v2') || [{name: 'Default', message: 'Default', time: Date.now()}]
+    /**@type {{title: string, message: string, time: number}[]} */
+    let logs = mcl.jsonWGet('darkoak:anticheatlogs:v2') || [{ name: 'Default', message: 'Default', time: Date.now() }]
     while (logs.length > 250) {
         logs.shift()
     }

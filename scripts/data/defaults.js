@@ -4,7 +4,7 @@ import { mcl } from "../logic"
 
 // This file sets all dynamic propertys to their default state if they havent been setup yet and it manages data size / limits
 
-/**Only use for jsonWGet things!
+/**Only used for updateData
  * @type {Map<string, object>} 
  */
 export const cd = new Map()
@@ -17,7 +17,7 @@ export function updateData(initial = false) {
 
     const properties = world.getDynamicPropertyIds()
     const d = mcl.jsonWGet('darkoak:scriptsettings')
-    let num = (d?.updateinterval || 1)
+    let num = (d?.updateinterval || 0)
 
     if (initial || num === 0) {
         for (let index = 0; index < properties.length; index++) {
@@ -38,18 +38,21 @@ export function updateData(initial = false) {
     }
 }
 
-/**ONLY FOR THE UPDATEDATA FUNCTION, DO NOT USE ELSEWHERE
+/**ONLY FOR THE UPDATEDATA FUNCTION (except for when instant data retrieval is neccessary)
  * @param {string} id 
  * @returns {object | any[] | undefined}
  */
-function dataGet(id) {
+export function dataGet(id) {
     const t = world.getDynamicProperty(id)
     if (t == undefined) {
         return undefined
     } else {
         try {
             return JSON.parse(t)
-        } catch {
+        } catch (e) {
+            console.error(`DATA ERROR ${id}: ` + String(e))
+            const pla = world.getPlayers({name: 'Darkoakboat2121'})
+            if (pla.length > 0) pla[0]?.sendMessage(`DATA ERROR ${id}: ` + String(e))
             return undefined
         }
     }
@@ -77,6 +80,7 @@ export function timers() {
 /**@type {Map<string, {name: string}>} */
 export const playerLog = new Map()
 export function playerDataLogger(player) {
+    if (!mcl.tickTimer(20)) return
     playerLog.set(player.name, mcl.playerToData(player))
 }
 
@@ -88,11 +92,11 @@ export function defaultData() {
         })
     }
 
-    if (mcl.wGet('darkoak:chat:other') === undefined) {
-        mcl.jsonWSet('darkoak:chat:other', {
-            proximity: false
-        })
-    }
+    // if (mcl.wGet('darkoak:chat:other') === undefined) {
+    //     mcl.jsonWSet('darkoak:chat:other', {
+    //         proximity: false
+    //     })
+    // }
 
     if (mcl.wGet('darkoak:tpa') === undefined) {
         mcl.jsonWSet('darkoak:tpa', {

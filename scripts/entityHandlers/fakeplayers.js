@@ -1,6 +1,7 @@
 import { world, system, StartupEvent, CommandPermissionLevel, CustomCommandParamType, GameMode, ItemStack } from "@minecraft/server"
 import { mcl } from "../logic"
 import { SimulatedPlayer, spawnSimulatedPlayer } from "@minecraft/server-gametest"
+import { log } from "../world/anticheat"
 
 
 const combatDistance = 5
@@ -20,6 +21,20 @@ export function combatManager(player) {
         target = mcl.closestPlayer(loc, player.dimension.id, player.name)
     } else {
         target = mcl.getPlayer(set.target)
+    }
+    const verified = mcl.jsonPGet(player, 'darkoak:sim:verified')
+    if (!verified || !verified?.verified) {
+        const d = mcl.jsonWGet('darkoak:anticheat')
+        if (d?.antibot) {
+            try {
+                const nameRef = player?.name || player?.nameTag
+                player?.remove()
+                player?.disconnect()
+                log({name: nameRef}, 'anti-bot: bot got deleted')
+            } catch {
+
+            }
+        }
     }
 
     if (target) {
@@ -95,12 +110,16 @@ export function fakePlayerCommand(evd) {
         if (action === 'spawn(none)') {
             system.runTimeout(() => {
                 try {
-                    spawnSimulatedPlayer({
+                    const fp = spawnSimulatedPlayer({
                         dimension: source.dimension,
                         x: loc.x,
                         y: loc.y,
                         z: loc.z
                     }, name, GameMode.Survival)
+                    mcl.jsonPSet(fp, 'darkoak:sim:verified', {
+                        time: Date.now(),
+                        verified: true
+                    })
                 } catch {
 
                 }

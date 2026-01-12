@@ -79,6 +79,38 @@
                             "darkoak:compressed_iron",
                             "darkoak:compressed_netherite"
                         ]
+                    },
+                    {
+                        "group_identifier": {
+                            "icon": "minecraft:board",
+                            "name": "darkoak:illegal_blocks"
+                        },
+                        "items": [
+                            {
+                                "name": "minecraft:board:0"
+                            },
+                            {
+                                "name": "minecraft:board:1"
+                            },
+                            {
+                                "name": "minecraft:board:2"
+                            },
+                            {
+                                "name": "minecraft:glowingobsidian"
+                            },
+                            {
+                                "name": "minecraft:end_gateway"
+                            },
+                            {
+                                "name": "minecraft:stonecutter"
+                            },
+                            {
+                                "name": "minecraft:netherreactor"
+                            },
+                            {
+                                "name": "minecraft:camera"
+                            }
+                        ]
                     }
                 ]
             }

@@ -1,6 +1,7 @@
-import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus } from "@minecraft/server"
+import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus, EquipmentSlot, EnchantmentTypes, EntityComponentTypes, ItemComponentTypes } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
+import { enchantments } from "../data/arrays"
 
 /**
  * @param {StartupEvent} evd 
@@ -105,27 +106,24 @@ export function WEcommands(evd) {
                         if (selected.id) system.clearRun(selected.id)
                     }
                 } else {
-                    let tempOutline1 = system.runInterval(() => {
-                        if (system.currentTick % 100 == 0) {
-                            switch (rot) {
-                                case StructureRotation.None:
-                                case StructureRotation.Rotate180:
-                                    mcl.particleOutline(selected.p1, {
-                                        x: selected.p1.x + (structure.size.x - 1),
-                                        y: selected.p1.y + (structure.size.y - 1),
-                                        z: selected.p1.z + (structure.size.z - 1),
-                                    }, undefined, 1)
-                                    break
-                                case StructureRotation.Rotate90:
-                                case StructureRotation.Rotate270:
-                                    mcl.particleOutline(selected.p1, {
-                                        x: selected.p1.x + (structure.size.z - 1),
-                                        y: selected.p1.y + (structure.size.y - 1),
-                                        z: selected.p1.z + (structure.size.x - 1),
-                                    }, undefined, 1)
-                                    break
-                            }
-                            system.clearRun(tempOutline1)
+                    system.runTimeout(() => {
+                        switch (rot) {
+                            case StructureRotation.None:
+                            case StructureRotation.Rotate180:
+                                mcl.particleOutline(selected.p1, {
+                                    x: selected.p1.x + (structure.size.x - 1),
+                                    y: selected.p1.y + (structure.size.y - 1),
+                                    z: selected.p1.z + (structure.size.z - 1),
+                                }, undefined, 1)
+                                break
+                            case StructureRotation.Rotate90:
+                            case StructureRotation.Rotate270:
+                                mcl.particleOutline(selected.p1, {
+                                    x: selected.p1.x + (structure.size.z - 1),
+                                    y: selected.p1.y + (structure.size.y - 1),
+                                    z: selected.p1.z + (structure.size.x - 1),
+                                }, undefined, 1)
+                                break
                         }
                     })
                 }
@@ -339,6 +337,89 @@ export function WEcommands(evd) {
             }
         })
     })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:wesphere',
+        description: 'Makes A Sphere',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.BlockType,
+                name: 'block'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'radius'
+            },
+            {
+                type: CustomCommandParamType.Boolean,
+                name: 'hollow'
+            },
+            {
+                type: CustomCommandParamType.Boolean,
+                name: 'confirm'
+            },
+        ],
+    }, (evd, block, radius, hollow, confirm) => {
+        /**@type {Player} */
+        const player = evd?.sourceEntity
+        system.runTimeout(() => {
+            if (player) {
+                const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
+                if (!selected?.p2) {
+                    player.sendMessage('Please Select An Area First')
+                    return
+                }
+
+                const center = selected?.p2
+                const dimension = player.dimension
+
+                const radiusSquared = radius * radius
+                const innerRadiusSquared = (radius - 1) * (radius - 1)
+
+                for (let x = -radius; x <= radius; x++) {
+                    for (let y = -radius; y <= radius; y++) {
+                        for (let z = -radius; z <= radius; z++) {
+                            const distanceSquared = x * x + y * y + z * z
+                            if (hollow || !confirm) {
+                                if (distanceSquared <= radiusSquared && distanceSquared >= innerRadiusSquared) {
+                                    const blockLocation = {
+                                        x: Math.floor(center.x + x),
+                                        y: Math.floor(center.y + y),
+                                        z: Math.floor(center.z + z),
+                                    }
+                                    try {
+                                        if (!confirm) {
+                                            dimension.spawnParticle('minecraft:endrod', blockLocation)
+                                        } else if (confirm) {
+                                            dimension.setBlockType(blockLocation, block.id)
+                                        }
+                                    } catch (e) {
+                                        console.log(`Failed to place block at ${blockLocation.x}, ${blockLocation.y}, ${blockLocation.z}: ${e}`)
+                                    }
+                                }
+                            } else if (distanceSquared <= radiusSquared) {
+                                const blockLocation = {
+                                    x: Math.floor(center.x + x),
+                                    y: Math.floor(center.y + y),
+                                    z: Math.floor(center.z + z),
+                                }
+                                try {
+                                    dimension.setBlockType(blockLocation, block.id)
+                                } catch (e) {
+                                    console.log(`Failed to place block at ${blockLocation.x}, ${blockLocation.y}, ${blockLocation.z}: ${e}`)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (confirm && mcl.pRemove(player, 'darkoak:worldedit')) {
+                    if (selected.id) system.clearRun(selected.id)
+                }
+            }
+        })
+    })
 }
 
 /**
@@ -361,18 +442,16 @@ export function WEselector(evd) {
             WEselector(evd)
         }
 
-        let tempOutline = system.runInterval(() => {
-            if (system.currentTick % 10 == 0) {
-                mcl.particleOutline(evd.block.location, evd.block.location, undefined, 0.5)
-                system.clearRun(tempOutline)
-            }
+        system.runTimeout(() => {
+            mcl.particleOutline(evd.block.location, evd.block.location, undefined, 0.5)
         })
 
         if (selected?.p1 && selected?.p2 && !selected?.id) {
             let idadder = system.runInterval(() => {
-                mcl.particleOutline(selected.p1, selected.p2, undefined, 1)
+                if (mcl.tickTimer(10)) mcl.particleOutline(selected.p1, selected.p2, undefined, 1)
             })
             mcl.jsonPUpdate(player, 'darkoak:worldedit', 'id', idadder)
+            console.log(JSON.stringify(mcl.jsonPGet(player, 'darkoak:worldedit')))
         }
     }
 }
@@ -416,6 +495,8 @@ export function betterVanillaCommands(evd) {
         }
 
         let amount = 0
+        let totalBlocks = blocks.length
+        let delayPerBlock = time ? (time / totalBlocks) : 0
 
         for (let index = 0; index < blocks.length; index++) {
             const block = blocks[index]
@@ -427,10 +508,7 @@ export function betterVanillaCommands(evd) {
             }
             if (mcl.blocksMatch(dimen.getBlock(dest), block)) continue
 
-            let delay = 0
-            if (time && time != 0) {
-                delay = Math.abs((index / 5) - time)
-            }
+            let delay = index * delayPerBlock
 
             try {
                 system.runTimeout(() => {
@@ -446,4 +524,121 @@ export function betterVanillaCommands(evd) {
             message: `Cloned ${amount} Blocks`
         }
     })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:dobsummon',
+        description: 'Better Summon Command (More Options)',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.EntityType,
+                name: 'entityType'
+            },
+            {
+                type: CustomCommandParamType.Location,
+                name: 'location'
+            },
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'amount'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'name'
+            },
+        ]
+    }, (evd, type, loc, amount, name) => {
+        const dimen = mcl.customSlashDimen(evd)
+        let r = ''
+        let i = 0
+        let possibleError = ''
+        while (i++ < (amount || 1)) {
+            try {
+                r = 'success'
+                system.runTimeout(() => {
+                    const ent = dimen.spawnEntity(type, loc)
+                    if (name) ent.nameTag = name
+                })
+            } catch (e) {
+                if (r === 'success') {
+                    r = 'partial'
+                } else {
+                    r = 'fail'
+                    possibleError = String(e)
+                }
+                break
+            }
+        }
+
+        switch (r) {
+            case 'success':
+                return {
+                    message: `Successfully Summoned ${amount} ${type} At ${loc.x} ${loc.y} ${loc.z}`,
+                    status: CustomCommandStatus.Success
+                }
+            case 'partial':
+                return {
+                    message: `Some Of The Entities Were Summoned: ${possibleError}`,
+                    status: CustomCommandStatus.Failure
+                }
+            case 'fail':
+                return {
+                    message: `None Of The Entities Were Summoned: ${possibleError}`,
+                    status: CustomCommandStatus.Failure
+                }
+        }
+    })
+
+    // evd.customCommandRegistry.registerEnum('darkoak:slots', [EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet, EquipmentSlot.Mainhand, EquipmentSlot.Offhand, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36'])
+    // evd.customCommandRegistry.registerEnum('darkoak:enchants', enchantments)
+    // evd.customCommandRegistry.registerCommand({
+    //     name: 'darkoak:dobenchant',
+    //     description: 'Better Enchant Command (More Options)',
+    //     permissionLevel: CommandPermissionLevel.GameDirectors,
+    //     mandatoryParameters: [
+    //         {
+    //             type: CustomCommandParamType.PlayerSelector,
+    //             name: 'players'
+    //         },
+    //         {
+    //             type: CustomCommandParamType.Enum,
+    //             name: 'darkoak:enchants'
+    //         },
+    //     ],
+    //     optionalParameters: [
+    //         {
+    //             type: CustomCommandParamType.Integer,
+    //             name: 'level'
+    //         },
+    //         {
+    //             type: CustomCommandParamType.Enum,
+    //             name: 'darkoak:slots'
+    //         },
+    //     ]
+    // }, (evd, players, enchant, level, slot) => {
+    //     for (let index = 0; index < players.length; index++) {
+    //         /**@type {Player} */
+    //         const player = players[index]
+    //         let item
+    //         let toGet = slot
+    //         if (!slot) toGet = EquipmentSlot.Mainhand
+    //         if (isNaN(slot)) {
+    //             item = player.getComponent(EntityComponentTypes.Equippable)?.getEquipment(slot)
+    //         } else {
+    //             item = mcl.getInventory(player)?.container.getItem(parseInt(slot))
+    //         }
+    //         if (item) {
+    //             system.runTimeout(() => {
+    //                 item.getComponent(ItemComponentTypes.Enchantable).addEnchantment({
+    //                     type: EnchantmentTypes.get(enchant),
+    //                     level: level
+    //                 })
+    //             })
+    //         }
+    //     }
+    // })
+
+
 }

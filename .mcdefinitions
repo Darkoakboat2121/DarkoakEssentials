@@ -5,6 +5,7 @@ tag=darkoak:team4
 tag=darkoak:immune
 tag=darkoak:immune2
 tag=darkoak:pacifist
+tag=darkoak:combat
 function=gen/coal_ore_gen
 entity=darkoak:floating_text
 item=darkoak:anticheat

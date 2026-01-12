@@ -57,9 +57,19 @@
                     "value": 0.7
                 }
             },
+            "darkoak:size0.9": {
+                "minecraft:scale": {
+                    "value": 0.9
+                }
+            },
             "darkoak:size1.0": {
                 "minecraft:scale": {
                     "value": 1.0
+                }
+            },
+            "darkoak:size1.1": {
+                "minecraft:scale": {
+                    "value": 1.1
                 }
             },
             "darkoak:size1.5": {
@@ -155,6 +165,10 @@
                 },
                 "minecraft:movement": {
                     "value": 0.1
+                },
+                "minecraft:pushable": {
+                    "is_pushable": false,
+                    "is_pushable_by_piston": true
                 }
             }
         },
@@ -361,6 +375,20 @@
                                                 "value": "darkoak:pacifist"
                                             }
                                         ]
+                                    },
+                                    {
+                                        "all_of": [
+                                            {
+                                                "test": "has_tag",
+                                                "subject": "self",
+                                                "value": "darkoak:combat"
+                                            },
+                                            {
+                                                "test": "has_tag",
+                                                "subject": "damager",
+                                                "value": "darkoak:combat"
+                                            }
+                                        ]
                                     }
                                 ]
                             }
@@ -453,6 +481,13 @@
                     ]
                 }
             },
+            "darkoak:size0.9": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size0.9"
+                    ]
+                }
+            },
             "darkoak:size1.0": {
                 "add": {
                     "component_groups": [
@@ -460,10 +495,10 @@
                     ]
                 }
             },
-            "darkoak:size1.5": {
+            "darkoak:size1.1": {
                 "add": {
                     "component_groups": [
-                        "darkoak:size1.5"
+                        "darkoak:size1.1"
                     ]
                 }
             },

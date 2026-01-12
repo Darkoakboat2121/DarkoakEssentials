@@ -2,7 +2,7 @@
 // This file holds data and some helper functions
 
 import { mcl } from "../logic"
-import { EntityComponentTypes, Player, PlayerJoinAfterEvent, PlayerLeaveBeforeEvent, system, world } from "@minecraft/server"
+import { Block, Entity, EntityComponentTypes, Player, PlayerJoinAfterEvent, PlayerLeaveBeforeEvent, system, world } from "@minecraft/server"
 
 /**List of usernames to ban automatically if prebans is set to true (proof) [notes], prebanable: [discrimination, hacking, backdooring]*/
 export const preBannedList = [
@@ -143,7 +143,50 @@ export const preBannedList = [
     'EntityEngine', //Alt
     'alteik', //Client dev
     'RadWolf514', //Likes WW2 germans
+    'nadi23459367', //Basic
+    'Psychobuggy9244', //Racism
+    'DDacarious', //Racism (check)
+    'Strwbrryx0', //Basic
+    'MattePlane3769', //Alt
+    'Monolo420', //Racism
+    'creed1231', //Racism
+    'Trilobite8410', //Likes WW2 german leader (hail ######)
+    'JunesGuysYT', //Basic
+    'jfq', //Basic
+    'X7G', //Basic
+    'FellowSafe1443', //Realm nuking
+    'TSL 5100', //Realm nuking
+    'BryceBarnette', //Realm nuking
+    'BraydenA21', //Realm nuking
+    'ArcZotic3232', //Realm nuking
+    'Wkey dummy', //Realm nuking
+    'J9c79k', //Realm nuking
+    'Songful2900', //Realm nuking
+    'Anthony82835', //Realm nuking
+    'Twitchsiz', //Realm nuking
+    'Omar6Idk1631', //Realm nuking
+    'MildPlayer76671', //Realm nuking
+    'ILoveJ7297', //Realm nuking
+    'Isabriones16', //Realm nuking
+    'zBichoZsx', //Realm nuking
+    'elias89910', //Realm nuking
+    'NRK EGOS', //Realm nuking
+    'Dqrk strict', //Realm nuking
+    'uvori6181', //Realm nuking
+    'R2 YTGOATMER', //Realm nuking
+    'Jamie soBe21', //Realm nuking
+    'DaxToTheMax5221', //Realm nuking
+    'DexTremBala', //Basic
+    'BilledBus3094', //Realm nuking
+    'VXPHCC', //Realm nuking
+    'HAZZA7917', //Realm nuking
+    'Static host8414', //Hack dev
+    'SnowyGamerXD', //Realm nuking
+    'Flash1234132', //Realm nuking (most likely a nuker)
+    'idkcodw', //Realm nuking
 ]
+
+export const prebansSet = new Set(preBannedList)
 
 /**List of blocks that shouldnt be placed by non-admins*/
 export const badBlocksList = [
@@ -239,146 +282,300 @@ export const spranks = {
 }
 
 /**
- * 
  * @param {Player} player 
  * @param {string} string 
  * @returns 
  */
-export function replacer(player, string) {
-    const loc = player.location
-    const velo = player.getVelocity()
-    const vd = player.getViewDirection()
-    const dot = velo.x * vd.x + velo.z * vd.z
+// export function replacer(player, string) {
+//     const loc = player.location
+//     const velo = player.getVelocity()
+//     const vd = player.getViewDirection()
+//     const dot = velo.x * vd.x + velo.z * vd.z
+//     const ap = world.getAllPlayers()
+
+//     const time = new Date()
+//     // let block = undefined
+//     // if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block) {
+//     //     block = player.getBlockFromViewDirection().block
+//     // } else {
+//     //     block = 'Undefined'
+//     // }
+
+//     // try making it work on blocks to with ?. and || parts ------------------
+//     let formattedString = string
+//         .replaceAll('#name#', player.name)
+//         .replaceAll('#namet#', player.name.replaceAll(' ', '').toString())
+//         .replaceAll('#health#', Math.ceil(mcl.healthValue(player)).toString())
+//         .replaceAll('#location#', `${loc.x.toFixed(0)} ${loc.y.toFixed(0)} ${loc.z.toFixed(0)}`)
+//         .replaceAll('#locationx#', `${loc.x.toFixed(0)}`)
+//         .replaceAll('#locationy#', `${loc.y.toFixed(0)}`)
+//         .replaceAll('#locationz#', `${loc.z.toFixed(0)}`)
+//         .replaceAll('#slot#', player.selectedSlotIndex.toString())
+//         .replaceAll('#velocity#', `${(velo.x).toFixed(1)} ${(velo.y).toFixed(1)} ${(velo.z).toFixed(1)}`)
+//         .replaceAll('#velocityx#', `${(velo.x).toFixed(1)}`)
+//         .replaceAll('#velocityy#', `${(velo.y).toFixed(1)}`)
+//         .replaceAll('#velocityz#', `${(velo.z).toFixed(1)}`)
+//         .replaceAll('#dot#', `${dot.toFixed(1)}`)
+//         .replaceAll('#cps#', `${(player.getDynamicProperty('darkoak:ac:cps') || '0').toString()}`)
+//         .replaceAll('#effects#', mcl.playerEffectsArray(player))
+//         .replaceAll('#tags#', mcl.playerTagsArray(player))
+//         .replaceAll('#players#', ap.length.toString())
+//         .replaceAll('#playerlist#', ap.map(e => e.name).join())
+//         .replaceAll('#dimension#', player.dimension.id)
+//         .replaceAll('#device#', player.clientSystemInfo.platformType.toString())
+//         .replaceAll('#tps#', mcl.wGet('darkoak:tps').toString())
+//         .replaceAll('#t-seconds#', (system.currentTick / 20).toFixed(0))
+//         .replaceAll('#s-seconds#', mcl.wGet('darkoak:sseconds').toString())
+//         .replaceAll('#s-minutes#', mcl.wGet('darkoak:sminutes').toString().split('.')[0])
+//         .replaceAll('#graphics#', player.graphicsMode.toString())
+//         .replaceAll('#input#', player.inputInfo.lastInputModeUsed.toString())
+//         .replaceAll('#time1#', `${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`)
+//         .replaceAll('#time2#', `${time.getHours()}:${time.getMinutes()}`)
+//         .replaceAll('#year#', time.getFullYear().toString())
+//         .replaceAll('#money#', mcl.getScore(player).toString())
+//         .replaceAll('#perm#', player.commandPermissionLevel.toString())
+
+//         .replaceAll('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
+
+
+//     try {
+//         const view = player.getViewDirection()
+//         formattedString = formattedString
+//             .replaceAll('#viewx#', view.x.toFixed(1))
+//             .replaceAll('#viewy#', view.y.toFixed(1))
+//             .replaceAll('#viewz#', view.z.toFixed(1))
+//     } catch {
+
+//     }
+
+//     // emojis
+//     if (formattedString.includes(':')) {
+//         for (let index = 0; index < emojis.length; index++) {
+//             const e = emojis[index]
+//             formattedString = formattedString.replaceAll(e.m, e.e)
+//         }
+//     }
+
+//     // held item
+//     if (formattedString.includes('#hand#')) {
+//         const item = mcl.getHeldItem(player)
+//         if (item) {
+//             formattedString = formattedString
+//                 .replaceAll('#hand#', item.typeId)
+//         } else {
+//             formattedString = formattedString
+//                 .replaceAll('#hand#', 'hand')
+//         }
+//     }
+
+//     // scores
+//     if (formattedString.includes('#[') && formattedString.includes(']#')) {
+//         let score = mcl.getStringBetweenChars(formattedString, '#[', ']#')
+//         formattedString = formattedString
+//             .replaceAll(score, mcl.getScoreOld(player, score).toString())
+//             .replaceAll('#[', '')
+//             .replaceAll(']#', '')
+//     }
+
+//     // random number
+//     if (formattedString.includes('#=') && formattedString.includes('=#')) {
+//         let random = mcl.getStringBetweenChars(formattedString, '#=', '=#')
+//         const split = random.split('-')
+//         const min = parseInt(split[0])
+//         const max = parseInt(split[1])
+//         if (min != undefined && max != undefined) {
+//             if (min > max) {
+//                 formattedString = formattedString
+//                     .replaceAll(random, 'Error: Min Is Greater Than Max')
+//                     .replaceAll('#=', '')
+//                     .replaceAll('=#', '')
+//             } else {
+//                 formattedString = formattedString
+//                     .replaceAll(random, mcl.randomNumberInRange(min, max).toString())
+//                     .replaceAll('#=', '')
+//                     .replaceAll('=#', '')
+//             }
+//         }
+//     }
+
+
+//     if (formattedString.includes('#{') && formattedString.includes('}#')) {
+//         const variable = mcl.getStringBetweenChars(formattedString, '#{', '}#')
+//         formattedString = formattedString
+//             .replaceAll(variable, mcl.wGet(`darkoak:vars:${variable}`) || '')
+//             .replaceAll('#{', '')
+//             .replaceAll('}#', '')
+
+//     }
+
+//     // math, btw this code is racist, idk why, it just gets censored in mc
+//     if (formattedString.includes('#(') && formattedString.includes(')#')) {
+//         try {
+//             let eq = mcl.getStringBetweenChars(formattedString, '#(', ')#')
+
+//             formattedString = formattedString
+//                 .replaceAll(eq, Function(`return ${eq}`)())
+//                 .replaceAll('#(', '')
+//                 .replaceAll(')#', '')
+//         } catch {
+//             mcl.adminMessage(`Replacer Hashtag Error At Math Replacer: ${player.name} -> ${string}`)
+//         }
+//     }
+
+//     return formattedString
+// }
+
+/**
+ * @param {Player | Entity | Block} d 
+ * @param {string} text 
+ */
+export function replacer(d, text) {
+    let f = text
+    const loc = d.location
     const ap = world.getAllPlayers()
-
     const time = new Date()
-    // let block = undefined
-    // if (player.getBlockFromViewDirection() != undefined && player.getBlockFromViewDirection().block) {
-    //     block = player.getBlockFromViewDirection().block
-    // } else {
-    //     block = 'Undefined'
-    // }
 
-    // try making it work on blocks to with ?. and || parts ------------------
-    let formattedString = string
-        .replaceAll('#name#', player.name)
-        .replaceAll('#health#', Math.ceil(mcl.healthValue(player)).toString())
+    if ((d instanceof Entity)) {
+        const velo = d.getVelocity()
+        const vd = d.getViewDirection()
+        const dot = velo.x * vd.x + velo.z * vd.z
+
+        if ((d instanceof Player)) {
+            f = f
+                .replaceAll('#name#', d.name)
+                .replaceAll('#namet#', d.name.replaceAll(' ', '').toString())
+                .replaceAll('#device#', d.clientSystemInfo.platformType.toString())
+                .replaceAll('#graphics#', d.graphicsMode.toString())
+                .replaceAll('#input#', d.inputInfo.lastInputModeUsed.toString())
+                .replaceAll('#perm#', d.commandPermissionLevel.toString())
+                .replaceAll('#slot#', d.selectedSlotIndex.toString())
+                .replaceAll('#cps#', `${(d.getDynamicProperty('darkoak:ac:cps') || '0').toString()}`)
+        }
+
+        f = f
+            .replaceAll('#health#', Math.ceil(mcl.healthValue(d)).toString())
+            .replaceAll('#velocity#', `${(velo.x).toFixed(1)} ${(velo.y).toFixed(1)} ${(velo.z).toFixed(1)}`)
+            .replaceAll('#velocityx#', `${(velo.x).toFixed(1)}`)
+            .replaceAll('#velocityy#', `${(velo.y).toFixed(1)}`)
+            .replaceAll('#velocityz#', `${(velo.z).toFixed(1)}`)
+            .replaceAll('#dot#', `${dot.toFixed(1)}`)
+            .replaceAll('#effects#', mcl.playerEffectsArray(d))
+            .replaceAll('#tags#', mcl.playerTagsArray(d))
+            .replaceAll('#time1#', `${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`)
+            .replaceAll('#time2#', `${time.getHours()}:${time.getMinutes()}`)
+            .replaceAll('#year#', time.getFullYear().toString())
+            .replaceAll('#money#', mcl.getScore(d).toString())
+            .replaceAll('#nametag#', d?.nameTag)
+
+        if (f.includes('#hand#')) {
+            const item = mcl.getHeldItem(d)
+            if (item) {
+                f = f
+                    .replaceAll('#hand#', item.typeId)
+            } else {
+                f = f
+                    .replaceAll('#hand#', 'hand')
+            }
+        }
+
+        try {
+            const view = d.getViewDirection()
+            f = f
+                .replaceAll('#viewx#', view.x.toFixed(1))
+                .replaceAll('#viewy#', view.y.toFixed(1))
+                .replaceAll('#viewz#', view.z.toFixed(1))
+        } catch {
+
+        }
+
+    } else if (d instanceof Block) {
+        f = f
+            .replaceAll('#type#', d.typeId)
+            .replaceAll('#above#', d.above()?.typeId)
+            .replaceAll('#below#', d.below()?.typeId)
+            .replaceAll('#north#', d.north()?.typeId)
+            .replaceAll('#south#', d.south()?.typeId)
+            .replaceAll('#east#', d.east()?.typeId)
+            .replaceAll('#west#', d.west()?.typeId)
+    }
+    f = f
         .replaceAll('#location#', `${loc.x.toFixed(0)} ${loc.y.toFixed(0)} ${loc.z.toFixed(0)}`)
         .replaceAll('#locationx#', `${loc.x.toFixed(0)}`)
         .replaceAll('#locationy#', `${loc.y.toFixed(0)}`)
         .replaceAll('#locationz#', `${loc.z.toFixed(0)}`)
-        .replaceAll('#slot#', player.selectedSlotIndex.toString())
-        .replaceAll('#velocity#', `${(velo.x).toFixed(1)} ${(velo.y).toFixed(1)} ${(velo.z).toFixed(1)}`)
-        .replaceAll('#velocityx#', `${(velo.x).toFixed(1)}`)
-        .replaceAll('#velocityy#', `${(velo.y).toFixed(1)}`)
-        .replaceAll('#velocityz#', `${(velo.z).toFixed(1)}`)
-        .replaceAll('#dot#', `${dot.toFixed(1)}`)
-        .replaceAll('#cps#', `${(player.getDynamicProperty('darkoak:ac:cps') || '0').toString()}`)
-        .replaceAll('#effects#', mcl.playerEffectsArray(player))
-        .replaceAll('#tags#', mcl.playerTagsArray(player))
-        .replaceAll('#players#', ap.length.toString())
-        .replaceAll('#playerlist#', ap.map(e => e.name).join())
-        .replaceAll('#dimension#', player.dimension.id)
-        .replaceAll('#device#', player.clientSystemInfo.platformType.toString())
         .replaceAll('#tps#', mcl.wGet('darkoak:tps').toString())
         .replaceAll('#t-seconds#', (system.currentTick / 20).toFixed(0))
         .replaceAll('#s-seconds#', mcl.wGet('darkoak:sseconds').toString())
         .replaceAll('#s-minutes#', mcl.wGet('darkoak:sminutes').toString().split('.')[0])
-        .replaceAll('#graphics#', player.graphicsMode.toString())
-        .replaceAll('#input#', player.inputInfo.lastInputModeUsed.toString())
-        .replaceAll('#time1#', `${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`)
-        .replaceAll('#time2#', `${time.getHours()}:${time.getMinutes()}`)
-        .replaceAll('#year#', time.getFullYear().toString())
-        .replaceAll('#money#', mcl.getScore(player).toString())
-        .replaceAll('#perm#', player.commandPermissionLevel.toString())
-
+        .replaceAll('#players#', ap.length.toString())
+        .replaceAll('#playerlist#', ap.map(e => e.name).join())
+        .replaceAll('#dimension#', d?.dimension?.id)
         .replaceAll('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
-        
 
-    try {
-        const view = player.getViewDirection()
-        formattedString = formattedString
-            .replaceAll('#viewx#', view.x.toFixed(1))
-            .replaceAll('#viewy#', view.y.toFixed(1))
-            .replaceAll('#viewz#', view.z.toFixed(1))
-    } catch {
-
-    }
-
-    // emojis
-    if (formattedString.includes(':')) {
+    if (f.includes(':')) {
         for (let index = 0; index < emojis.length; index++) {
             const e = emojis[index]
-            formattedString = formattedString.replaceAll(e.m, e.e)
+            f = f.replaceAll(e.m, e.e)
         }
     }
 
-    // held item
-    if (formattedString.includes('#hand#')) {
-        const item = mcl.getHeldItem(player)
-        if (item) {
-            formattedString = formattedString
-                .replaceAll('#hand#', item.typeId)
-        } else {
-            formattedString = formattedString
-                .replaceAll('#hand#', 'hand')
+    while (f.includes('#{') && f.includes('}#')) {
+        try {
+            let match = f.match(/#\{([^{}]+)\}#/)
+            if (!match) break
+            f = f.replace(match[0], mcl.jsonWGet(`darkoak:vars:${match[1]}`)?.value || '')
+        } catch {
+            break
         }
     }
 
-    // scores
-    if (formattedString.includes('#[') && formattedString.includes(']#')) {
-        let score = mcl.getStringBetweenChars(formattedString, '#[', ']#')
-        formattedString = formattedString
-            .replaceAll(score, mcl.getScoreOld(player, score).toString())
-            .replaceAll('#[', '')
-            .replaceAll(']#', '')
+    while (f.includes('#=') && f.includes('=#')) {
+        try {
+            let match = f.match(/#\=([^()]+)\=#/)
+            if (!match) break
+
+            const ib = match[1]
+            const split = ib.split('-')
+            const min = parseInt(split[0])
+            const max = parseInt(split[1])
+            if (min && max) {
+                if (min > max) {
+                    f = f.replace(match[0], 'Error: Min Is Greater Than Max')
+                } else {
+                    f = f.replace(match[0], mcl.xorRandomNum(min, max).toString())
+                }
+            }
+        } catch {
+            break
+        }
     }
 
-    // random number
-    if (formattedString.includes('#=') && formattedString.includes('=#')) {
-        let random = mcl.getStringBetweenChars(formattedString, '#=', '=#')
-        const split = random.split('-')
-        const min = parseInt(split[0])
-        const max = parseInt(split[1])
-        if (min != undefined && max != undefined) {
-            if (min > max) {
-                formattedString = formattedString
-                    .replaceAll(random, 'Error: Min Is Greater Than Max')
-                    .replaceAll('#=', '')
-                    .replaceAll('=#', '')
-            } else {
-                formattedString = formattedString
-                    .replaceAll(random, mcl.randomNumberInRange(min, max).toString())
-                    .replaceAll('#=', '')
-                    .replaceAll('=#', '')
+    if ((d instanceof Entity)) {
+        while (f.includes('#[') && f.includes(']#')) {
+            try {
+                let match = f.match(/#\[([^()]+)\]#/)
+                if (!match) break
+
+                f = f.replace(match[0], (mcl.getScoreOld(d, match[1]) || 0).toString())
+            } catch {
+                break
             }
         }
     }
 
-    if (formattedString.includes('#{') && formattedString.includes('}#')) {
-        const variable = mcl.getStringBetweenChars(formattedString, '#{', '}#')
-        formattedString = formattedString
-            .replaceAll(variable, mcl.wGet(`darkoak:vars:${variable}`) || '')
-            .replaceAll('#{', '')
-            .replaceAll('}#', '')
-
-    }
-
-    // math, btw this code is racist, idk why, it just gets censored in mc
-    if (formattedString.includes('#(') && formattedString.includes(')#')) {
+    while (f.includes('#(') && f.includes(')#')) {
         try {
-            let eq = mcl.getStringBetweenChars(formattedString, '#(', ')#')
+            let match = f.match(/#\(([^()]+)\)#/)
+            if (!match) break
 
-            formattedString = formattedString
-                .replaceAll(eq, Function(`return ${eq}`)())
-                .replaceAll('#(', '')
-                .replaceAll(')#', '')
+            let eq = match[1]
+            let result = Function(`return ${eq}`)()
+            f = f.replace(match[0], result)
         } catch {
-            mcl.adminMessage(`Replacer Hashtag Error At Math Replacer: ${player.name} -> ${string}`)
+            break
         }
     }
-
-    return formattedString
+    return f
 }
 
 
@@ -389,7 +586,7 @@ export const hashtags = [
     '\nKeys:',
     '\\n -> New Line',
     '#[scorename]# -> Player Score (Replace scorename With An Actual Score Name)',
-    '#(math)# -> Math Equation (Replace math With A Math Equation, Allowed Values: numbers, *(multiplication), +(addition), /(division), -(subtraction), replacer hashtags (This Does Not Support Math Nesting))',
+    '#(math)# -> Math Equation (Replace math With A Math Equation, Allowed Values: numbers, *(multiplication), +(addition), /(division), -(subtraction), replacer hashtags)',
     '#name# -> Player Name',
     '#health# -> Player Health',
     '#location# -> Player Co-ordinates',
@@ -702,7 +899,7 @@ export const trackingKeysPlayer = [
 ]
 
 export const crasherSymbol = ''
-export const crasherSymbol2 = 'ï£¿'
+export const crasherSymbol2 = ''
 
 /**
  * @param {Player} player Player that the item amount runs on
@@ -809,6 +1006,73 @@ export function SSColorIndex(def) {
     if (index < 0) index = 12
     return index
 }
+
+export const susNames = [
+    '.gg/',
+    'LumineProxy',
+    '§"',
+    '"',
+    '§1§lVERTEX',
+]
+
+export const devs = [
+    'Darkoakboat2121',
+]
+
+export const enchantments = [
+    'protection',
+    'fire_protection',
+    'feather_falling',
+    'blast_protection',
+    'projectile_protection',
+    'thorns',
+    'respiration',
+    'depth_strider',
+    'aqua_affinity',
+    'sharpness',
+    'smite',
+    'bane_of_arthropods',
+    'knockback',
+    'fire_aspect',
+    'looting',
+    'efficiency',
+    'silk_touch',
+    'unbreaking',
+    'fortune',
+    'power',
+    'punch',
+    'flame',
+    'infinity',
+    'luck_of_the_sea',
+    'lure',
+    'frost_walker',
+    'mending',
+    'binding',
+    'vanishing',
+    'impaling',
+    'riptide',
+    'loyalty',
+    'channeling',
+    'multishot',
+    'piercing',
+    'quick_charge',
+    'soul_speed',
+    'swift_sneak',
+    'wind_burst',
+    'density',
+    'breach',
+    'lunge'
+]
+
+export const itemToDamage = [
+    { type: 'minecraft:wooden_sword', damage: 4 },
+    { type: 'minecraft:stone_sword', damage: 5 },
+    { type: 'minecraft:copper_sword', damage: 5 },
+    { type: 'minecraft:iron_sword', damage: 6 },
+    { type: 'minecraft:golden_sword', damage: 4 },
+    { type: 'minecraft:diamond_sword', damage: 7 },
+    { type: 'minecraft:netherite_sword', damage: 8 },
+]
 
 
 // dynamic propertys can hold 32767 characters

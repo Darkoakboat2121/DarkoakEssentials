@@ -1,4 +1,4 @@
-import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent } from "@minecraft/server"
+import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { worldProtectionBadItems, worldProtectionWater } from "../data/arrays"
@@ -7,14 +7,14 @@ import { antiFastPlace } from "./anticheat"
 
 
 /**
- * @param {PlayerBreakBlockBeforeEvent | PlayerPlaceBlockBeforeEvent} evd 
+ * @param {PlayerBreakBlockBeforeEvent | PlayerPlaceBlockBeforeEvent | PlayerInteractWithBlockBeforeEvent} evd 
  */
 export function placeBreakProtection(evd) {
     if (mcl.isCreating(evd.player)) return
     let places = mcl.listGetValues('darkoak:protection:')
     for (let index = 0; index < places.length; index++) {
         /**
-         * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }}}
+         * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }, break: boolean, build: boolean, interactblocks: boolean}}
          */
         const area = JSON.parse(places[index])
 
@@ -34,20 +34,38 @@ export function placeBreakProtection(evd) {
                 const coords1 = {
                     x: parseInt(parts1[0]),
                     y: parseInt(parts1[1]),
-                    z: parseInt(parts1[2])
+                    z: parseInt(parts1[2]),
                 }
                 const parts2 = b?.coords2?.split(' ')
                 const coords2 = {
                     x: parseInt(parts2[0]),
                     y: parseInt(parts2[1]),
-                    z: parseInt(parts2[2])
+                    z: parseInt(parts2[2]),
                 }
                 if (mcl.locationInside({ x: x, z: z }, coords1, (coords2 || coords1))) {
                     return
                 }
             }
+            const isInteract = (evd instanceof PlayerInteractWithBlockBeforeEvent)
+            const allowed = mcl.allowCheck(block)
+            if ((evd instanceof PlayerBreakBlockBeforeEvent)) {
+                if (area?.break) return
+                if (area?.breakallow && allowed) return
+            }
+            if ((evd instanceof PlayerPlaceBlockBeforeEvent)) {
+                if (area?.build) return
+                if (area?.buildallow && allowed) return
+            }
+            if (isInteract) {
+                if (area?.interactblocks) return
+                if (area?.interactblocksallow && allowed) return
+            }
             evd.cancel = true
-            evd.player.sendMessage('§cThis Land Is Protected!§r')
+            if (isInteract) {
+                if (mcl.tickTimer(15)) evd.player.sendMessage('§cThis Land Is Protected!§r')
+            } else {
+                evd.player.sendMessage('§cThis Land Is Protected!§r')
+            }
             return
         }
     }
@@ -216,17 +234,18 @@ export function worldProtectionOther(player) {
     const bans = mcl.jsonWGet('darkoak:banneditems') || []
 
     if (item) {
+        const contain = mcl.getItemContainer(player)
         if (d?.water) {
             const wpw = worldProtectionWater
-            if (wpw.includes(item.typeId)) mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
+            if (wpw.includes(item.typeId)) contain.setItem(player.selectedSlotIndex)
         }
 
         if (d?.pearls && item.typeId === 'minecraft:ender_pearl') {
-            mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
+            contain.setItem(player.selectedSlotIndex)
         }
 
         if (d?.pistons && item.typeId === 'minecraft:piston' || item.typeId === 'minecraft:sticky_piston') {
-            mcl.getItemContainer(player).setItem(player.selectedSlotIndex)
+            contain.setItem(player.selectedSlotIndex)
         }
     }
 
