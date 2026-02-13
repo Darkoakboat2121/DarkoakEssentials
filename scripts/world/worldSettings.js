@@ -206,12 +206,18 @@ export function borderAndTracking(player) {
 
     // World border
     if (worldBorder != 0 && !c?.bordermaster) {
+        const riding = player.getComponent(EntityComponentTypes.Riding)?.entityRidingOn
         if (Math.abs(x) > worldBorder) {
             const k = (x / worldBorder)
             if (mcl.tickTimer(20)) player.applyDamage(Math.abs(k), {
                 cause: EntityDamageCause.override
             })
             mcl.knockback(player, k * -1, 0, 0.1)
+            if (riding) riding.applyImpulse({
+                x: k * -1,
+                y: 0.1,
+                z: 0
+            })
         }
 
         if (Math.abs(z) > worldBorder) {
@@ -220,6 +226,11 @@ export function borderAndTracking(player) {
                 cause: EntityDamageCause.override
             })
             mcl.knockback(player, 0, k * -1, 0.1)
+            if (riding) riding.applyImpulse({
+                x: 0,
+                y: 0.1,
+                z: k * -1
+            })
         }
 
     }
@@ -378,14 +389,18 @@ export function killTracking(evd) {
  * @param {string} [command=undefined] 
  */
 function trackerHelper(type, entity, command = undefined) {
-    let SB = world.scoreboard.getObjective(type)
-    if (!SB) SB = world.scoreboard.addObjective(type)
-    SB.addScore(entity, 1)
-    if (command) entity.runCommand(command)
-    entity.addTag(type)
-    system.runTimeout(() => {
-        entity.removeTag(type)
-    }, 1)
+    try {
+        let SB = world.scoreboard.getObjective(type)
+        if (!SB) SB = world.scoreboard.addObjective(type)
+        SB.addScore(entity, 1)
+        if (command) entity.runCommand(command)
+        entity?.addTag(type)
+        system.runTimeout(() => {
+            entity?.removeTag(type)
+        }, 1)
+    } catch (e) {
+        console.log(`tracker error, ${entity?.id}: ` + String(e))
+    }
 }
 
 /**
@@ -493,7 +508,7 @@ export function veinminer(evd) {
 
     if (d?.trees?.enabled && block.typeId.endsWith('_log') && !block.typeId.startsWith('stripped_') && held.typeId.endsWith('_axe')) {
         vein((d?.trees?.max || 0))
-    } else if (d?.ores?.enabled && block.typeId.endsWith('_ore') && held.typeId.endsWith('_pickaxe')) {
+    } else if (d?.ores?.enabled && (block.typeId.endsWith('_ore') || block.typeId === 'minecraft:ancient_debris') && held.typeId.endsWith('_pickaxe')) {
         vein((d?.ores?.max || 0))
     }
 

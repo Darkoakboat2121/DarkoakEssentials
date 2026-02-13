@@ -57,7 +57,6 @@ changelog:
         animated action forms ***
 
         arrow border killer *
-        plots *
         dynamic shops *
         animated builds * (help soul please when we make this)
         vertical slabs!!!! *
@@ -65,28 +64,26 @@ changelog:
         more punishments (make them like trolling) *
         lifesteal system *
         trading system * (between p to p and p to e)
-        dynamic lighting system *
         anti combat log system *
-        lag clear system *
         personal settings command (to disable sitting, tpa, other optional stuff) *
         anti-invis-skins module *
         thrices math idea *
+        chat color adder ui *
+
+        
+        fake player spleef preset ***
         
         
-        summonable fireballs (cant remember if this was added before this update)
-        /darkoak:dobsummon (/summon but better)
-        anti chat crasher
+        sitter item
+        anti-force-op
+        dynamic lighting system ----- needs settings! probably other player settings
         crates (rewards should be commands) -----still needs work
-        /me is disabled automatically to help fight against lumine hackers and the chat screen no longer has a max amount of messages
-        many new items to the illegal item giver ui (slates!)
-        hit & kill tracking
-        quick chat buttons
-        /wesphere
-        customizibility option, large or normal ui sizes
-        custom combat system
-        a new spell (figure out what it is)
+        anti-spam-delay
+        
+        
 
 
+        scythe dummy item *
         rideable attribute *
         dev tools: emulated packet reading, error messages *
         we circle maker /wecircle *
@@ -96,19 +93,14 @@ changelog:
         hole filler *
         afk timer *
         /boats leaderboard with @a *
-        signs+ * (spinning signs, rainbow text, bad apple lol, delays, slideshows)
         kits! *
         owner system *
         alt uis *
 
 
     fixed:
-        nicknames interactions with namecolors
-        random data issue
-        world border
-        sidebar fading issue
-        variables
-        some anticheat unreliablity *
+        replacer function... again... (it only accepts nested multiples of special elements "#[1#[5]#]#" = 15, ones like "#[1]# #[2]#" dont work)
+        gens
 
         sitting and wind charges *
         lava / water bucket use on world protected areas ***
@@ -118,13 +110,9 @@ changelog:
 
         
     changes:
-        clear chat has no scroll now
-        /inventory now saves the armor and offhand slots
-        the world protected areas now have additional options
-        the ban, prebans, and whitelist systems have been reworked
-        chat commands now have dynamic replacements for commands, type: !test @s 1, command: tp $1$ $2$ $2$ $2$
-        /darkoak:dobclone is now more performant
-        the replacer system has been completely reworked
+        the item mover lag clear option makes items move every second but staggered for performance
+        the chat and anticheat logs now make space for larger elements, allowing more logs to be stored while being much less error prone
+        antispam2 now checks the percentage of matching text
 
         /wepaste should have axis rotation *
         /attribute having a growth / shrinkage instead of instant, it should be togglable *
@@ -137,6 +125,12 @@ changelog:
         http requests *
 
     removed:
+
+
+
+
+
+
         
         
 
@@ -165,6 +159,14 @@ BOT INFO:
         Profile signature validity
         Skin/cape signature validity
         UUID ↔ token binding
+
+
+splashs client:
+    esp
+    killaura / triggerbot / pvp stuff
+    anti-spam
+    external spam
+    nuker (i dont think it works)
 
 
 IDEAS:
@@ -224,8 +226,32 @@ HitBox
 Kill Aura: 1
 .give: yeah idk, maybe check for nearby items? (that method wouldnt work with /give)
 
-
+FAKE PLAYERS:
+    spleef mode
+    chest mover mode
+    
 
 UIS:
     darko - server transfer ui
     
+CLIENT DEFS:
+    L1: Injection clients (user sided)
+        inject using dlls into mc, changes packets sent
+
+    L2: Proxy clients (bridge sided)
+        connects to an external server
+        has a fatal flaw (atleast lumine has it)
+
+    L2.1: Bots (bridge sided)
+        does not connect to an external server, but does change how the connection works compared to normal clients
+        predictable names are easy to protect against, unpredictable ones arent
+        may use subsessions
+
+    L3: OP exploit (unknown)
+        its only happened twice
+        borealjam was involved in both
+        theres no name or nametag with the user
+
+
+
+

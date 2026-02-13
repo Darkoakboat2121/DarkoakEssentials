@@ -24,17 +24,20 @@ import * as worldSettings from "./world/worldSettings"
 import * as worldProtection from "./world/worldProtection"
 import * as worldEdit from "./world/worldEdit"
 import * as roles from "./world/roles"
-import { plotAdder } from "./world/plots"
+import { plotAdder, plotBreakPlaceProtection, plotCommands } from "./world/plots"
+import { lagClear } from "./miscellaneous/lagclear"
+import { signsPlus } from "./miscellaneous/signsplus"
 
 import { combatManager, fakePlayerCommand } from "./entityHandlers/fakeplayers"
 import { scoreboardHandler } from "./entityHandlers/floatingtext"
 import { invSeeLinker, invSeeLocker } from "./entityHandlers/invAccessor"
-import { crashJob, customCombatSystem, customCombatToggle, magicItem, magicSlotter, sitCheck } from "./entityHandlers/players"
+import { crashJob, customCombatSystem, customCombatToggle, dynamicLighting, magicItem, magicSlotter, magicTalismanActionBar, sitCheck, sitMap } from "./entityHandlers/players"
 
 // seventh set up external uis / commands
 import * as external from "./external/external"
 import { customEnchantActions, customEnchantEvents, enchantOnDamaged, enchantOnDeathKill, enchantOnHit, enchantOnJump, enchantOnUse } from "./enchanting"
 import { bui } from "./uis/baseplateUI"
+import { prejoinSystem } from "./miscellaneous/prejoins"
 
 import { debugLog } from "./debug/debugLog"
 
@@ -82,6 +85,7 @@ world.afterEvents.playerSpawn.subscribe((evd) => {
     chat.messageQueueAndPlayerList(evd)
     moneySetter(evd)
     chat.logJoinsLeaves(evd)
+    anticheat.antiSubsessionsRework(evd)
 
     // system.sendScriptEvent('darkoak:afterplayerspawn', JSON.stringify({
     //     initialSpawn: evd.initialSpawn,
@@ -103,6 +107,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
     worldEdit.WEselector(evd)
     worldSettings.cratesOpener(evd)
     worldProtection.placeBreakProtection(evd)
+    plotBreakPlaceProtection(evd)
 
     // system.runTimeout(() => {
     //     system.sendScriptEvent('darkoak:beforeplayerinteractwithblock', JSON.stringify({
@@ -193,6 +198,7 @@ world.beforeEvents.playerBreakBlock.subscribe((evd) => {
     worldProtection.lockedChestProtection(evd)
     roles.roleBreak(evd)
     worldSettings.veinminer(evd)
+    plotBreakPlaceProtection(evd)
 
     // system.runTimeout(() => {
     //     system.sendScriptEvent('darkoak:beforeplayerbreakblock', JSON.stringify({
@@ -215,6 +221,7 @@ world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
     anticheat.antiFastPlace(evd)
     worldSettings.worldSettingsBuild(evd)
     roles.roleBuild(evd)
+    plotBreakPlaceProtection(evd)
 
     // system.sendScriptEvent('darkoak:beforeplayerplaceblock', JSON.stringify({
     //     block: evd.block,
@@ -229,6 +236,7 @@ world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
 // Before explosion
 world.beforeEvents.explosion.subscribe((evd) => {
     worldProtection.explosionProtectionLandclaim(evd)
+    plotBreakPlaceProtection(evd)
 
     // system.sendScriptEvent('darkoak:beforeexplosion', JSON.stringify({
     //     dimension: evd.dimension,
@@ -286,87 +294,22 @@ world.afterEvents.itemReleaseUse.subscribe((evd) => {
 
 world.afterEvents.dataDrivenEntityTrigger.subscribe((evd) => {
     anticheat.antiBot(evd)
-    debugLog(evd)
+    //debugLog(evd)
+})
+
+world.afterEvents.messageReceive.subscribe((evd) => {
+    console.error(evd.id, evd.message, evd?.player?.name)
 })
 
 system.runTimeout(() => {
     beforeEvents.asyncPlayerJoin.subscribe((evd) => {
-        const name = evd?.name
-
-        const w = mcl.jsonWGet('darkoak:welcome')
-        if (!w?.prejoinSend) worldSettings.welcomeMessage(evd)
-
-        const admins = mcl.getAdminList()
-        if (admins.includes(name)) {
-            evd.allowJoin()
-            return
+        try {
+            console.log(prejoinSystem(evd))
+        } catch (e) {
+            throw new Error(String(e))
         }
-
-        const d = mcl.jsonWGet('darkoak:anticheat')
-        if (d?.antizd) {
-            if (!name || name.length < 1) {
-                evd.disconnect('Anti-ZD')
-                return
-            }
-            for (let index = 0; index < arrays.susNames.length; index++) {
-                const n = arrays.susNames[index]
-                if (name.includes(n)) {
-                    anticheat.log({ name: name }, `anti-ZD: ${name}`)
-                    evd.disconnect('Anti-ZD')
-                    return
-                }
-            }
-        }
-
-        if (d?.prebans && arrays.prebansSet.has(name)) {
-            // const prebans = arrays.preBannedList
-            // for (let index = 0; index < prebans.length; index++) {
-            //     const preban = prebans[index]
-            //     if (name === preban) {
-            //         evd.disconnect('You\'ve Been Prebanned From This Server, Apply To Be Removed From The List Here: https://discord.gg/cE8cYYeFFx')
-            //         return
-            //     }
-            // }
-            evd.disconnect('You\'ve Been Prebanned From This Server, Apply To Be Removed From The List Here: https://discord.gg/cE8cYYeFFx')
-            return
-        }
-
-        const bans = mcl.listGetBoth('darkoak:bans:')
-        if (bans) {
-            for (let index = 0; index < bans.length; index++) {
-                const ban = bans[index]
-                const data = JSON.parse(ban.value)
-                if (data?.player != name) return
-                if (data?.time === 0) {
-                    evd.disconnect('You Are Permanently Banned')
-                    return
-                }
-                if ((Date.now() - data?.timeOfBan) < data?.time) {
-                    const td = mcl.timeDifference(data?.timeOfBan + data?.time)
-                    evd.disconnect(`You\'ve Been Banned For "${data?.message}"\nYou Will Be Unbanned In ${Math.abs(td.hours) - 1}:${Math.abs(td.minutes)}:${Math.abs(td.seconds)}`)
-                    return
-                } else {
-                    mcl.adminMessage(`${data.player}\'s Ban Has Expired`)
-                    mcl.wRemove(ban.id)
-                    return
-                }
-            }
-        }
-
-        const whitelist = mcl.jsonWGet('darkoak:whitelist')
-        if (whitelist?.enabled) {
-            const wlp = whitelist?.whitelist.split(',').map(e => e.trim())
-            if (!wlp.includes(name)) {
-                evd.disconnect()
-                return
-            }
-        }
-
-        if (w?.prejoinSend) worldSettings.welcomeMessage(evd)
-
-        evd.allowJoin()
     })
-})
+}, 200)
 
 system.afterEvents.scriptEventReceive.subscribe((evd) => {
     scriptEvents(evd)
@@ -394,6 +337,8 @@ system.runInterval(() => {
     chat.chatGames(cd.get('darkoak:scriptsettings'))
     timers()
     defaultData()
+    lagClear()
+    signsPlus()
 
     invSeeLinker()
 
@@ -421,9 +366,17 @@ system.runInterval(() => {
         sitCheck(player)
         playerDataLogger(player)
         magicSlotter(player)
+        magicTalismanActionBar(player)
         landclaimBorders(player)
         customCombatToggle(player)
+
+        dynamicLighting(player)
+
+        //plotAdder(player)
         // mcl.particleOutline({x: -167, y: 62, z: -76}, {x: -171, y: 66, z: -80}, undefined, 0.1, player.dimension.id)
+
+        //player.runCommand('gettopsolidblock -200 63 -102')
+        //player.runCommand('querytarget @s')
     }
 
     //anticheat.antiZDInterval(cd.get('darkoak:anticheat'))
@@ -434,10 +387,6 @@ system.runInterval(() => {
     //     sentTime: Date.now(),
     //     currentTick: system.currentTick
     // }))
-
-    // mcl.archimedesSpiral(2, 1, 1, (x, z) => {
-    //     world.getDimension('overworld').runCommand(`setblock ${-204 + x} 88 ${36 + z} grass_block`)
-    // })
 })
 
 /**
@@ -503,9 +452,9 @@ function itemOpeners(evd) {
         const time = mcl.jsonWGet('darkoak:itemsettings')
 
         // checks if the cooldown has expired
-        if (now - lastUsed < (time.hopfeather * 1000)) {
-            const remainingTime = Math.ceil(((time.hopfeather * 1000) - (now - lastUsed)) / 1000)
-            if (time.hopfeatherM) player.sendMessage(`§cYou Must Wait ${remainingTime} More Seconds To Use This Item Again!`)
+        if (now - lastUsed < ((time?.hopfeather ?? 0) * 1000)) {
+            const remainingTime = Math.ceil((((time?.hopfeather ?? 0) * 1000) - (now - lastUsed)) / 1000)
+            if (time?.hopfeatherM) player.sendMessage(`§cYou Must Wait ${remainingTime} More Seconds To Use This Item Again!`)
             return
         }
 
@@ -520,6 +469,10 @@ function itemOpeners(evd) {
         return
     }
 
+    if (item.typeId == 'darkoak:sitter') {
+        sitMap.set(player.name, 1000)
+        return
+    }
 
     if (item.typeId.startsWith('darkoak:dummy')) {
         for (let index = 0; index <= arrays.dummySize; index++) {
@@ -543,9 +496,11 @@ function communityGiver(evd) {
 
     p.runCommand(`function utility/recycler`)
 
-    if (s?.giveOnJoin && p.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0) {
-        p.runCommand('give @s darkoak:community')
-    }
+    system.runTimeout(() => {
+        if (s?.giveOnJoin && p.runCommand('testfor @s [hasitem={item=darkoak:community}]').successCount == 0) {
+            p.runCommand('give @s darkoak:community')
+        }
+    }, 2)
 }
 
 /**
@@ -677,7 +632,6 @@ function dataEditorBlock(evd) {
 }
 
 function uis() {
-
     const c = mcl.jsonWGet('darkoak:scriptsettings')
     if (c?.cuimaster) return
 
@@ -688,6 +642,7 @@ function uis() {
         const type = uisF[index].id.split(':')[2]
 
         const players = world.getPlayers({ tags: [parts.tag] })
+        if (!players || players.length === 0) continue
         for (let index = 0; index < players.length; index++) {
             const player = players[index]
             switch (type) {
@@ -716,9 +671,9 @@ function gens() {
         const b = JSON.parse(blocks[index])
 
         const block = world.getDimension(b?.dimension || 'overworld')
+        if (!mcl.tickTimer(b?.delay || 0)) continue
 
         if (!b?.coords2) {
-            if (!mcl.tickTimer(b?.delay || 1)) continue
             const parts = b?.coords.split(' ')
             try {
                 const coords = {
@@ -726,21 +681,12 @@ function gens() {
                     y: parseInt(parts[1]),
                     z: parseInt(parts[2])
                 }
-                if (!block.getBlock({
-                    x: coords.x,
-                    y: coords.y,
-                    z: coords.z
-                })) continue
-                block.setBlockType({
-                    x: coords.x,
-                    y: coords.y,
-                    z: coords.z
-                }, b.block)
+                if (!block.getBlock(coords)) continue
+                block.setBlockType(coords, b.block)
             } catch {
                 mcl.adminMessage(`Failed To Set Block ${b.block} At ${parts[0]} ${parts[1]} ${parts[2]}`)
             }
         } else {
-            if (!mcl.tickTimer(b?.delay || 0)) continue
             block.runCommand(`fill ${b.coords} ${b.coords2} ${b.block}`)
         }
     }
@@ -765,20 +711,6 @@ function gens() {
             }
         } catch (e) {
             mcl.adminMessage(`Failed To Spawn Mob ${m?.mob} At ${m?.loc.x} ${m?.loc.y} ${m?.loc.z}`)
-        }
-    }
-
-    const signs = mcl.listGetBoth('darkoak:signsplus:')
-    for (let index = 0; index < signs.length; index++) {
-        const sign = JSON.parse(signs[index].value)
-
-        try {
-            const block = mcl.getBlock(sign.location, sign.dimension)
-            if (!block) return
-
-
-        } catch (e) {
-            mcl.adminMessage(`Failed To Use Signs+ On Sign: ${sign.location.x} ${sign.location.y} ${sign.location.z}`)
         }
     }
 }
@@ -1024,7 +956,7 @@ function scriptEvents(evd) {
     //     }
     //     try {
     //         const p = arrays.replacer(player, evd.message).split(' ')
-    //         mcl.wSet(`darkoak:vars:${p[0]}`, p[1])
+    //         *FORMALLY WSET FUNCTION*(`darkoak:vars:${p[0]}`, p[1])
     //     } catch {
     //         mcl.adminMessage(`Scriptevent darkoak:variable From ${player.nameTag} Has An Error`)
     //         return
@@ -1170,7 +1102,7 @@ function scriptEvents(evd) {
 system.beforeEvents.watchdogTerminate.subscribe((evd) => {
     const d = mcl.jsonWGet('darkoak:scriptsettings')
     if (!d) return
-    if (d.cancelWatchdog) {
+    if (d?.cancelWatchdog) {
         mcl.adminMessage(`Script Shutdown, Reason: ${evd.terminateReason.toString()}`)
         evd.cancel = true
     }
@@ -1311,7 +1243,11 @@ function modalTextUIBuilder(playerToShow, ui) {
         for (let index = 0; index < commands.length; index++) {
             let command = commands[index]
             command = command.replace(/\$(\d+)\$/g, (_, n) => e[n - 1])
-            playerToShow.runCommand(command)
+            try {
+                playerToShow.runCommand(command)
+            } catch {
+
+            }
         }
     })
 }
@@ -1377,6 +1313,7 @@ function moneySetter(evd) {
  * @param {Player} player 
  */
 function playerLister(player) {
+    if (mcl.tickTimer(20)) return
 
     let players = mcl.getPlayerList() || []
     if (!players.includes(player.name)) {
@@ -1411,6 +1348,7 @@ function customSlashCommands(evd) {
     roles.roleCommand(evd)
     fakePlayerCommand(evd)
     worldEdit.betterVanillaCommands(evd)
+    plotCommands(evd)
 
 
     evd.customCommandRegistry.registerEnum('darkoak:dimensions', ['overworld', 'nether', 'end'])
@@ -1546,7 +1484,11 @@ function customSlashCommands(evd) {
         system.runTimeout(() => {
             for (let index = 0; index < player.length; index++) {
                 const p = player[index]
-                transferPlayer(p, { hostname: hostname, port: port })
+                try {
+                    transferPlayer(p, { hostname: hostname, port: port })
+                } catch (e) {
+                    console.error(String(e))
+                }
             }
         })
     })
@@ -1709,8 +1651,10 @@ function customSlashCommands(evd) {
             for (let index = 0; index < entity.length; index++) {
                 /**@type {Entity} */
                 const e = entity[index]
-                e.applyKnockback({ x: 0, z: 0 }, e.getVelocity().y * -1)
-                e.applyKnockback({ x: x, z: z, }, y)
+                if (e.isValid) {
+                    e.applyKnockback({ x: 0, z: 0 }, e.getVelocity().y * -1)
+                    e.applyKnockback({ x: x, z: z, }, y)
+                }
             }
         })
     })
@@ -1895,7 +1839,7 @@ function customSlashCommands(evd) {
         })
     })
 
-    evd.customCommandRegistry.registerEnum('darkoak:debugtypes', ['aclog', 'playerlist', 'bytes', 'bytesize', 'what', 'http', 'uis', 'clipboard', 'fakeplayer', 'dupe', 'dupe_without_id', 'debugfilter', 'playerraw'])
+    evd.customCommandRegistry.registerEnum('darkoak:debugtypes', ['aclog', 'playerlist', 'bytes', 'bytesize', 'what', 'http', 'uis', 'clipboard', 'fakeplayer', 'dupe', 'dupe_without_id', 'debugfilter', 'playerraw', 'setmax', 'owner'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:debug',
         description: 'Be Careful!',
@@ -1974,7 +1918,7 @@ function customSlashCommands(evd) {
                     if (!ptg) {
                         player.sendMessage('No Player Found By That Name, Now Searching Entities In Current Dimension...')
                         system.runTimeout(() => {
-                            const entList = player.dimension.getEntities().map(e => `Type: ${e?.typeId}, Name: ${e?.nameTag}`)
+                            const entList = player.dimension.getEntities().map(e => `Type: ${e?.typeId ?? 'EMPTY'}, Name: ${e?.name ?? e?.nameTag ?? 'EMPTY'}`)
                             player.sendMessage(entList?.join('\n') || 'No Entities Found')
                         }, 40)
                     } else {
@@ -1983,6 +1927,39 @@ function customSlashCommands(evd) {
                         } catch (e) {
                             player.sendMessage(`Player Data Corrupted: ${e}`)
                         }
+                    }
+                    break
+                case 'setmax':
+                    try {
+                        const fp = spawnSimulatedPlayer({
+                            dimension: player.dimension,
+                            x: player.location.x,
+                            y: player.location.y,
+                            z: player.location.z
+                        }, 'darkoak_setter', GameMode.Survival)
+                        mcl.jsonPSet(fp, 'darkoak:sim:verified', {
+                            time: Date.now(),
+                            verified: true
+                        })
+                        fp.commandPermissionLevel = CommandPermissionLevel.Owner
+                        fp.runCommand('execute as @s run setmaxplayers 20')
+                        fp.runCommand('setmaxplayers 20')
+                        fp.dimension.runCommand(`execute as ${fp.name} run setmaxplayers 20`)
+                        fp.chat('/setmaxplayers 20')
+                        fp.chat('/setmaxplayers 20')
+                        fp.chat('i twyed - N')
+                        system.runTimeout(() => {
+                            fp.remove()
+                        }, 40)
+                    } catch (e) {
+                        console.error(String(e))
+                    }
+                    break
+                case 'owner':
+                    try {
+                        player.commandPermissionLevel = CommandPermissionLevel.Owner
+                    } catch {
+
                     }
                     break
             }
@@ -2240,12 +2217,12 @@ function customSlashCommands(evd) {
         const dimen = mcl.customSlashDimen(evd)
         const equipmentSlots = [49, 50, 51, 52, 53]
         const ni = nameInven.replaceAll(' ', '')
-        world.sendMessage(ni)
 
         system.runTimeout(() => {
             for (let index = 0; index < players.length; index++) {
                 /**@type {Player} */
                 const player = players[index]
+                player.sendMessage(`§aLoaded Inventory: §i${ni}§r`)
 
                 switch (inventype) {
                     case 'save':
@@ -2834,43 +2811,6 @@ function customSlashCommands(evd) {
             }, particle, amount, mcl.customSlashDimen(evd).id)
         })
     })
-
-    evd.customCommandRegistry.registerEnum('darkoak:plotoptions', ['redeem', 'players', 'travel'])
-    // evd.customCommandRegistry.registerCommand({
-    //     name: 'darkoak:plot',
-    //     description: 'Plot System',
-    //     permissionLevel: CommandPermissionLevel.Any,
-    //     mandatoryParameters: [
-    //         {
-    //             type: CustomCommandParamType.Enum,
-    //             name: 'darkoak:plotoptions'
-    //         }
-    //     ],
-    //     optionalParameters: [
-    //         {
-    //             type: CustomCommandParamType.String,
-    //             name: 'plot_num_or_name'
-    //         }
-    //     ]
-    // }, (evd, option, travel) => {
-    //     const player = evd?.sourceEntity
-    //     if (!player || player.typeId != 'minecraft:player') return
-    //     switch (option) {
-    //         case 'redeem':
-    //             if (plotAdder(player)) {
-    //                 player.sendMessage(`§aYou\'ve Redeemed A Plot!`)
-    //             } else {
-    //                 player.sendMessage(`§cYou Already Have A Plot!`)
-    //             }
-    //             break
-    //         case 'players':
-
-    //             break
-    //         case 'travel':
-
-    //             break
-    //     }
-    // })
 }
 
 // world.afterEvents.dataDrivenEntityTrigger.subscribe((evd) => {

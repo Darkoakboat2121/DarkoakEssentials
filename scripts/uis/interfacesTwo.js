@@ -297,7 +297,7 @@ export function deleteWarpUI(player) {
             interfaces.warpSettingsUI(player)
             return
         }
-        mcl.wSet(raw[evd.selection])
+        mcl.wRemove(raw[evd.selection])
     }).catch()
 }
 
@@ -435,7 +435,18 @@ export function anticheatSettings(player) {
     bui.toggle(f, 'Anti-spam', d?.antispam)
     bui.label(f, 'Checks The Players Recent Messages For Repeats, Automatically Formats To Ensure Spaces And Formatting Codes Don\'t Bypass It')
     bui.label(f, 'This Also Checks If The Message Matches Common Hack Client Messages')
-    bui.toggle(f, 'Attempt To Bypass Anti-Anti-Spammer Hack?', d?.antispam2, 'May Have False Positives. Does Not Notify / Log')
+    bui.spacer(f)
+    bui.toggle(f, 'Attempt To Bypass Anti-Anti-Spammer Hack?', d?.antispam2, 'May Have False Positives. Does Not Notify / Log. Needs The Above Module To Be Active')
+    bui.slider(f, 'Sensitivity', 10, 90, d?.antispam2sense, 10, 'If X% Of The Message Matches The Past Message, It Blocks It')
+    bui.spacer(f)
+    bui.toggle(f, 'Anti-spam-delay', d?.antispam3, 'Does Not Need Anti-Spam On')
+    bui.label(f, 'Checks If Two Messages Were Sent Milliseconds Apart, If So, Prevents It')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Chat-Flood', d?.antichatflood)
+    bui.label(f, 'Prevents Players From Sending Messages Larger Then Specified')
+    bui.slider(f, 'Max Size', 100, 500, d?.antichatfloodsense, 50, 'In Characters')
 
     bui.divider(f)
 
@@ -644,8 +655,19 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
+    bui.toggle(f, 'Anti-Subsession-Abuse', d?.subsession)
+    bui.label(f, 'Checks If An Unkickable Bot Has Joined And Kicks The Host Account')
+
+    bui.divider(f)
+
+    bui.toggle(f, 'Anti-Force-OP', d?.antiforceop)
+    bui.label(f, 'Forces Everyone Except Allowed Names To Have Member Permissions For Commands')
+    bui.textField(f, 'Allowed Players:', 'Example: Darkoakboat2121, Wertwert3612', (d?.antiforceopallowed ?? player?.name), 'Seperate Names Using Commas')
+
+    bui.divider(f)
+
     f.show(player).then((evd) => {
-        if (evd.canceled) return
+        if (evd.canceled || evd.cancelationReason) return
         const e = bui.formValues(evd)
         let i = 0
         mcl.jsonWSet('darkoak:anticheat', {
@@ -659,6 +681,10 @@ export function anticheatSettings(player) {
             antispeedsense: e[i++],
             antispam: e[i++],
             antispam2: e[i++],
+            antispam2sense: e[i++],
+            antispam3: e[i++],
+            antichatflood: e[i++],
+            antichatfloodsense: e[i++],
             antiillegalenchant: e[i++],
             antikillaura: e[i++],
             antikillaurasense: e[i++],
@@ -706,6 +732,9 @@ export function anticheatSettings(player) {
             antizd: e[i++],
             antiinvisskins: e[i++],
             antibot: e[i++],
+            subsession: e[i++],
+            antiforceop: e[i++],
+            antiforceopallowed: e[i++],
         })
     }).catch()
 }
@@ -799,7 +828,7 @@ export function auctionHouse(player) {
         if (mcl.getScore(player) > selected.price) {
             player.runCommand(`give @s ${selected.item.typeId} ${selected.item.amount}`)
             mcl.removeScore(player, selected.price)
-            mcl.wSet(items[evd.selection].id)
+            mcl.wRemove(items[evd.selection].id)
         }
     }).catch()
 }
@@ -1064,7 +1093,7 @@ export function protectedAreasRemoveUI(player) {
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        mcl.wSet(both[evd.selection].id)
+        mcl.wRemove(both[evd.selection].id)
     }).catch()
 }
 
@@ -1706,8 +1735,8 @@ export function itemSettingsUI(player) {
     const d = mcl.jsonWGet('darkoak:itemsettings')
 
     bui.divider(f)
-    bui.slider(f, 'Hop Feather Cooldown', 0, 10, d.hopfeather)
-    bui.toggle(f, 'Show Cooldown Message?', d.hopfeatherM)
+    bui.slider(f, 'Hop Feather Cooldown', 0, 10, d?.hopfeather ?? 0)
+    bui.toggle(f, 'Show Cooldown Message?', d?.hopfeatherM ?? false)
     bui.divider(f)
 
     f.show(player).then((evd) => {
@@ -2282,43 +2311,48 @@ export function signsPlusMainUI(player) {
 
     const wdr = mcl.getDataByLocation('darkoak:signsplus:', 'location', sign.location)
     let wd = {}
-    if (wdr) wd = JSON.parse(wdr.value)
+    let id = `darkoak:signsplus:${mcl.timeUuid()}`
+    if (wdr) {
+        wd = JSON.parse(wdr.value)
+        id = wdr.id
+    }
 
     bui.title(f, 'Signs+')
 
     bui.toggle(f, 'Spin?', wd?.spin?.enabled) // 0
     bui.toggle(f, 'Clockwise?', wd?.spin?.clockwise) // 1
+    bui.slider(f, 'Spin Speed', 1, 40, wd?.spin?.spinspeed)
 
     bui.divider(f)
-    bui.label(f, 'Line 1 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
-    bui.textField(f, 'Line 1, Frame 1', 'Example: &-------', wd?.line1?.f1 || lines[0]) // 2
-    bui.textField(f, 'Line 1, Frame 2', 'Example: --&-----', wd?.line1?.f2) // 3
-    bui.textField(f, 'Line 1, Frame 3', 'Example: ----&---', wd?.line1?.f3) // 4
-    bui.textField(f, 'Line 1, Frame 4', 'Example: ------&-', wd?.line1?.f4) // 5
-    bui.divider(f)
-
-    bui.divider(f)
-    bui.label(f, 'Line 2 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
-    bui.textField(f, 'Line 2, Frame 1', 'Example: &-------', wd?.line2?.f1 || lines[1]) // 2
-    bui.textField(f, 'Line 2, Frame 2', 'Example: --&-----', wd?.line2?.f2) // 3
-    bui.textField(f, 'Line 2, Frame 3', 'Example: ----&---', wd?.line2?.f3) // 4
-    bui.textField(f, 'Line 2, Frame 4', 'Example: ------&-', wd?.line2?.f4) // 5
+    bui.label(f, 'Frame 1 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
+    bui.textField(f, 'Frame 1, Line 1', 'Example: &-------', wd?.frame1?.f1 || lines[0]) // 2
+    bui.textField(f, 'Frame 1, Line 2', 'Example: --&-----', wd?.frame1?.f2) // 3
+    bui.textField(f, 'Frame 1, Line 3', 'Example: ----&---', wd?.frame1?.f3) // 4
+    bui.textField(f, 'Frame 1, Line 4', 'Example: ------&-', wd?.frame1?.f4) // 5
     bui.divider(f)
 
     bui.divider(f)
-    bui.label(f, 'Line 3 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
-    bui.textField(f, 'Line 3, Frame 1', 'Example: &-------', wd?.line3?.f1 || lines[2]) // 2
-    bui.textField(f, 'Line 3, Frame 2', 'Example: --&-----', wd?.line3?.f2) // 3
-    bui.textField(f, 'Line 3, Frame 3', 'Example: ----&---', wd?.line3?.f3) // 4
-    bui.textField(f, 'Line 3, Frame 4', 'Example: ------&-', wd?.line3?.f4) // 5
+    bui.label(f, 'Frame 2 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
+    bui.textField(f, 'Frame 2, Line 1', 'Example: &-------', wd?.frame2?.f1 || lines[1]) // 2
+    bui.textField(f, 'Frame 2, Line 2', 'Example: --&-----', wd?.frame2?.f2) // 3
+    bui.textField(f, 'Frame 2, Line 3', 'Example: ----&---', wd?.frame2?.f3) // 4
+    bui.textField(f, 'Frame 2, Line 4', 'Example: ------&-', wd?.frame2?.f4) // 5
     bui.divider(f)
 
     bui.divider(f)
-    bui.label(f, 'Line 4 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
-    bui.textField(f, 'Line 4, Frame 1', 'Example: &-------', wd?.line4?.f1 || lines[3]) // 2
-    bui.textField(f, 'Line 4, Frame 2', 'Example: --&-----', wd?.line4?.f2) // 3
-    bui.textField(f, 'Line 4, Frame 3', 'Example: ----&---', wd?.line4?.f3) // 4
-    bui.textField(f, 'Line 4, Frame 4', 'Example: ------&-', wd?.line4?.f4) // 5
+    bui.label(f, 'Frame 3 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
+    bui.textField(f, 'Frame 3, Line 1', 'Example: &-------', wd?.frame3?.f1 || lines[2]) // 2
+    bui.textField(f, 'Frame 3, Line 2', 'Example: --&-----', wd?.frame3?.f2) // 3
+    bui.textField(f, 'Frame 3, Line 3', 'Example: ----&---', wd?.frame3?.f3) // 4
+    bui.textField(f, 'Frame 3, Line 4', 'Example: ------&-', wd?.frame3?.f4) // 5
+    bui.divider(f)
+
+    bui.divider(f)
+    bui.label(f, 'Frame 4 Animation. Switches Through Any Non-empty Frames On The Specified Delay')
+    bui.textField(f, 'Frame 4, Line 1', 'Example: &-------', wd?.frame4?.f1 || lines[3]) // 2
+    bui.textField(f, 'Frame 4, Line 2', 'Example: --&-----', wd?.frame4?.f2) // 3
+    bui.textField(f, 'Frame 4, Line 3', 'Example: ----&---', wd?.frame4?.f3) // 4
+    bui.textField(f, 'Frame 4, Line 4', 'Example: ------&-', wd?.frame4?.f4) // 5
     bui.divider(f)
 
     bui.divider(f)
@@ -2342,39 +2376,41 @@ export function signsPlusMainUI(player) {
 
         mcl.rewriteSign(sign, e[19])
 
-        mcl.jsonWSet(`darkoak:signsplus:${mcl.timeUuid()}`, {
+        let i = 1
+        mcl.jsonWSet(id, {
             location: sign.location,
             dimension: sign.dimension.id,
             spin: {
                 enabled: noWall,
-                clockwise: e[1]
+                clockwise: e[i++],
+                spinspeed: e[i++],
             },
-            line1: {
-                f1: e[2],
-                f2: e[3],
-                f3: e[4],
-                f4: e[5],
+            frame1: {
+                f1: e[i++],
+                f2: e[i++],
+                f3: e[i++],
+                f4: e[i++],
             },
-            line2: {
-                f1: e[6],
-                f2: e[7],
-                f3: e[8],
-                f4: e[9],
+            frame2: {
+                f1: e[i++],
+                f2: e[i++],
+                f3: e[i++],
+                f4: e[i++],
             },
-            line3: {
-                f1: e[10],
-                f2: e[11],
-                f3: e[12],
-                f4: e[13],
+            frame3: {
+                f1: e[i++],
+                f2: e[i++],
+                f3: e[i++],
+                f4: e[i++],
             },
-            line4: {
-                f1: e[14],
-                f2: e[15],
-                f3: e[16],
-                f4: e[17],
+            frame4: {
+                f1: e[i++],
+                f2: e[i++],
+                f3: e[i++],
+                f4: e[i++],
             },
             color: {
-                rainbow: e[18],
+                rainbow: e[i++],
             },
         })
     })
@@ -3137,7 +3173,7 @@ export function crateUI(player, num) {
                 if (flags.useitem) mcl.pCommand(player, `clear @s ${d?.itemtype} 0 ${d?.itemamount}`)
                 if (flags.usemoney) mcl.removeScore(player, d?.moneycost)
 
-                const picked = d?.rewards[mcl.ranNumInRange2(0, d?.rewards?.length - 1)]
+                const picked = d?.rewards[mcl.xorRandomNum(0, d?.rewards?.length - 1)]
                 mcl.pCommand(player, picked)
                 break
             case 1:
@@ -3365,6 +3401,9 @@ export function lagClearSettingsUI(player) {
 
     bui.toggle(f, 'Item Chest Packaging Enabled?', d?.chestenabled)
 
+    bui.toggle(f, 'TP XP To Nearest Player?', d?.xpcleaner)
+    bui.toggle(f, 'Items Slowly Move Towards Nearest Player?', d?.itemmoving)
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             interfaces.worldSettingsUI(player)
@@ -3376,6 +3415,8 @@ export function lagClearSettingsUI(player) {
             enabled: e[i++],
             stackingenabled: e[i++],
             chestenabled: e[i++],
+            xpcleaner: e[i++],
+            itemmoving: e[i++],
         })
     })
 }
@@ -3386,8 +3427,11 @@ export function plotSettingsUI(player) {
 
     const d = mcl.jsonWGet('darkoak:plotsettings')
 
+    const dimens = ['overworld', 'nether', 'the_end']
+
     bui.toggle(f, 'Enabled?', d?.enabled)
     bui.textField(f, 'Start Coords:', 'Example: 100 0 0', d?.start)
+    bui.dropdown(f, 'Dimension:', dimens, d?.dimension)
     bui.dropdown(f, 'Direction:', ['X+', 'X-', 'Z+', 'Z-'], d?.direction)
     bui.slider(f, 'Size Of Plot', 4, 28, d?.size, 4)
 
@@ -3399,6 +3443,7 @@ export function plotSettingsUI(player) {
         mcl.jsonWSet('darkoak:plotsettings', {
             enabled: e[i++],
             start: e[i++],
+            dimension: e[i++],
             direction: e[i++],
             size: e[i++],
         })
@@ -3406,7 +3451,54 @@ export function plotSettingsUI(player) {
 }
 
 export function plotPlayersUI(player) {
-    
+    let f = new ActionFormData()
+    bui.title(f, 'Plot Players Manager')
+
+    bui.button(f, 'Add Player To Plot')
+    bui.button(f, 'Remove Player From Plot')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        switch (evd.selection) {
+            case 0:
+                plotPlayersAddUI(player)
+                break
+            case 1:
+                plotPlayersRemoveUI(player)
+                break
+        }
+    })
+}
+
+export function plotPlayersAddUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Plot Player Adding')
+
+    const names = bui.namePicker(f, undefined, 'Player To Add')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const d = mcl.jsonWGet('darkoak:plotsettings')
+        let players = mcl.jsonWGet(`darkoak:plot:${player.name}`)?.players || []
+        const e = bui.formValues(evd)
+        players.push(names[e[0]])
+        mcl.jsonWUpdate(`darkoak:plot:${player.name}`, 'players', players)
+    })
+}
+
+export function plotPlayersRemoveUI(player) {
+    let f = new ModalFormData()
+    /**@type {string[]} */
+    let players = mcl.jsonWGet(`darkoak:plot:${player.name}`)?.players || []
+    bui.dropdown(f, 'Player To Remove', players)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        const e = bui.formValues(evd)
+        players.map(p => p !== players[e[0]])
+        mcl.jsonWUpdate(`darkoak:plot:${player.name}`, 'players', players)
+    })
 }
 
 export function debugLog(player) {

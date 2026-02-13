@@ -6,6 +6,7 @@ import { mcl } from "../logic"
  */
 export function scoreboardHandler(players) {
     const texts = mcl.getAllEntities('darkoak:floating_text')
+    if (mcl.tickTimer(40)) return
 
     for (let index = 0; index < texts.length; index++) {
         try {
@@ -14,17 +15,20 @@ export function scoreboardHandler(players) {
             let scoreArray = []
             for (let index = 0; index < players.length; index++) {
                 const player = players[index]
-                scoreArray.push(`${player.name}: ${world.scoreboard.getObjective(scoreToGet.score)?.getScore(player) || '0'}`)
+                try {
+                    scoreArray.push(`§a${player?.name}§j:§r ${world.scoreboard.getObjective(scoreToGet.score)?.getScore(player) || '0'}`)
+                } catch {
+                    scoreArray.push(`§a${player?.name}§j:§r 0`)
+                }
             }
             scoreArray.sort((a, b) => {
-                const scoreA = parseInt(a.split(': ')[1]) || 0
-                const scoreB = parseInt(b.split(': ')[1]) || 0
+                const scoreA = parseInt(a.split(':§r ')[1]) || 0
+                const scoreB = parseInt(b.split(':§r ')[1]) || 0
                 return scoreB - scoreA
             })
-
             text.nameTag = `${scoreToGet.text}\n${scoreArray.join('\n')}`
-        } catch {
-
+        } catch (e) {
+            console.error(String(e))
         }
     }
 }

@@ -39,7 +39,8 @@
                             "darkoak:dummy26",
                             "darkoak:dummy27",
                             "darkoak:dummy28",
-                            "darkoak:dummy29"
+                            "darkoak:dummy29",
+                            "darkoak:dummy30"
                         ]
                     },
                     {
@@ -55,7 +56,8 @@
                             "darkoak:generators",
                             "darkoak:data_editor",
                             "darkoak:community",
-                            "darkoak:world_edit"
+                            "darkoak:world_edit",
+                            "darkoak:sitter"
                         ]
                     },
                     {
@@ -109,6 +111,18 @@
                             },
                             {
                                 "name": "minecraft:camera"
+                            },
+                            {
+                                "name": "minecraft:client_request_placeholder_block"
+                            },
+                            {
+                                "name": "minecraft:invisible_bedrock"
+                            },
+                            {
+                                "name": "minecraft:moving_block"
+                            },
+                            {
+                                "name": "minecraft:info_update"
                             }
                         ]
                     }

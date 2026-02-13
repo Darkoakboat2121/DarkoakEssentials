@@ -414,6 +414,7 @@ export function playerDataViewUI(playerToShow, playerToView) {
     bui.label(f, `Location: ${parseInt(player.location.x)} ${parseInt(player.location.y)} ${parseInt(player.location.z)}, Dimension: ${player.dimension.id}`)
     bui.label(f, `Effects: ${mcl.playerEffectsArray(player)}`)
     bui.label(f, `Tags: ${mcl.playerTagsArray(player).join(', §r§f')}`)
+    bui.label(f, `Max Render Distance: ${player?.clientSystemInfo?.maxRenderDistance}\nMemory Tier: ${player?.clientSystemInfo?.memoryTier}\nPlatform Type: ${player?.clientSystemInfo?.platformType}`)
 
     bui.divider(f)
     bui.label(f, 'Items:')
@@ -1363,15 +1364,15 @@ export function dataDeleterUI(player, search = '') {
     let f = new ActionFormData()
     bui.title(f, 'Delete Data')
 
-    const data = mcl.listGetBoth().filter(e => e.id.includes(search))
+    const data = world.getDynamicPropertyIds().filter(e => e.includes(search))
 
     bui.button(f, `Search?\nCurrent Search: ${search}`)
     bui.divider(f)
 
     for (let index = 0; index < data.length; index++) {
         const d = data[index]
-        bui.label(f, d.id)
-        bui.label(f, d.value.toString())
+        bui.label(f, d)
+        bui.label(f, (world.getDynamicProperty(d) ?? 'undefined').toString())
         bui.button(f, 'Delete?')
         bui.divider(f)
     }
@@ -1382,7 +1383,7 @@ export function dataDeleterUI(player, search = '') {
             dataDeleterSearchUI(player, search)
             return
         }
-        mcl.wSet(data[evd.selection - 1].id)
+        world.setDynamicProperty(data[evd.selection - 1])
         dataDeleterUI(player, search)
     }).catch()
 }
@@ -1655,7 +1656,7 @@ export function actionUIMakerUI(player) {
 
         const ui = { title, body, tag, buttons }
 
-        mcl.wSet(`darkoak:ui:action:${mcl.timeUuid()}`, JSON.stringify(ui))
+        mcl.jsonWSet(`darkoak:ui:action:${mcl.timeUuid()}`, ui)
     }).catch()
 }
 
@@ -1680,7 +1681,7 @@ export function UIDeleterUI(player) {
             UIMakerUI(player)
             return
         }
-        mcl.wSet(u[evd.selection])
+        mcl.wRemove(u[evd.selection])
     }).catch()
 }
 
@@ -1987,7 +1988,7 @@ export function shopRemoveUI(player) {
     f.show(player).then((evd) => {
         if (evd.canceled) return
 
-        mcl.wSet(item[evd.selection].id)
+        mcl.wRemove(item[evd.selection].id)
     }).catch()
 }
 
@@ -2438,12 +2439,12 @@ export function reportPlayerUI(player) {
     bui.title(f, 'Report A Player')
 
     const settings = mcl.jsonWGet('darkoak:reportsettings')
-    if (!settings.enabled) {
+    if (!settings?.enabled) {
         player.sendMessage('§cReporting Is Disabled§r')
         return
     }
 
-    bui.label(f, `Rules:\n${settings.rules}`)
+    bui.label(f, `Rules:\n${settings?.rules}`)
 
     const names = bui.namePicker(f, undefined, '\nPlayer:')
     bui.textField(f, 'Reason:', 'Example: He Was Hacking')
@@ -2454,7 +2455,12 @@ export function reportPlayerUI(player) {
             return
         }
         const e = bui.formValues(evd)
-        mcl.wSet(`darkoak:report:${mcl.timeUuid()}`, JSON.stringify({ player: names[e[0]], reason: e[1], submitter: player.name }))
+        let i = 0
+        mcl.jsonWSet(`darkoak:report:${mcl.timeUuid()}`, {
+            player: names[i++],
+            reason: e[i++],
+            submitter: e[i++],
+        })
     }).catch()
 }
 

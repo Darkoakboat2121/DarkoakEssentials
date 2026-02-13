@@ -67,7 +67,7 @@ export class mcl {
         let result = ''
         const charactersLength = characters.length
         for (let i = 0; i < length; i++) {
-            result += characters.charAt(mcl.randomNumber(charactersLength))
+            result += characters.charAt(mcl.xorRandomNum(0, charactersLength))
         }
         return result
     }
@@ -183,6 +183,83 @@ export class mcl {
     }
 
     /**
+     * @param {string} string 
+     * @param {string} start 
+     * @param {string} end 
+     */
+    static getStringBetweenStrings(string, start, end) {
+        const results = []
+        const estart = start.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const eend = end.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const startLen = start.length
+        const endLen = end.length
+        let i = 0
+        while (i < string.length) {
+            const startIdx = string.indexOf(start, i)
+            if (startIdx === -1) break
+            let depth = 1
+            let j = startIdx + startLen
+            while (j < string.length) {
+                if (string.substr(j, startLen) === start) {
+                    depth++
+                    j += startLen
+                } else if (string.substr(j, endLen) === end) {
+                    depth--
+                    j += endLen
+                    if (depth === 0) {
+                        results.push(string.substring(startIdx, j))
+                        break
+                    }
+                } else {
+                    j++
+                }
+            }
+            i = startIdx + 1
+        }
+        return results
+    }
+
+    /**don't touch -P
+     * @param {string} string 
+     * @param {string} start 
+     * @param {string} end 
+     * @returns {string[]}
+     */
+    static getAllContentsBetweenDelimiters(string, start, end) {
+        const results = []
+        const startLen = start.length
+        const endLen = end.length
+        let i = 0
+        while (i < string.length) {
+            const startIdx = string.indexOf(start, i)
+            if (startIdx === -1) break
+            let depth = 1
+            let j = startIdx + startLen
+            while (j < string.length) {
+                if (string.substr(j, startLen) === start) {
+                    depth++
+                    j += startLen
+                } else if (string.substr(j, endLen) === end) {
+                    depth--
+                    if (depth === 0) {
+                        const inner = string.substring(startIdx + startLen, j)
+                        results.push(...mcl.getAllContentsBetweenDelimiters(inner, start, end))
+                        if (!inner.includes(start)) results.push(inner)
+                        break
+                    }
+                    j += endLen
+                } else {
+                    j++
+                }
+            }
+            i = startIdx + startLen
+        }
+
+        if (results.length === 0 && string.trim() !== '') results.push(string)
+        return results.filter(s => s.trim() !== '')
+    }
+
+    /**
      * @param {string} text 
      * @returns {string}
      */
@@ -191,9 +268,10 @@ export class mcl {
         return text.charAt(0).toUpperCase() + text.slice(1)
     }
 
-    /**Sets a global dynamic property
+    /**Sets a global dynamic property (DEPRECIATED)
      * @param {string} id 
      * @param {any | undefined} setTo 
+     * @deprecated
     */
     static wSet(id, setTo) {
         try {
@@ -204,8 +282,9 @@ export class mcl {
         }
     }
 
-    /**Gets a global dynamic property
+    /**Gets a global dynamic property (DEPRECIATED)
      * @param {string} id 
+     * @deprecated
     */
     static wGet(id) {
         return world.getDynamicProperty(id)
@@ -214,6 +293,7 @@ export class mcl {
     /**Sets and returns the value OR gets the value. If theres nothing to retrieve it sets the value
      * @param {string} id 
      * @param {any} value 
+     * @deprecated
      */
     static wSog(id, value) {
         const def = mcl.wGet(id)
@@ -266,9 +346,15 @@ export class mcl {
     /**Sets a global data object
      * @param {string} id 
      * @param {object} data 
+     * @returns {boolean} Returns true if it successfully saved, false if didn't save
      */
     static jsonWSet(id, data) {
-        world.setDynamicProperty(id, JSON.stringify(data))
+        try {
+            world.setDynamicProperty(id, JSON.stringify(data))
+            return true
+        } catch {
+            return false
+        }
     }
 
     /**WIP
@@ -609,7 +695,7 @@ export class mcl {
      * @returns {number}
      */
     static healthValue(player) {
-        return player.getComponent("minecraft:health").currentValue
+        return player?.getComponent("minecraft:health")?.currentValue
     }
 
     /**Returns the players score for the inputted objective
@@ -619,7 +705,7 @@ export class mcl {
      */
     static getScoreOld(player, objective) {
         try {
-            return world.scoreboard.getObjective(objective)?.getScore(player) || 0
+            return world.scoreboard.getObjective(objective)?.getScore(player) ?? 0
         } catch {
             return 0
         }
@@ -846,10 +932,20 @@ export class mcl {
     }
 
     /**Returns a list of all admins
-     * @returns {string[]}
+     * 
      */
-    static getAdminList() {
-        return mcl.jsonWGet('darkoak:adminlist')
+    static getAdminList(set = false) {
+        const list = mcl.jsonWGet('darkoak:adminlist')
+        if (set) {
+            /**@type {Set<string>} */
+            const toReturn = new Set(list)
+            return toReturn
+        } else {
+            /**@type {string[]} */
+            const toReturn = list
+            return toReturn
+        }
+        return
     }
 
     /**Returns a list of all moderators
@@ -878,8 +974,8 @@ export class mcl {
      * @param {Entity} player 
      */
     static stopPlayer(player) {
-        const v = player.getVelocity()
-        player.applyKnockback({ x: v.x * -1, z: v.z * -1 }, v.y * -1)
+        const v = player?.getVelocity()
+        player?.applyKnockback({ x: v?.x * -1, z: v?.z * -1 }, v?.y * -1)
     }
 
     /**
@@ -1027,8 +1123,8 @@ export class mcl {
     static getDataByLocation(id = '', key, location) {
         const dataArray = mcl.listGetBoth(id)
         for (let index = 0; index < dataArray.length; index++) {
-            const d = JSON.parse(dataArray[index].value)
-            if (d[key] == location) {
+            const d = JSON.parse(dataArray[index].value)[key]
+            if (d.x === location.x && d.y === location.y && d.z === location.z) {
                 return dataArray[index]
             } else continue
         }
@@ -1054,7 +1150,7 @@ export class mcl {
      * @param {number} y 
      */
     static knockback(player, x, z, y) {
-        player.applyKnockback({ x: x, z: z }, y)
+        player?.applyKnockback({ x: x, z: z }, y)
     }
 
     /**
@@ -1085,9 +1181,9 @@ export class mcl {
      */
     static compareLocations(loc1, loc2) {
         if (
-            loc1.x === loc2.x &&
-            loc1.y === loc2.y &&
-            loc1.z === loc2.z
+            loc1?.x === loc2?.x &&
+            loc1?.y === loc2?.y &&
+            loc1?.z === loc2?.z
         ) return true
         return false
     }
@@ -1205,10 +1301,17 @@ export class mcl {
      * @param {Player} player Player to soft-kick
      */
     static softKick(player) {
-        transferPlayer(player, {
-            hostname: '127.0.0.0',
-            port: 0
-        })
+        if (player) {
+            try {
+                transferPlayer(player, {
+                    hostname: '127.0.0.0',
+                    port: 0
+                })
+                return true
+            } catch {
+                return false
+            }
+        }
     }
 
     /**
@@ -1217,7 +1320,7 @@ export class mcl {
      */
     static kick(player, message) {
         const op = world.getAllPlayers().filter(e => e.commandPermissionLevel === CommandPermissionLevel.Admin)[0]
-        op.runCommand(`kick "${player.name}" ${message}`)
+        op.runCommand(`kick "${player?.name}" ${message}`)
     }
 
     /**
@@ -1244,7 +1347,9 @@ export class mcl {
             hours: Math.floor(timeDiff / (1000 * 60 * 60)),
             minutes: Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60)),
             seconds: Math.floor((timeDiff % (1000 * 60)) / 1000),
-            milliseconds: timeDiff % 1000
+            milliseconds: timeDiff % 1000,
+            now: now,
+            timeDiff: timeDiff
         }
     }
 
@@ -1349,7 +1454,7 @@ export class mcl {
      * @param {Block} block2 
      */
     static blocksMatch(block1, block2) {
-        return block1.matches(block2.typeId, block2.permutation.getAllStates())
+        return block1?.matches(block2?.typeId, block2?.permutation?.getAllStates())
         // if (
         //     block1.type === block2.type &&
         //     block1.typeId === block2.typeId &&
@@ -1365,12 +1470,12 @@ export class mcl {
      */
     static getNearestPlayer(dimen, loc) {
         const players = world.getAllPlayers()
-        let distances = players.map(player => ({
+        let distances = players.filter(e => e.dimension === dimen).map(player => ({
             player,
             distance: mcl.distance(player.location, loc)
         }))
 
-        distances.sort((a, b) => a.distance - b.distance)
+        distances.sort((a, b) => a?.distance - b?.distance)
 
         return distances.map(pd => pd.player)[0]
     }
@@ -1387,6 +1492,28 @@ export class mcl {
         const maxZ = Math.max(loc1?.z, loc2?.z)
 
         if (check.x >= minX && check.x <= maxX && check.z >= minZ && check.z <= maxZ) {
+            return true
+        } else return false
+    }
+
+    /**If 'check' is inside an area (loc1 and loc2), returns true
+     * @param {{x: number, y: number, z: number}} check 
+     * @param {{x?: number, y?: number, z?: number}} loc1 
+     * @param {{x?: number, y?: number, z?: number}} loc2 
+     */
+    static locationInside2(check, loc1, loc2) {
+        const minX = Math.min((loc1?.x ?? Infinity), (loc2?.x ?? Infinity))
+        const maxX = Math.max((loc1?.x ?? Infinity), (loc2?.x ?? Infinity))
+        const minY = Math.min((loc1?.y ?? Infinity), (loc2?.y ?? Infinity))
+        const maxY = Math.max((loc1?.y ?? Infinity), (loc2?.y ?? Infinity))
+        const minZ = Math.min((loc1?.z ?? Infinity), (loc2?.z ?? Infinity))
+        const maxZ = Math.max((loc1?.z ?? Infinity), (loc2?.z ?? Infinity))
+
+        if (
+            check.x >= minX && check.x <= maxX &&
+            check.y >= minY && check.y <= maxY &&
+            check.z >= minZ && check.z <= maxZ
+        ) {
             return true
         } else return false
     }
@@ -1419,6 +1546,49 @@ export class mcl {
         }
     }
 
+    /**Loads a location around 'loc' and provides a callback for code to perform while that area is loaded
+     * @param {{x: number, y: number, z: number}} loc 
+     * @param {(evd: TickingArea) => {}} callback 
+     */
+    static loader(loc, callback) {
+        const id = `darkoak:loader:${mcl.timeUuid()}`
+        if (world.tickingAreaManager.hasTickingArea(id)) {
+            world.tickingAreaManager.removeTickingArea(id)
+        }
+        world.tickingAreaManager.createTickingArea(id, {
+            from: {
+                x: loc.x - 10,
+                y: loc.y - 10,
+                z: loc.z - 10,
+            },
+            to: {
+                x: loc.x + 10,
+                y: loc.y + 10,
+                z: loc.z + 10,
+            }
+        }).then((evd) => {
+            callback(evd)
+            world.tickingAreaManager.removeTickingArea(id)
+        })
+    }
+
+    /**Spreads an arrays content along a timeframe and provides a callback for each element
+     * @param {any[]} array 
+     * @param {number} totalTime 
+     * @param {(e?: any, i: number) => {}} callback 
+     */
+    static arraySpreader(array, totalTime, callback) {
+        const interval = totalTime * 1000
+        const step = array.length > 0 ? interval / array.length : interval
+
+        for (let index = 0; index < array.length; index++) {
+            const e = array[index]
+            system.runTimeout(() => {
+                callback(e, index)
+            }, Math.floor(step * index / 50))
+        }
+    }
+
     /**Removes a player from the world, returns whether it worked
      * @param {Player} player 
      */
@@ -1441,15 +1611,14 @@ export class mcl {
      */
     static debugLog(title, message) {
         let logs = mcl.jsonWGet('darkoak:debuglog') || [{ title: 'No Title', message: 'Default', time: Date.now() }]
-        while (logs.length > 250) {
-            logs.shift()
-        }
         logs.push({
             title: title,
             message: message,
             time: Date.now()
         })
-        mcl.jsonWSet('darkoak:debuglog', logs)
+        while (!mcl.jsonWSet('darkoak:debuglog', logs)) {
+            logs.shift()
+        }
     }
 
 
@@ -1460,7 +1629,7 @@ export class mcl {
      * @param {string} type 
      * @param {boolean} hollow 
      */
-    static sphereGenerator(loc, dimension = 'overworld', radius = 5, type,  hollow) {
+    static sphereGenerator(loc, dimension = 'overworld', radius = 5, type, hollow) {
         const radiusSquared = radius * radius
         const innerRadiusSquared = (radius - 1) * (radius - 1)
 

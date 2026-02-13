@@ -27,25 +27,39 @@ export function placeBreakProtection(evd) {
             x: x,
             z: z,
         }, area?.p1, area?.p2)) {
-            const blocks = mcl.listGetValues('darkoak:gen:')
-            for (let ind = 0; ind < blocks.length; ind++) {
-                const b = JSON.parse(blocks[ind])
-                const parts1 = b?.coords?.split(' ')
-                const coords1 = {
-                    x: parseInt(parts1[0]),
-                    y: parseInt(parts1[1]),
-                    z: parseInt(parts1[2]),
-                }
-                const parts2 = b?.coords2?.split(' ')
-                const coords2 = {
-                    x: parseInt(parts2[0]),
-                    y: parseInt(parts2[1]),
-                    z: parseInt(parts2[2]),
-                }
-                if (mcl.locationInside({ x: x, z: z }, coords1, (coords2 || coords1))) {
-                    return
+            
+            if ((evd instanceof PlayerBreakBlockBeforeEvent)) {
+                const blocks = mcl.listGetValues('darkoak:gen:')
+                for (let ind = 0; ind < blocks.length; ind++) {
+                    const b = JSON.parse(blocks[ind])
+                    const parts1 = b?.coords?.split(' ')
+                    const coords1 = {
+                        x: parseInt(parts1[0]),
+                        y: parseInt(parts1[1]),
+                        z: parseInt(parts1[2]),
+                    }
+                    const parts2 = b?.coords2?.split(' ')
+                    const coords2 = {
+                        x: parseInt(parts2[0]),
+                        y: parseInt(parts2[1]),
+                        z: parseInt(parts2[2]),
+                    }
+                    const minX = Math.min(coords1.x, coords2.x)
+                    const maxX = Math.max(coords1.x, coords2.x)
+                    const minY = Math.min(coords1.y, coords2.y)
+                    const maxY = Math.max(coords1.y, coords2.y)
+                    const minZ = Math.min(coords1.z, coords2.z)
+                    const maxZ = Math.max(coords1.z, coords2.z)
+                    if (
+                        block.x >= minX && block.x <= maxX &&
+                        block.y >= minY && block.y <= maxY &&
+                        block.z >= minZ && block.z <= maxZ
+                    ) {
+                        return
+                    }
                 }
             }
+
             const isInteract = (evd instanceof PlayerInteractWithBlockBeforeEvent)
             const allowed = mcl.allowCheck(block)
             if ((evd instanceof PlayerBreakBlockBeforeEvent)) {
@@ -187,7 +201,7 @@ export function dimensionBan(player) {
                 dimension: world.getDimension('minecraft:overworld')
             })
         } else {
-            player.kill()
+            player?.kill()
         }
     }
 }

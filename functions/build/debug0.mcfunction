@@ -1,0 +1,1 @@
+fill ~3 ~-1 ~3 ~-3 ~-1 ~-3 minecraft:hardened_clay

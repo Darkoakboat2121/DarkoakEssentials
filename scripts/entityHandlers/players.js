@@ -2,7 +2,7 @@ import { world, Player, EntityComponentTypes, ItemUseAfterEvent, system, EntityH
 import { mcl } from "../logic"
 import { itemToDamage } from "../data/arrays"
 
-let sitMap = new Map()
+export let sitMap = new Map()
 let sittersMap = new Map()
 
 /**
@@ -74,31 +74,65 @@ export function magicItem(evd) {
     const spell = magic?.slot1 + magic?.slot2 + magic?.slot3 + magic?.slot4
     // 1 = sneak, 2 = jump, 3 = look up, 4 = look down, 5 = sprint, 6 = sneak jump 
 
-    // if (evd.itemStack.typeId === 'darkoak:magic_talisman') {
+    if (evd.itemStack.typeId === 'darkoak:magic_talisman') {
 
-    //     if (magic?.cast) {
-    //         let newItem = new ItemStack(evd.itemStack.type, evd.itemStack.amount)
-    //         newItem = evd.itemStack
-    //         let ogLore = evd.itemStack.getLore()
-    //         ogLore.push(`Spell: ${spell}`)
-    //         newItem.setLore(ogLore)
-    //         mcl.getInventory(player).container.setItem(mcl.getInventory(player).container.find(mcl.getHeldItem(player)), newItem)
-    //     } else if (magic?.mana >= (d?.cost || 1)) {
-    //         const newSpell = evd.itemStack.getLore().filter(e => e.startsWith('Spell: '))[0].replace('Spell: ', '')
-    //         spellTyper(newSpell, d, player)
-    //     }
+        if (magic?.cast) {
+            let newItem = new ItemStack(evd.itemStack.type, evd.itemStack.amount)
+            newItem = evd.itemStack
+            // let ogLore = evd.itemStack.getLore()
 
-    //     magicMap.set(player.name, {
-    //         enabled: false,
-    //         mana: magic?.mana - (d?.cost || 1),
-    //         slot1: '0',
-    //         slot2: '0',
-    //         slot3: '0',
-    //         slot4: '0',
-    //         cast: false
-    //     })
-    //     return
-    // }
+            // for (let index = 0; index < ogLore.length; index++) {
+            //     let line = ogLore[index]
+            //     if (line.startsWith('Spell: ')) {
+
+            //         return
+            //     }
+            // }
+
+            // ogLore.push(`Spell: ${spell}`)
+            // newItem.setLore(ogLore)
+            newItem.setDynamicProperty('darkoak:spell', JSON.stringify({
+                spell: spell
+            }))
+            mcl.getInventory(player).container.setItem(mcl.getInventory(player).container.find(mcl.getHeldItem(player)), newItem)
+            if (d?.messages) player.sendMessage(`§aStored: ${`§${magic?.slot1 || '0'}& §${magic?.slot2 || '0'}& §${magic?.slot3 || '0'}& §${magic?.slot4 || '0'}&\n§rMana: ${magic?.mana ?? (d?.maxmana ?? 20)}`}§r`)
+            magicMap.set(player.name, {
+                enabled: false,
+                mana: (magic?.mana ?? (d?.maxmana ?? 20)) - (d?.cost ?? 1),
+                slot1: '0',
+                slot2: '0',
+                slot3: '0',
+                slot4: '0',
+                cast: false
+            })
+        } else if (magic?.mana >= (d?.cost ?? 1)) {
+            // const newSpell = evd.itemStack.getLore().filter(e => e.startsWith('Spell: '))[0].replace('Spell: ', '')
+            const ns = evd.itemStack.getDynamicProperty('darkoak:spell')
+            if (!ns) return
+            const newSpell = JSON.parse(ns)?.spell
+            spellTyper(newSpell, d, player)
+            magicMap.set(player.name, {
+                enabled: false,
+                mana: (magic?.mana ?? (d?.maxmana ?? 20)) - ((d?.cost ?? 1) * 1.5),
+                slot1: '0',
+                slot2: '0',
+                slot3: '0',
+                slot4: '0',
+                cast: false
+            })
+        } else {
+            magicMap.set(player.name, {
+                enabled: false,
+                mana: (magic?.mana ?? (d?.maxmana ?? 20)),
+                slot1: '0',
+                slot2: '0',
+                slot3: '0',
+                slot4: '0',
+                cast: false
+            })
+        }
+        return
+    }
 
     if (evd.itemStack.typeId != 'darkoak:magic_book') return
     if (magic?.cast && magic?.mana >= (d?.cost || 1)) {
@@ -134,6 +168,21 @@ export function magicItem(evd) {
             cast: false
         })
     }
+}
+
+/**
+ * @param {Player} player 
+ * @returns 
+ */
+export function magicTalismanActionBar(player) {
+    const d = mcl.jsonWGet('darkoak:magic')
+    if (!d?.enabled || !d?.showaction) return
+
+    const held = mcl.getHeldItem(player)
+    if (!held || held.typeId != 'darkoak:magic_talisman') return
+
+    const magic = magicMap.get(player.name)
+    player.onScreenDisplay.setActionBar(`§${magic?.slot1 || '0'}& §${magic?.slot2 || '0'}& §${magic?.slot3 || '0'}& §${magic?.slot4 || '0'}&\n§rMana: ${magic?.mana ?? (d?.maxmana ?? 20)}`)
 }
 
 function spellTyper(spell, d, player) {
@@ -289,7 +338,7 @@ function spellTyper(spell, d, player) {
         case '4411':
             if (d?.earthquake?.enabled) {
                 for (let index = 0; index < (d?.earthquake?.length || 5); index++) {
-                    mcl.pCommand(player, `summon evocation_fang ^ ^ ^${index + 1}`)
+                    mcl.pCommand(player, `summon evocation_fang ^ ^ ^${index + 2}`)
                 }
                 type = 'Earthquake'
             }
@@ -299,7 +348,7 @@ function spellTyper(spell, d, player) {
             break
         case '4441':
             let o = 0
-            mcl.archimedesSpiral(2, 20, 0.35, (x, z) => {
+            mcl.archimedesSpiral(2, 17, 0.35, (x, z) => {
                 o++
                 if (o > 7) mcl.pCommand(player, `summon evocation_fang ~${x} ~ ~${z}`)
             })
@@ -381,7 +430,7 @@ export function magicSlotter(player) {
         })
     }
     // console.log(JSON.stringify(magicMap.get(player.name)))
-    player.onScreenDisplay.setActionBar(`§${magic?.slot1}& §${magic?.slot2}& §${magic?.slot3}& §${magic?.slot4}&\n§rMana: ${magic?.mana}`)
+    if (mcl.jsonWGet('darkoak:magic')?.showaction) player.onScreenDisplay.setActionBar(`§${magic?.slot1}& §${magic?.slot2}& §${magic?.slot3}& §${magic?.slot4}&\n§rMana: ${magic?.mana}`)
     // player.sendMessage({rawtext: [{text: `§${magic?.slot1}& §${magic?.slot2}& §${magic?.slot3}& §${magic?.slot4}&`}]})
 
 }
@@ -395,7 +444,7 @@ function manaRegen(player) {
     if (d?.enabled && mcl.tickTimer(21) && magic?.mana < d?.maxmana) {
         let setto = (magic?.mana || 0) + (d?.regenrate || 1)
         while (setto > d?.maxmana) {
-            setto--
+            setto -= 0.5
         }
         magicMap.set(player.name, {
             enabled: magic?.enabled,
@@ -491,7 +540,7 @@ export const crashSet = new Set()
  * @param {Player[]} players 
  */
 export function crashJob(players) {
-    const pna = players.map(e => e.name)
+    const pna = players.map(e => e?.name)
     crashSet.forEach(e => {
         if (pna.includes(e)) {
             let i = 0
@@ -603,4 +652,49 @@ export function customCombatSystem(evd) {
 export function customCombatToggle(player) {
     const d = mcl.jsonWGet('darkoak:customcombat')
     if (!d?.enabled && player.hasTag('darkoak:combat')) player.removeTag('darkoak:combat')
+}
+
+/**
+ * @type {Map<string, {x: number, y: number, z: number}>}
+ */
+let lightingMap = new Map()
+
+/**
+ * @param {Player} player 
+ */
+export function dynamicLighting(player) {
+    const light = lightingMap.get(player.name)
+    const held = mcl.getHeldItem(player)
+    if (!held) {
+        clearLight()
+        return
+    }
+
+    const isLightSource = (held?.typeId?.endsWith('torch') || held?.typeId?.endsWith('lantern') || held?.typeId === 'minecraft:lit_pumpkin' || held?.typeId?.endsWith('froglight') || held?.typeId?.includes('glow'))
+    if (!isLightSource) {
+        clearLight()
+        return
+    }
+
+    const loc = player.location
+    const loch = {
+        x: loc.x,
+        y: loc.y + 1,
+        z: loc.z
+    }
+    const headBlock = player.dimension.getBlock(loch)
+    if (headBlock?.typeId != 'minecraft:air' && headBlock?.typeId != 'minecraft:light_block_15') {
+        clearLight()
+        return
+    }
+
+    if (!mcl.compareLocations(loch, light) && isLightSource) {
+        clearLight()
+        player.dimension.setBlockType(loch, 'minecraft:light_block_15')
+        lightingMap.set(player.name, loch)
+    }
+
+    function clearLight() {
+        if (light && player.dimension.getBlock(light)?.typeId?.startsWith('minecraft:light_block')) player.dimension.setBlockType(light, 'minecraft:air')
+    }
 }

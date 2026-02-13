@@ -155,6 +155,16 @@ export class bui {
         return f.divider()
     }
 
+    /**Adds spacing
+     * @param {ModalFormData | ActionFormData} f 
+     * @param {number} amount 
+     */
+    static spacer(f, amount = 1) {
+        for (let index = 0; index < amount; index++) {
+            f.label('')
+        }
+    }
+
     /**Generic toggle
      * @param {ModalFormData} f 
      */

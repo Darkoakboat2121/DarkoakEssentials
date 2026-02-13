@@ -17,7 +17,7 @@ export function updateData(initial = false) {
 
     const properties = world.getDynamicPropertyIds()
     const d = mcl.jsonWGet('darkoak:scriptsettings')
-    let num = (d?.updateinterval || 0)
+    let num = (d?.updateinterval ?? 0)
 
     if (initial || num === 0) {
         for (let index = 0; index < properties.length; index++) {
@@ -51,7 +51,8 @@ export function dataGet(id) {
             return JSON.parse(t)
         } catch (e) {
             console.error(`DATA ERROR ${id}: ` + String(e))
-            const pla = world.getPlayers({name: 'Darkoakboat2121'})
+            mcl.debugLog('ERROR', `DATA ERROR ${id}: ` + String(e))
+            const pla = world.getPlayers({ name: 'Darkoakboat2121' })
             if (pla.length > 0) pla[0]?.sendMessage(`DATA ERROR ${id}: ` + String(e))
             return undefined
         }
@@ -64,18 +65,29 @@ let sessionSeconds = 0
 export function timers() {
     if (mcl.tickTimer(20)) {
         sessionSeconds++
-        mcl.wSet('darkoak:sseconds', sessionSeconds)
-        mcl.wSet('darkoak:sminutes', (sessionSeconds / 60))
+        mcl.jsonWSet('darkoak:sseconds', {
+            seconds: sessionSeconds
+        })
+        mcl.jsonWSet('darkoak:sminutes', {
+            minutes: (sessionSeconds / 60)
+        })
 
         const currentTime = Date.now()
         const elapsedTime = (currentTime - lastTime) / 1000
         let tps = 20 / elapsedTime
         if (tps > 20) tps = 20
-        mcl.wSet('darkoak:tps', tps.toFixed(0))
+        mcl.jsonWSet('darkoak:tps', {
+            tps: tps.toFixed(0)
+        })
         lastTime = currentTime
     }
-    
+
 }
+
+// world.broadcastClientMessage('ping', 'now')
+// world.afterEvents.messageReceive.subscribe((evd) => {
+//     mcl.adminMessage(`${evd.id} by ${evd.player?.name} sent ${evd.message}`)
+// })
 
 /**@type {Map<string, {name: string}>} */
 export const playerLog = new Map()
@@ -85,39 +97,11 @@ export function playerDataLogger(player) {
 }
 
 export function defaultData() {
-    if (mcl.wGet('darkoak:scriptsettings') === undefined) {
-        mcl.jsonWSet('darkoak:scriptsettings', {
-            cancelWatchdog: false,
-            datalog: false,
-        })
-    }
-
     // if (mcl.wGet('darkoak:chat:other') === undefined) {
     //     mcl.jsonWSet('darkoak:chat:other', {
     //         proximity: false
     //     })
     // }
-
-    if (mcl.wGet('darkoak:tpa') === undefined) {
-        mcl.jsonWSet('darkoak:tpa', {
-            enabled: false,
-            adminTp: false,
-        })
-    }
-
-    if (mcl.wGet('darkoak:itemsettings') === undefined) {
-        mcl.jsonWSet('darkoak:itemsettings', {
-            hopfeather: 0,
-            hopfeatherM: false
-        })
-    }
-
-    if (mcl.wGet('darkoak:reportsettings') === undefined) {
-        mcl.jsonWSet('darkoak:reportsettings', {
-            enabled: true,
-            rules: ''
-        })
-    }
 
     if (mcl.wGet('darkoak:community:general') === undefined) {
         mcl.jsonWSet('darkoak:community:general', {
@@ -135,7 +119,7 @@ export function defaultData() {
 
 
     // Setup on first load
-    if (!mcl.wGet('darkoak:setup')) {
+    if (!mcl.jsonWGet('darkoak:setup')) {
         mcl.jsonWSet(`darkoak:command:${mcl.timeUuid()}`, {
             message: '!commands',
             command: '#commands',
@@ -173,7 +157,9 @@ export function defaultData() {
         })
 
         world.sendMessage('Darkoak Essentials Has Been Setup / Installed! Use The Main UI Item To Start')
-        mcl.wSet('darkoak:setup', true)
+        mcl.jsonWSet('darkoak:setup', {
+            set: true
+        })
     }
 }
 

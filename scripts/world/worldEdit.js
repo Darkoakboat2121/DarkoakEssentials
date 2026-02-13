@@ -1,7 +1,7 @@
 import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus, EquipmentSlot, EnchantmentTypes, EntityComponentTypes, ItemComponentTypes } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
-import { enchantments } from "../data/arrays"
+import { enchantments, particles, sounds } from "../data/arrays"
 
 /**
  * @param {StartupEvent} evd 
@@ -173,6 +173,18 @@ export function WEcommands(evd) {
             }
         })
     })
+
+    // evd.customCommandRegistry.registerCommand({
+    //     name: 'darkoak:wefillt',
+    //     description: 'Fills The Selected Area With Support For Large Sizes',
+    //     permissionLevel: CommandPermissionLevel.GameDirectors,
+    //     mandatoryParameters: [
+    //         {
+    //             type: CustomCommandParamType.BlockType,
+    //             name: 'block'
+    //         },
+    //     ]
+    // })
 
     // -P
     evd.customCommandRegistry.registerEnum('darkoak:gradienttypes', ['stone', 'stonebricks', 'dirt', 'wood', 'darkwood', 'custom'])
@@ -420,6 +432,58 @@ export function WEcommands(evd) {
             }
         })
     })
+
+    // evd.customCommandRegistry.registerEnum('darkoak:animationoptions', ['save', 'load', 'move', 'play', 'stop'])
+    // evd.customCommandRegistry.registerCommand({
+    //     name: 'darkoak:weanimate',
+    //     description: 'Animates A Build Using Frames. Save -> Saves Current Frame, Load -> Loads A Specified Frame, Move -> Changes The Currently Edited Frame, Play -> Starts The Animation, Stop -> Stops The Animation',
+    //     permissionLevel: CommandPermissionLevel.GameDirectors,
+    //     mandatoryParameters: [
+    //         {
+    //             type: CustomCommandParamType.String,
+    //             name: 'animation_name'
+    //         },
+    //         {
+    //             type: CustomCommandParamType.Enum,
+    //             name: 'darkoak:animationoptions'
+    //         },
+    //     ],
+    //     optionalParameters: [
+    //         {
+    //             type: CustomCommandParamType.Integer,
+    //             name: 'frame'
+    //         }
+    //     ]
+    // }, (evd, animname, option, frame) => {
+    //     /**@type {Player} */
+    //     const player = evd?.sourceEntity
+    //     if (player) {
+    //         const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
+    //         if (!selected?.p2) {
+    //             player.sendMessage('Please Select An Area First')
+    //             return
+    //         }
+
+    //         const dimension = mcl.customSlashDimen(evd)
+    //         const id = `darkoak:animatedbuild:${animname}`
+    //         const d = mcl.jsonWGet(id)
+    //         system.runTimeout(() => {
+    //             switch (option) {
+    //                 case 'save':
+    //                     const currentFrames = d?.frames
+    //                     if (!currentFrames) {
+    //                         mcl.jsonWSet(id, {
+
+    //                         })
+    //                     } else {
+
+    //                     }
+    //                     mcl.jsonWUpdate(id, 'frames',)
+    //                     break
+    //             }
+    //         })
+    //     }
+    // })
 }
 
 /**
@@ -450,6 +514,13 @@ export function WEselector(evd) {
             let idadder = system.runInterval(() => {
                 if (mcl.tickTimer(10)) mcl.particleOutline(selected.p1, selected.p2, undefined, 1)
             })
+            system.runTimeout(() => {
+                try {
+                    system.clearRun(idadder)
+                } catch {
+
+                }
+            }, (20 * 60))
             mcl.jsonPUpdate(player, 'darkoak:worldedit', 'id', idadder)
             console.log(JSON.stringify(mcl.jsonPGet(player, 'darkoak:worldedit')))
         }
@@ -589,6 +660,94 @@ export function betterVanillaCommands(evd) {
                     status: CustomCommandStatus.Failure
                 }
         }
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:particles', particles)
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:dobparticle',
+        description: 'Better Particle Command (Has An Enum Instead)',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:particles'
+            },
+            {
+                type: CustomCommandParamType.Location,
+                name: 'location',
+            },
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'players'
+            }
+        ]
+    }, (evd, particle, loc, players) => {
+        let p = `minecraft:${particle}`
+        system.runTimeout(() => {
+            if (players) {
+                for (let index = 0; index < players.length; index++) {
+                    /**@type {Player} */
+                    const player = players[index]
+                    player.spawnParticle(p, loc)
+                }
+            } else {
+                mcl.customSlashDimen(evd)?.spawnParticle(p, loc)
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:sounds', sounds)
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:dobplaysound',
+        description: 'Better Playsound Command (Has An Enum Instead)',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:sounds'
+            }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'players'
+            },
+            {
+                type: CustomCommandParamType.Location,
+                name: 'location'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'volume'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'pitch'
+            }
+        ]
+    }, (evd, sound, players, loc, vol, pitch) => {
+        const location = (loc ?? evd?.initiator?.location ?? evd?.sourceBlock?.location ?? evd?.sourceEntity?.location)
+        system.runTimeout(() => {
+            if (players) {
+                for (let index = 0; index < players.length; index++) {
+                    /**@type {Player} */
+                    const player = players[index]
+                    player.playSound(sound, {
+                        location: location,
+                        volume: vol,
+                        pitch: pitch,
+                    })
+                }
+            } else {
+                mcl.customSlashDimen(evd).playSound(sound, location, {
+                    volume: vol,
+                    pitch: pitch,
+                })
+            }
+        })
+        
     })
 
     // evd.customCommandRegistry.registerEnum('darkoak:slots', [EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet, EquipmentSlot.Mainhand, EquipmentSlot.Offhand, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36'])

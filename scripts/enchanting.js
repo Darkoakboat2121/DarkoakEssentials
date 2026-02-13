@@ -27,7 +27,7 @@ export function enchantOnHit(evd, d) {
 
         switch (parts[1]) {
             case 'Explode':
-                world.getDimension(entity.dimension.id).createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                entity.dimension.createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                 break
             case 'Extra Damage':
                 entity.applyDamage(amount)
@@ -71,7 +71,7 @@ export function enchantOnDeathKill(evd, d) {
 
             switch (parts[1]) {
                 case 'Explode':
-                    world.getDimension(entity.dimension.id).createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                    entity.dimension.createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                     break
                 case 'Extra Damage':
                     entity.applyDamage(amount)
@@ -105,7 +105,7 @@ export function enchantOnDeathKill(evd, d) {
 
             switch (parts[1]) {
                 case 'Explode':
-                    world.getDimension(player.dimension.id).createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                    player.dimension.createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                     break
                 case 'Extra Damage':
                     player.applyDamage(amount)
@@ -145,7 +145,7 @@ export function enchantOnUse(evd, d) {
 
         switch (parts[1]) {
             case 'Explode':
-                world.getDimension(player.dimension.id).createExplosion(player.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                player.dimension.createExplosion(player.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                 break
             case 'Extra Damage':
                 const damaged = player.getEntitiesFromViewDirection({
@@ -189,7 +189,7 @@ export function enchantOnJump(player, d) {
 
         switch (parts[1]) {
             case 'Explode':
-                world.getDimension(player.dimension.id).createExplosion(player.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                player.dimension.createExplosion(player.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                 break
             case 'Extra Damage':
                 player.applyDamage(amount)
@@ -230,7 +230,7 @@ export function enchantOnDamaged(evd, d) {
 
         switch (parts[1]) {
             case 'Explode':
-                world.getDimension(entity.dimension.id).createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
+                entity.dimension.createExplosion(entity.location, amount / nerf, { breaksBlocks: false, causesFire: false })
                 break
             case 'Extra Damage':
                 entity.applyDamage(amount)

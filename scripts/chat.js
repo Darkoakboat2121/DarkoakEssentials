@@ -11,6 +11,7 @@ import { cd } from "./data/defaults"
 // This file handles all chat interactions such as:
 // Custom commands, ranks, censoring, antispam
 
+/**@type {Map<string, {message: string, time: number}>} */
 let messageMap = new Map()
 let lastSender = ''
 
@@ -62,7 +63,7 @@ export function chatSystem(evd = undefined, player, message) {
     // chat games
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string}} */
     const game = mcl.jsonWGet('darkoak:chatgames')
-    const word = mcl.wGet('darkoak:chatgame1:word')
+    const word = mcl.jsonWGet('darkoak:chatgame1:word')?.word
     if (word) {
         if (message.trim() == word.trim()) {
             world.sendMessage(`§a${player.name} won! The word was: §r§f${word}`)
@@ -258,7 +259,9 @@ export function chatGames(chat) {
 
             world.sendMessage(`§a[${loops}] Unscramble for a prize! Word:§r§f ${mcl.stringScrambler(word)}`)
 
-            mcl.wSet('darkoak:chatgame1:word', word)
+            mcl.jsonWSet('darkoak:chatgame1:word', {
+                word: word
+            })
         }
     }
 
@@ -353,7 +356,7 @@ export function nametag(p, ocs, d) {
 
     if (ocs?.healthDisplay) lines.push(`§aHealth: ${Math.round(mcl.healthValue(p))}§r§f`)
     if (ocs?.nametag) lines.push(mcl.jsonPGet(p, 'darkoak:antispam').message)
-    if (ocs?.nametag) lines.push((messageMap.get(p.name) || ''))
+    if (ocs?.nametag) lines.push(((messageMap.get(p.name)?.message) ?? ''))
     if (ocs?.nametagRanks) lines.push(`${cr.start}${replacer(p, ranks.join(cr.middle))}${cr.end}`)
 
     system.runTimeout(() => {
@@ -487,15 +490,16 @@ function chatPreventives(player, message) {
             }
         }
 
+
         const d = mcl.jsonWGet('darkoak:anticheat')
 
         // anti spam
-        if (d?.antispam) {
+        if (d?.antispam && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) {
             const trimmed = message.trim()
-            if ((messageMap.get(player.name) || '') === trimmed && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) return true
+            if (mcl.deleteFormatting(messageMap.get(player.name)?.message ?? '') === trimmed) return true
             if (
                 trimmed.includes('horion.download') ||
-                trimmed.includes('lumineproxy') ||
+                trimmed.includes('lumineproxy.org') ||
                 trimmed.includes('packet.sell.app') ||
                 trimmed.includes('LUMINE UTILITY PROXY')
             ) {
@@ -503,11 +507,33 @@ function chatPreventives(player, message) {
                 return true
             }
             if (d?.antispam2) {
-                if (trimmed.split('|')[1]?.trim().length === 8) {
-                    return true
+                const past = messageMap.get(player?.name)?.message
+                if (past) {
+                    const length = trimmed.length
+                    let amount = 0
+                    for (let index = 0; index < length; index++) {
+                        const l = trimmed.charAt(index)
+                        if (past.charAt(index).length > 0 && past.charAt(index) === l) {
+                            amount++
+                        }
+                    }
+
+                    const percent = (amount / length) * 100
+                    if (percent >= (d?.antispam2sense ?? 50)) return true
                 }
             }
         }
+
+        if (d?.antichatflood && message.length > (d?.antichatfloodsense ?? 100)) return true
+
+        if (d?.antispam3) {
+            const past = messageMap.get(player?.name)
+            if (past) {
+                const td = mcl.timeDifference(past.time)
+                if (Math.abs(td.timeDiff) < 800) return true
+            }
+        }
+
         if (d?.antispamactive) {
             if (player.isJumping || player.isSprinting) {
                 log(player, `anti-spam-active`)
@@ -518,11 +544,15 @@ function chatPreventives(player, message) {
         // anti crasher 1
         if (d?.anticrasher1 && (message.includes(crasherSymbol) || message.includes(crasherSymbol2))) return true
 
-        messageMap.set(player.name, message.trim())
+        messageMap.set(player.name, {
+            message: message.trim(),
+            time: Date.now(),
+        })
         return false
-    } catch {
+    } catch (e) {
         system.runTimeout(() => {
             mcl.adminMessage(`Chat Preventatives Failed For: ${player.name}`)
+            mcl.debugLog('Chat Preventitives', String(e))
         })
         return false
     }
@@ -535,7 +565,7 @@ function chatPreventives(player, message) {
  * @param {{antistreamermode: boolean}} d 
  */
 function messageModifiers(ocs, chat, player, d) {
-    if (mcl.jsonWGet('darkoak:community:general').emojisenabled) {
+    if (mcl.jsonWGet('darkoak:community:general')?.emojisenabled) {
         for (let index = 0; index < emojis.length; index++) {
             const e = emojis[index]
             chat.message = chat.message.replaceAll(e.m, e.e)
@@ -595,9 +625,6 @@ function messageModifiers(ocs, chat, player, d) {
 export function messageLog(player, message) {
     /**@type {{name: string, message: string, time: number}[]} */
     let logs2 = mcl.jsonWGet('darkoak:messagelogs:v2') || [{ name: 'Default', message: 'Default', time: Date.now() }]
-    while (logs2.length > 200) {
-        logs2.shift()
-    }
     if (logs2.length > 0 && logs2[logs2.length - 1].name === player.name) {
         logs2[logs2.length - 1].message += `\n| ${message}`
     } else {
@@ -607,7 +634,9 @@ export function messageLog(player, message) {
             time: Date.now()
         })
     }
-    mcl.jsonWSet('darkoak:messagelogs:v2', logs2)
+    while (!mcl.jsonWSet('darkoak:messagelogs:v2', logs2)) {
+        logs2.shift()
+    }
 }
 
 /**
