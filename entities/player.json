@@ -57,6 +57,11 @@
                     "value": 0.7
                 }
             },
+            "darkoak:size0.8": {
+                "minecraft:scale": {
+                    "value": 0.8
+                }
+            },
             "darkoak:size0.9": {
                 "minecraft:scale": {
                     "value": 0.9
@@ -75,6 +80,11 @@
             "darkoak:size1.5": {
                 "minecraft:scale": {
                     "value": 1.5
+                }
+            },
+            "darkoak:size1.9": {
+                "minecraft:scale": {
+                    "value": 1.9
                 }
             },
             "darkoak:size2.0": {
@@ -152,6 +162,182 @@
                     "is_pushable_by_piston": true
                 }
             },
+            "darkoak:rideabletrue": {
+                "minecraft:rideable": {
+                    "crouching_skip_interact": true,
+                    "family_types": [],
+                    "interact_text": "Hop on top?",
+                    "seat_count": 1,
+                    "seats": {
+                        "position": [
+                            0,
+                            0,
+                            0
+                        ]
+                    }
+                }
+            },
+            "darkoak:rideablefalse": {
+                "minecraft:rideable": {
+                    "seat_count": 2,
+                    "family_types": [
+                        "parrot_tame"
+                    ],
+                    "pull_in_entities": true,
+                    "seats": [
+                        {
+                            "position": [
+                                0.4,
+                                -0.2,
+                                -0.1
+                            ],
+                            "min_rider_count": 0,
+                            "max_rider_count": 0,
+                            "lock_rider_rotation": 0
+                        },
+                        {
+                            "position": [
+                                -0.4,
+                                -0.2,
+                                -0.1
+                            ],
+                            "min_rider_count": 1,
+                            "max_rider_count": 2,
+                            "lock_rider_rotation": 0
+                        }
+                    ]
+                }
+            },
+            "darkoak:gravitytrue": {
+                "minecraft:physics": {
+                    "push_towards_closest_space": true,
+                    "has_gravity": true
+                }
+            },
+            "darkoak:gravityfalse": {
+                "minecraft:physics": {
+                    "push_towards_closest_space": true,
+                    "has_gravity": false
+                }
+            },
+            "darkoak:bandwidthdefault": {
+                "minecraft:conditional_bandwidth_optimization": {
+                    "default_values": {
+                        "max_dropped_ticks": 10,
+                        "max_optimized_distance": 80,
+                        "use_motion_prediction_hints": false
+                    }
+                }
+            },
+            "darkoak:bandwidthperformance": {
+                "minecraft:conditional_bandwidth_optimization": {
+                    "default_values": {
+                        "max_dropped_ticks": 20,
+                        "max_optimized_distance": 40,
+                        "use_motion_prediction_hints": false
+                    }
+                }
+            },
+            "darkoak:bandwidthquality": {
+                "minecraft:conditional_bandwidth_optimization": {
+                    "default_values": {
+                        "max_dropped_ticks": 0,
+                        "max_optimized_distance": 120,
+                        "use_motion_prediction_hints": true
+                    }
+                }
+            },
+            "darkoak:bandwidthpvp": {
+                "minecraft:conditional_bandwidth_optimization": {
+                    "default_values": {
+                        "max_dropped_ticks": 10,
+                        "max_optimized_distance": 80,
+                        "use_motion_prediction_hints": false
+                    },
+                    "conditional_values": [
+                        {
+                            "conditional_values": [
+                                {
+                                    "test": "distance_to_nearest_player",
+                                    "operator": "<=",
+                                    "value": 10
+                                }
+                            ],
+                            "max_dropped_ticks": 0,
+                            "max_optimized_distance": 20,
+                            "use_motion_prediction_hints": true
+                        }
+                    ]
+                }
+            },
+            "darkoak:nametagtrue": {
+                "minecraft:nameable": {
+                    "always_show": true,
+                    "allow_name_tag_renaming": false
+                }
+            },
+            "darkoak:nametagfalse": {
+                "minecraft:nameable": {
+                    "always_show": false,
+                    "allow_name_tag_renaming": false
+                }
+            },
+            "darkoak:stackable": {
+                "minecraft:is_stackable": {}
+            },
+            "darkoak:noinvis": {
+                "minecraft:renders_when_invisible": {}
+            },
+            "darkoak:lucky": {
+                "minecraft:luck": {
+                    "value": 100,
+                    "max": 100
+                }
+            },
+            "darkoak:leashable": {
+                "minecraft:leashable": {
+                    "can_be_stolen": false,
+                    "hard_distance": 6,
+                    "max_distance": 10,
+                    "soft_distance": 4
+                },
+                "minecraft:leashable_to": {}
+            },
+            "darkoak:heliophobia": {
+                "minecraft:burns_in_daylight": {}
+            },
+            "darkoak:new": {
+                
+            },
+            "darkoak:grapple": {
+                "minecraft:leashable": {
+                    "can_be_stolen": false,
+                    "hard_distance": 5,
+                    "max_distance": 100,
+                    "soft_distance": 2
+                }
+            },
+            "darkoak:crash2": {
+                "minecraft:transformation": {
+                    "drop_equipment": false,
+                    "drop_inventory": false,
+                    "into": "minecraft:chicken",
+                    "keep_level": true,
+                    "keep_owner": false,
+                    "preserve_equipment": true
+                }
+            },
+            "darkoak:crash": {
+                "minecraft:explode": {
+                    "breaks_blocks": false,
+                    "causes_fire": false,
+                    "destroy_affected_by_griefing": false,
+                    "fire_affected_by_griefing": false,
+                    "fuse_lit": true,
+                    "max_resistance": 0,
+                    "power": 3
+                }
+            },
             "darkoak:reset": {
                 "minecraft:scale": {
                     "value": 1.0
@@ -169,6 +355,43 @@
                 "minecraft:pushable": {
                     "is_pushable": false,
                     "is_pushable_by_piston": true
+                },
+                "minecraft:rideable": {
+                    "seat_count": 2,
+                    "family_types": [
+                        "parrot_tame"
+                    ],
+                    "pull_in_entities": true,
+                    "seats": [
+                        {
+                            "position": [
+                                0.4,
+                                -0.2,
+                                -0.1
+                            ],
+                            "min_rider_count": 0,
+                            "max_rider_count": 0,
+                            "lock_rider_rotation": 0
+                        },
+                        {
+                            "position": [
+                                -0.4,
+                                -0.2,
+                                -0.1
+                            ],
+                            "min_rider_count": 1,
+                            "max_rider_count": 2,
+                            "lock_rider_rotation": 0
+                        }
+                    ]
+                },
+                "minecraft:physics": {
+                    "push_towards_closest_space": true
+                },
+                "minecraft:conditional_bandwidth_optimization": {},
+                "minecraft:nameable": {
+                    "always_show": true,
+                    "allow_name_tag_renaming": false
                 }
             }
         },
@@ -407,23 +630,57 @@
             "minecraft:conditional_bandwidth_optimization": {},
             "minecraft:block_climber": {},
             "minecraft:environment_sensor": {
-                "triggers": {
-                    "filters": {
-                        "all_of": [
-                            {
-                                "test": "has_mob_effect",
-                                "subject": "self",
-                                "value": "bad_omen"
-                            },
-                            {
-                                "test": "is_in_village",
-                                "subject": "self",
-                                "value": true
-                            }
-                        ]
+                "triggers": [
+                    {
+                        "filters": {
+                            "all_of": [
+                                {
+                                    "test": "has_mob_effect",
+                                    "subject": "self",
+                                    "value": "bad_omen"
+                                },
+                                {
+                                    "test": "is_in_village",
+                                    "subject": "self",
+                                    "value": true
+                                }
+                            ]
+                        },
+                        "event": "minecraft:gain_raid_omen"
                     },
-                    "event": "minecraft:gain_raid_omen"
-                }
+                    {
+                        "filters": {
+                            "all_of": [
+                                {
+                                    "test": "is_visible",
+                                    "subject": "self",
+                                    "operator": "equals",
+                                    "value": false
+                                },
+                                {
+                                    "test": "actor_health",
+                                    "subject": "self",
+                                    "operator": "!=",
+                                    "value": 0
+                                }
+                            ]
+                        },
+                        "event": "darkoak:is_invis"
+                    },
+                    {
+                        "filters": {
+                            "all_of": [
+                                {
+                                    "test": "is_visible",
+                                    "subject": "self",
+                                    "operator": "equals",
+                                    "value": true
+                                }
+                            ]
+                        },
+                        "event": "darkoak:is_not_invis"
+                    }
+                ]
             }
         },
         "events": {
@@ -460,6 +717,16 @@
                     ]
                 }
             },
+            "darkoak:is_invis": {
+                "queue_command": {
+                    "command": "tag @s add darkoak:isinvisible"
+                }
+            },
+            "darkoak:is_not_invis": {
+                "queue_command": {
+                    "command": "tag @s remove darkoak:isinvisible"
+                }
+            },
             "darkoak:size0.1": {
                 "add": {
                     "component_groups": [
@@ -481,6 +748,13 @@
                     ]
                 }
             },
+            "darkoak:size0.8": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size0.8"
+                    ]
+                }
+            },
             "darkoak:size0.9": {
                 "add": {
                     "component_groups": [
@@ -499,6 +773,20 @@
                 "add": {
                     "component_groups": [
                         "darkoak:size1.1"
+                    ]
+                }
+            },
+            "darkoak:size1.5": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size1.5"
+                    ]
+                }
+            },
+            "darkoak:size1.9": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:size1.9"
                     ]
                 }
             },
@@ -600,10 +888,206 @@
                     ]
                 }
             },
+            "darkoak:rideabletrue": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:rideabletrue"
+                    ]
+                }
+            },
+            "darkoak:rideablefalse": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:rideablefalse"
+                    ]
+                }
+            },
+            "darkoak:gravitytrue": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:gravitytrue"
+                    ]
+                }
+            },
+            "darkoak:gravityfalse": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:gravityfalse"
+                    ]
+                }
+            },
+            "darkoak:bandwidthdefault": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:bandwidthdefault"
+                    ]
+                }
+            },
+            "darkoak:bandwidthperformance": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:bandwidthperformance"
+                    ]
+                }
+            },
+            "darkoak:bandwidthquality": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:bandwidthquality"
+                    ]
+                }
+            },
+            "darkoak:bandwidthpvp": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:bandwidthpvp"
+                    ]
+                }
+            },
+            "darkoak:nametagtrue": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:nametagtrue"
+                    ]
+                }
+            },
+            "darkoak:nametagfalse": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:nametagfalse"
+                    ]
+                }
+            },
+            "darkoak:stackabletrue": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:stackable"
+                    ]
+                }
+            },
+            "darkoak:stackablefalse": {
+                "remove": {
+                    "component_groups": [
+                        "darkoak:stackable"
+                    ]
+                }
+            },
+            "darkoak:noinvistrue": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:noinvis"
+                    ]
+                }
+            },
+            "darkoak:noinvisfalse": {
+                "remove": {
+                    "component_groups": [
+                        "darkoak:noinvis"
+                    ]
+                }
+            },
+            "darkoak:luckytrue": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:lucky"
+                    ]
+                }
+            },
+            "darkoak:luckyfalse": {
+                "remove": {
+                    "component_groups": [
+                        "darkoak:lucky"
+                    ]
+                }
+            },
+            "darkoak:leashabletrue": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:leashable"
+                    ]
+                }
+            },
+            "darkoak:leashablefalse": {
+                "remove": {
+                    "component_groups": [
+                        "darkoak:leashable"
+                    ]
+                }
+            },
+            "darkoak:heliophobiatrue": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:heliophobia"
+                    ]
+                }
+            },
+            "darkoak:heliophobiafalse": {
+                "remove": {
+                    "component_groups": [
+                        "darkoak:heliophobia"
+                    ]
+                }
+            },
+            "darkoak:new": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:new"
+                    ]
+                }
+            },
+            "darkoak:grapple": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:grapple"
+                    ]
+                }
+            },
+            "darkoak:grapplefalse": {
+                "remove": {
+                    "component_groups": [
+                        "darkoak:grapple"
+                    ]
+                }
+            },
+            "darkoak:crash2": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:crash2"
+                    ]
+                },
+                "remove": {
+                    "component_groups": [
+                        "darkoak:crash2"
+                    ]
+                }
+            },
+            "darkoak:crash": {
+                "add": {
+                    "component_groups": [
+                        "darkoak:crash"
+                    ]
+                },
+                "remove": {
+                    "component_groups": [
+                        "darkoak:crash"
+                    ]
+                }
+            },
             "darkoak:reset": {
                 "add": {
                     "component_groups": [
                         "darkoak:reset"
+                    ]
+                },
+                "remove": {
+                    "component_groups": [
+                        "darkoak:stackable",
+                        "darkoak:noinvis",
+                        "darkoak:lucky",
+                        "darkoak:leashable",
+                        "darkoak:crash",
+                        "darkoak:crash2",
+                        "darkoak:heliophobia"
                     ]
                 }
             }

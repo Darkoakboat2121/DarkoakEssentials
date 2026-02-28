@@ -1,5 +1,6 @@
 import { world, system, Player, Entity, ItemStack, Block, ItemTypes, ItemComponentTypes } from "@minecraft/server"
 import { ActionFormData, MessageFormData, ModalFormData, uiManager, UIManager } from "@minecraft/server-ui"
+import { debugDrawer, DebugText } from "@minecraft/debug-utilities"
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
 import { customEnchantActions, customEnchantEvents } from "../enchanting"
@@ -8,6 +9,7 @@ import { bui } from "./baseplateUI"
 import * as modal from "./modalUI"
 import { chatSystem } from "../chat"
 import { crashSet } from "../entityHandlers/players"
+import { renderTexts } from "../miscellaneous/floatingtextv2"
 
 
 /**UI for data editor item
@@ -95,9 +97,14 @@ export function genMainUI(player) {
     bui.button(f, 'Add New Ore Gen\n§7Create A New Ore Generator', icons.block('emerald_ore'))
     bui.button(f, 'Remove An Ore Gen\n§7Remove an Existing Ore Generator', icons.block('redstone_ore'))
     bui.button(f, 'Modify An Ore Gen\n§7Modify An Existing Ore Generator', icons.block('gold_ore'))
+    bui.divider(f)
     bui.button(f, 'Add New Mob Gen')
     bui.button(f, 'Remove A Mob Gen')
     bui.button(f, 'Modify A Mob Gen')
+    bui.divider(f)
+    bui.button(f, 'Add New Floating Text V2')
+    bui.button(f, 'Remove A Floating Text V2')
+    bui.button(f, 'Modify A Floating Text V2')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -121,6 +128,14 @@ export function genMainUI(player) {
             case 5:
                 mobGenModifyUI(player)
                 break
+            case 6: {
+                floatingTextV2AddModifyUI(player)
+                break
+            }
+            case 7: {
+                floatingTextV2RemoveUI(player)
+                break
+            }
             default:
                 player.sendMessage('§cError§r')
                 break
@@ -131,8 +146,9 @@ export function genMainUI(player) {
 /**
  * @param {Player} player 
  */
-export function genAddUI(player) {
+export function genAddUI(player, g) {
     let f = new ModalFormData()
+    bui.title(f, 'Add/Modify A Generator')
 
     let b = player.getBlockFromViewDirection()
     let n
@@ -142,24 +158,34 @@ export function genAddUI(player) {
         n = { x: '', y: '', z: '' }
     }
 
-    bui.textField(f, 'Block ID:', 'Example: minecraft:diamond_ore')
-    bui.textField(f, 'Co-ords:', 'Example: 10 1 97', `${n.x || ''} ${n.y || ''} ${n.z || ''}`.trim())
+    const d = g?.value ?? {}
 
-    bui.textField(f, 'Co-ords 2 (For Areas):', 'Example: 20 11 107', '', 'Leave Empty For One Block')
+    bui.textField(f, 'Block IDs:', 'Example: diamond_ore, oak_log', d?.block, 'Split Each Possible Block With ,')
+    bui.toggle(f, `Mixed?`, d?.mixed ?? false, 'If There\'s Multiple Block ID\'s And This Is Enabled, The Blocks Will Be Mixed')
+    bui.toggle(f, 'Mix Spread?', d?.mixspread ?? false, 'If Mixed & This Is Enabled, Spreads The Mix Of Blocks Among The Delay (Reduces Lag)')
+
+    bui.textField(f, 'Co-ords:', 'Example: 10 1 97', (d?.coords ?? '') || (`${n.x || ''} ${n.y || ''} ${n.z || ''}`.trim()))
+    bui.textField(f, 'Co-ords 2 (For Areas):', 'Example: 20 11 107', d?.coords2 ?? '', 'Leave Empty For One Block')
 
     const dimensions = bui.dimensionPicker(f, player, true)
 
-    bui.textField(f, 'Delay In Ticks:', 'Example: 200')
+    bui.textField(f, 'Delay In Ticks:', 'Example: 200', d?.delay ?? '')
 
     f.show(player).then((evd) => {
-        if (evd.canceled) genMainUI(player)
+        if (evd.canceled) {
+            genMainUI(player)
+            return
+        }
         const e = bui.formValues(evd)
-        mcl.jsonWSet(`darkoak:gen:${mcl.timeUuid()}`, {
-            block: e[0].trim(),
-            coords: e[1].trim(),
-            coords2: e[2].trim(),
-            dimension: dimensions[e[3]],
-            delay: e[4],
+        let i = 0
+        mcl.jsonWSet((g?.id ?? `darkoak:gen:${mcl.timeUuid()}`), {
+            block: e[i++].trim(),
+            mixed: e[i++],
+            mixspread: e[i++],
+            coords: e[i++].trim(),
+            coords2: e[i++].trim(),
+            dimension: dimensions[e[i++]],
+            delay: e[i++],
         })
     }).catch()
 }
@@ -195,7 +221,7 @@ export function genModifyPickerUI(player) {
     bui.title(f, 'Generator To Modify')
 
     const raw = mcl.listGet('darkoak:gen:')
-    const gens = mcl.listGetValues('darkoak:gen:')
+    const gens = mcl.jsonListGetBoth('darkoak:gen:')
 
     if (gens === undefined || gens.length === 0) {
         player.sendMessage('§cNo Generators Found§r')
@@ -203,42 +229,44 @@ export function genModifyPickerUI(player) {
     }
 
     for (let index = 0; index < gens.length; index++) {
-        const g = JSON.parse(gens[index])
-        bui.button(f, `Modify: ${g.block}\n${g.coords}, ${g.dimension || 'overworld'}`)
+        const g = gens[index].value
+        bui.label(f, `Blocks: ${g?.block}\nCoords: ${g?.coords} - ${g?.coords2}\nDimension: ${g?.dimension}`)
+        bui.button(f, `Modify?`)
+        bui.divider(f)
     }
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
-        genModifyUI(player, raw[evd.selection])
+        genAddUI(player, gens[evd.selection])
     }).catch()
 }
 
-export function genModifyUI(player, gen) {
-    let f = new ModalFormData()
-    const data = mcl.jsonWGet(gen)
-    bui.title(f, 'Modify')
+// export function genModifyUI(player, gen) {
+//     let f = new ModalFormData()
+//     const data = mcl.jsonWGet(gen)
+//     bui.title(f, 'Modify')
 
-    bui.textField(f, 'Block ID:', '', data?.block)
-    bui.textField(f, 'Co-ords:', '', data?.coords)
+//     bui.textField(f, 'Block ID:', '', data?.block)
+//     bui.textField(f, 'Co-ords:', '', data?.coords)
 
-    bui.textField(f, 'Co-ords 2 (For Areas):', 'Example: 20 11 107', data?.coords2, 'Leave Empty For One Block')
+//     bui.textField(f, 'Co-ords 2 (For Areas):', 'Example: 20 11 107', data?.coords2, 'Leave Empty For One Block')
 
-    const dimensions = bui.dimensionPicker(f, player, true)
+//     const dimensions = bui.dimensionPicker(f, player, true)
 
-    bui.textField(f, 'Delay In Ticks:', 'Example: 200', data?.delay)
+//     bui.textField(f, 'Delay In Ticks:', 'Example: 200', data?.delay)
 
-    f.show(player).then((evd) => {
-        if (evd.canceled) return
-        const e = bui.formValues(evd)
-        mcl.jsonWSet(gen, {
-            block: e[0].trim(),
-            coords: e[1].trim(),
-            coords2: e[2].trim(),
-            dimension: dimensions[e[3]],
-            delay: e[4],
-        })
-    }).catch()
-}
+//     f.show(player).then((evd) => {
+//         if (evd.canceled) return
+//         const e = bui.formValues(evd)
+//         mcl.jsonWSet(gen, {
+//             block: e[0].trim(),
+//             coords: e[1].trim(),
+//             coords2: e[2].trim(),
+//             dimension: dimensions[e[3]],
+//             delay: e[4],
+//         })
+//     }).catch()
+// }
 
 export function tpaSettings(player) {
     let f = new ModalFormData()
@@ -420,15 +448,7 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-fly 1', d?.antifly1)
-    bui.label(f, 'Checks If A Player Is Flying Like In Creative Mode But Without Creative')
 
-    bui.divider(f)
-
-    bui.toggle(f, 'Anti-speed', d?.antispeed)
-    bui.label(f, 'Checks If Player Is Moving Too Fast')
-
-    bui.slider(f, 'Speed Limit', 10, 40, d?.antispeedsense, 1)
 
     bui.divider(f)
 
@@ -452,13 +472,6 @@ export function anticheatSettings(player) {
 
     bui.toggle(f, 'Anti-illegal-enchant', d?.antiillegalenchant)
     bui.label(f, 'Checks If The Held Item Of A Player Has Illegal Enchants')
-
-    bui.divider(f)
-
-    bui.toggle(f, 'Anti-killaura', d?.antikillaura)
-    bui.label(f, 'Checks If The Players CPS Is Too High')
-
-    bui.slider(f, 'CPS Limit', 15, 40, d?.antikillaurasense, 1)
 
     bui.divider(f)
 
@@ -553,12 +566,6 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
-    bui.toggle(f, 'Anti-Reach', d?.antireach)
-    bui.label(f, 'Checks How Far Away Two Players Are When One Hits Another')
-    bui.slider(f, 'Reach Distance To Log', 55, 80, d?.antireachsense, 1, 'Tens Place = Ones Place (For Example: 65 = 6.5)')
-
-    bui.divider(f)
-
     bui.toggle(f, 'Anti-Air-Place', d?.antiairplace)
     bui.label(f, 'Checks If A Player Places A Block Without Support')
 
@@ -626,7 +633,7 @@ export function anticheatSettings(player) {
     bui.toggle(f, 'Anti-Auto-Clicker', d?.antiautoclicker)
     bui.label(f, 'Checks If A Player Is Hitting An Entity At The Same Delay Three Times In A Row')
 
-    bui.slider(f, 'Sensitivity (Smaller Is More Sensitive)', 2, 12, d?.antiautoclickersense, 1, 'This Changes The Millisecond Allowance Between Hits, 0 Means The Three Hits Have To Be Exactly The Same Delay Between Each, 10 Means Each Hit Can Be Ten Milliseconds Away From Each Other To Still Log')
+    bui.slider(f, 'Sensitivity (Smaller Is More Sensitive)', 0, 12, d?.antiautoclickersense, 1, 'This Changes The Millisecond Allowance Between Hits, 0 Means The Three Hits Have To Be Exactly The Same Delay Between Each, 10 Means Each Hit Can Be Ten Milliseconds Away From Each Other To Still Log')
 
     bui.divider(f)
 
@@ -666,6 +673,41 @@ export function anticheatSettings(player) {
 
     bui.divider(f)
 
+    bui.header(f, 'Combat Hacks') // combat hacks --------\/
+
+    bui.spacer(f)
+
+    bui.toggle(f, 'Anti-Killaura', d?.antikaura)
+    bui.label(f, 'Adds An Invisible Entity Behind A Player And Checks If The Player Hits It')
+
+    bui.spacer(f)
+
+    bui.toggle(f, 'Anti-CPS', d?.anticps)
+    bui.label(f, 'Checks If The Players CPS Is Too High')
+    bui.slider(f, 'CPS Limit', 15, 40, d?.anticpssense, 1)
+
+    bui.spacer(f)
+
+    bui.toggle(f, 'Anti-Reach', d?.antireach)
+    bui.label(f, 'Checks How Far Away Two Players Are When One Hits Another')
+    bui.slider(f, 'Reach Distance To Log', 55, 80, d?.antireachsense, 1, 'Tens Place = Ones Place (For Example: 65 = 6.5)')
+    bui.spacer(f)
+
+    bui.divider(f) // combat hacks --------/\
+
+    bui.header(f, 'Movement') // movement hacks --------\/
+
+    bui.toggle(f, 'Anti-fly 1', d?.antifly1)
+    bui.label(f, 'Checks If A Player Is Flying Like In Creative Mode But Without Creative')
+
+    bui.spacer(f)
+
+    bui.toggle(f, 'Anti-speed', d?.antispeed)
+    bui.label(f, 'Checks If Player Is Moving Too Fast')
+    bui.slider(f, 'Speed Limit', 10, 40, d?.antispeedsense, 1)
+
+    bui.divider(f)// movement hacks --------/\
+
     f.show(player).then((evd) => {
         if (evd.canceled || evd.cancelationReason) return
         const e = bui.formValues(evd)
@@ -676,9 +718,6 @@ export function anticheatSettings(player) {
             antinukersense: e[i++],
             antifastplace: e[i++],
             antifastplacesense: e[i++],
-            antifly1: e[i++],
-            antispeed: e[i++],
-            antispeedsense: e[i++],
             antispam: e[i++],
             antispam2: e[i++],
             antispam2sense: e[i++],
@@ -686,8 +725,6 @@ export function anticheatSettings(player) {
             antichatflood: e[i++],
             antichatfloodsense: e[i++],
             antiillegalenchant: e[i++],
-            antikillaura: e[i++],
-            antikillaurasense: e[i++],
             antigamemode: e[i++],
             npcdetect: e[i++],
             antifly2: e[i++],
@@ -709,8 +746,6 @@ export function anticheatSettings(player) {
             antidupe2: e[i++],
             antinbt2: e[i++],
             antiadminitems: e[i++],
-            antireach: e[i++],
-            antireachsense: e[i++],
             antiairplace: e[i++],
             antistreamermode: e[i++],
             anticrasher2: e[i++],
@@ -735,6 +770,18 @@ export function anticheatSettings(player) {
             subsession: e[i++],
             antiforceop: e[i++],
             antiforceopallowed: e[i++],
+
+            //combat hacks
+            antikaura: e[i++],
+            anticps: e[i++],
+            anticpssense: e[i++],
+            antireach: e[i++],
+            antireachsense: e[i++],
+
+            //movement hacks
+            antifly1: e[i++],
+            antispeed: e[i++],
+            antispeedsense: e[i++],
         })
     }).catch()
 }
@@ -991,6 +1038,10 @@ export function worldProtection(player) {
     bui.toggle(f, 'Ban Ender Pearls?', data?.pearls)
     bui.toggle(f, 'Ban Water Buckets?', data?.water)
     bui.toggle(f, 'Ban Pistons?', data?.pistons)
+    bui.divider(f)
+    bui.toggle(f, 'Ban Enderdragons?', data?.dragons)
+    bui.toggle(f, 'Ban Withers?', data?.withers)
+    bui.toggle(f, 'Ban Command Block Minecarts?', data?.cmdbm)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -1001,6 +1052,9 @@ export function worldProtection(player) {
             pearls: e[i++],
             water: e[i++],
             pistons: e[i++],
+            dragons: e[i++],
+            withers: e[i++],
+            cmdbm: e[i++],
         })
     }).catch()
 }
@@ -1045,7 +1099,7 @@ export function protectedAreasAddUI(player, both) {
 
     bui.textField(f, '\n(x z)\nCoordinates 1:', 'Example: 0 0', `${d?.p1?.x || ''} ${d?.p1?.z || ''}`)
     bui.textField(f, '\n(x z)\nCoordinates 2:', 'Example: 10 20', auto, 'This Is Autofilled With Your Current Location If You Aren\'t Modifying It')
-    
+
     bui.toggle(f, 'Players Can Break Blocks?', d?.break)
     bui.toggle(f, 'Ignore Breaking Rule if Above Allow?', d?.breakallow)
     bui.toggle(f, 'Players Can Build Blocks?', d?.build)
@@ -1159,7 +1213,8 @@ export function messageLogUI(player, search = '') {
     for (let index = 0; index < logs.length; index++) {
         const l = logs[index]
         const timeDiff = mcl.timeDifference(l.time)
-        bui.label(f, `${l.name} (${timeDiff.hours}H ${timeDiff.minutes}M ${timeDiff.seconds}S Ago) -> ${l.message}`)
+        bui.label(f, `${l.name} (${timeDiff.hours}H ${timeDiff.minutes}M ${timeDiff.seconds}S Ago)\n[Contains Formatting: ${l.message.includes('§')}]\n${l.message}`)
+        bui.divider(f)
     }
 
     bui.button(f, 'Dismiss')
@@ -1265,10 +1320,17 @@ export function addRankUI(player) {
 
     const pl = bui.namePicker(f, undefined, '\nPlayer:') // 0
     bui.textField(f, 'Rank To Add:', 'Example: §1Admin§r', '', 'Leave Empty To Use The Dropdown') // 1
+    let colorPickers = colorCodes.map(e => `${e}Example`)
+    colorPickers.unshift('')
+    bui.dropdown(f, 'Name Color To Add:', colorPickers) // 2
+    bui.dropdown(f, 'Chat Color To Add:', colorPickers) // 3
 
     let tags = mcl.playerTagsArray(undefined, 'rank:')
+    tags.unshift('')
     if (tags.length == 0) tags = ['rank:Admin', 'rank:Dev']
-    bui.dropdown(f, 'Rank To Add:', tags.map(e => e.replace('rank:', ''))) // 2
+    bui.dropdown(f, 'Rank To Add:', tags.map(e => e.replace('rank:', ''))) // 4
+
+
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -1276,10 +1338,19 @@ export function addRankUI(player) {
 
         const playerToAdd = mcl.getPlayer(pl[e[0]])
         if (!e[1]) {
-            playerToAdd.addTag(tags[e[2]])
+            playerToAdd.addTag(tags[e[4]])
         } else {
             playerToAdd.addTag(`rank:${e[1]}`)
         }
+
+        if (e[1]) {
+            playerToAdd.addTag(`rank:${e[1]}`)
+        } else if (e[4] && tags[e[4]].length > 0) {
+            playerToAdd.addTag(tags[e[4]])
+        }
+
+        if (colorCodes[e[2]].length > 0) playerToAdd.addTag(`namecolor:${colorCodes[e[2] - 1]}`)
+        if (colorCodes[e[3]].length > 0) playerToAdd.addTag(`chatcolor:${colorCodes[e[3] - 1]}`)
     }).catch()
 }
 
@@ -1290,20 +1361,27 @@ export function removeRankUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Remove Rank')
 
-    let tl = mcl.playerTagsArray(undefined, 'rank:')
-    if (tl.length == 0) {
-        player.sendMessage('§cNo Ranks To Remove!§r')
-        return
-    }
+    const pl = bui.namePicker(f, undefined, '\nPlayer:') // 0
 
-    const pl = bui.namePicker(f, undefined, '\nPlayer:')
+    let tl = mcl.playerTagsArray(undefined, 'rank:') // 1
+    tl.unshift('')
     bui.dropdown(f, 'Rank To Remove:', tl.map(e => e.replace('rank:', '')))
+
+    let nl = mcl.playerTagsArray(undefined, 'namecolor:') // 2
+    nl.unshift('')
+    bui.dropdown(f, 'Name Color To Remove:', nl.map(e => `${e.replace('namecolor:', '')}Example`))
+
+    let cl = mcl.playerTagsArray(undefined, 'chatcolor:') // 3
+    cl.unshift('')
+    bui.dropdown(f, 'Chat Color To Remove:', cl.map(e => `${e.replace('chatcolor:', '')}Example`))
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const e = bui.formValues(evd)
-
-        mcl.getPlayer(pl[e[0]]).removeTag(tl[e[1]])
+        const ptr = mcl.getPlayer(pl[e[0]])
+        if (tl[e[1]].length > 0) ptr.removeTag(tl[e[1]])
+        if (nl[e[2]].length > 0) ptr.removeTag(nl[e[2]])
+        if (cl[e[3]].length > 0) ptr.removeTag(cl[e[3]])
     }).catch()
 }
 
@@ -1509,7 +1587,7 @@ export function scriptSettings(player) {
     bui.divider(f)
     bui.header(f, 'Main')
 
-    bui.slider(f, 'Seconds Between Data Updates', 1, 15, d?.updateinterval, 1, 'The Higher The Amount, The Less Laggy The Addon Will Be')
+    bui.slider(f, 'Seconds Between Data Updates', 0, 30, d?.updateinterval, 1, 'The Higher The Amount, The Less Laggy The Addon Will Be')
 
     bui.divider(f)
     bui.header(f, 'Feature Toggles')
@@ -1648,7 +1726,7 @@ export function autoResponseAddUI(player) {
 
     bui.label(f, hashtags)
 
-    bui.textField(f, 'Word / Phrase:', 'Example: plot')
+    bui.textField(f, 'Word / Phrase:', 'Example: plot', '', 'You Can Add Multiple Words/Phrases By Splitting Each With A Comma , ')
 
     bui.textField(f, 'Response:', 'Example: Plots are $30000')
 
@@ -1996,25 +2074,29 @@ export function itemBindingUI(player) {
     })
 }
 
-export function adminAndPlayerListUI(player) {
+export function adminAndPlayerListUI(player, search) {
     let f = new ActionFormData()
     bui.title(f, 'Admin & Player List')
-    bui.header(f, 'Admins:')
 
     const admins = mcl.getAdminList()
-    const players = mcl.getPlayerList()
+    let players = mcl.getPlayerList()
+    if (search) players = players.filter(e => e.includes(search))
     const mods = mcl.getModList()
     const banned = mcl.getBanList()
 
+
+    bui.header(f, 'Admins:')
     for (let index = 0; index < admins.length; index++) {
         const admin = admins[index]
         bui.label(f, admin)
     }
 
     bui.divider(f)
+    bui.button(f, `Search For Player: (${search ?? 'None'})`)
     bui.header(f, `All Players:`)
-    bui.label(f, `${world.getAllPlayers().length.toString()}/${players.length.toString()} Online`)
+    if (!search) bui.label(f, `${world.getAllPlayers().length.toString()}/${players.length.toString()} Online`)
 
+    let final = []
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
         let finalName = [player]
@@ -2022,14 +2104,36 @@ export function adminAndPlayerListUI(player) {
         if (admins && admins.includes(player)) finalName.push('[§mAdmin§r]')
         if (mods && mods.includes(player)) finalName.push('[§uMod§r]')
         if (banned && banned.includes(player)) finalName.push('[§cBanned§r]')
-        bui.label(f, finalName.join(' '))
+        final.push(finalName.join(' '))
     }
+
+    bui.label(f, final.join('\n\n'))
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             interfaces.dashboardMainUI(player)
             return
         }
+        if (evd.selection === 0) {
+            playerListSearch(player, search)
+            return
+        }
+    })
+}
+
+export function playerListSearch(player, search) {
+    let f = new ModalFormData()
+    bui.title(f, 'Player List Searcher')
+
+    bui.textField(f, 'Player Name:', 'Example: Darkoakboat2121', search ?? '')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            adminAndPlayerListUI(player, search)
+            return
+        }
+        const e = bui.formValues(evd)
+        adminAndPlayerListUI(player, e[0])
     })
 }
 
@@ -2195,6 +2299,9 @@ export function otherPlayerSettingsUI(player) {
                 break
             case 5:
                 customCombatSettingsUI(player)
+                break
+            case 6:
+                dynamicLightingSettings(player)
                 break
         }
     })
@@ -3433,7 +3540,7 @@ export function plotSettingsUI(player) {
     bui.textField(f, 'Start Coords:', 'Example: 100 0 0', d?.start)
     bui.dropdown(f, 'Dimension:', dimens, d?.dimension)
     bui.dropdown(f, 'Direction:', ['X+', 'X-', 'Z+', 'Z-'], d?.direction)
-    bui.slider(f, 'Size Of Plot', 4, 28, d?.size, 4)
+    bui.slider(f, 'Size Of Plot', 4, 32, d?.size, 4)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -3456,6 +3563,7 @@ export function plotPlayersUI(player) {
 
     bui.button(f, 'Add Player To Plot')
     bui.button(f, 'Remove Player From Plot')
+    bui.button(f, 'Personal Plot Settings')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -3466,6 +3574,9 @@ export function plotPlayersUI(player) {
             case 1:
                 plotPlayersRemoveUI(player)
                 break
+            case 2:
+                plotPlayersSettingsUI(player)
+                break
         }
     })
 }
@@ -3475,29 +3586,60 @@ export function plotPlayersAddUI(player) {
     bui.title(f, 'Plot Player Adding')
 
     const names = bui.namePicker(f, undefined, 'Player To Add')
+    bui.toggle(f, 'Allow Player To Modify The Plot?', true)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
         const d = mcl.jsonWGet('darkoak:plotsettings')
         let players = mcl.jsonWGet(`darkoak:plot:${player.name}`)?.players || []
         const e = bui.formValues(evd)
-        players.push(names[e[0]])
+        players.push({
+            name: names[e[0]],
+            allowModify: e[1],
+        })
         mcl.jsonWUpdate(`darkoak:plot:${player.name}`, 'players', players)
     })
 }
 
 export function plotPlayersRemoveUI(player) {
     let f = new ModalFormData()
-    /**@type {string[]} */
+    bui.title(f, 'Plot Player Removing')
+
+    /**@type {string[] | {name: string, allowModify: boolean}[]} */
     let players = mcl.jsonWGet(`darkoak:plot:${player.name}`)?.players || []
-    bui.dropdown(f, 'Player To Remove', players)
+    let ref = players
+    if (player[0] && typeof players[0] === 'object') {
+        ref = ref.map(e => `${e?.name}, Edit: ${e?.allowModify ?? true}`)
+    }
+    bui.dropdown(f, 'Player To Remove', ref)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
 
         const e = bui.formValues(evd)
-        players.map(p => p !== players[e[0]])
+        if (typeof players[0] === 'object') {
+            players = players.filter(p => p.name !== players[e[0]].name)
+        } else {
+            players = players.filter(p => p !== players[e[0]])
+        }
         mcl.jsonWUpdate(`darkoak:plot:${player.name}`, 'players', players)
+    })
+}
+
+export function plotPlayersSettingsUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Personal Plot Settings')
+
+    const d = mcl.jsonWGet(`darkoak:plot:${player.name}`)
+
+    bui.toggle(f, 'Let Everyone Visit?', d?.freeVisit)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        const e = bui.formValues(evd)
+        mcl.jsonWUpdate(`darkoak:plot:${player.name}`, 'settings', {
+            freeVisit: e[0],
+        })
     })
 }
 
@@ -3553,9 +3695,216 @@ export function customCombatSettingsUI(player, errorMessage = '') {
     })
 }
 
+/**
+ * @param {Player} player 
+ */
+export function floatingTextV2AddModifyUI(player, d) {
+    const f = new ModalFormData()
+    bui.title(f, 'Add New Floating Text V2')
+
+    bui.textField(f, 'Location:', 'Example: -168 56 739', d?.location ?? `${parseInt(player.location.x)} ${parseInt(player.location.y)} ${parseInt(player.location.z)}`)
+    bui.textField(f, 'Text:', 'Example: Welcome!', d?.text ?? '')
+    bui.slider(f, 'Scale', 1, 50, d?.scale ?? 10, 1, 'Tens Place = Ones Place, 10 = 1.0')
+    bui.divider(f)
+    bui.slider(f, 'Amount Of Red', 0, 100, d?.color?.red ?? 100, 1)
+    bui.slider(f, 'Amount Of Blue', 0, 100, d?.color?.blue ?? 100, 1)
+    bui.slider(f, 'Amount Of Green', 0, 100, d?.color?.green ?? 100, 1)
+    bui.divider(f)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        const e = bui.formValues(evd)
+        let i = 0
+
+        mcl.jsonWSet(`darkoak:floatingtextv2:${mcl.timeUuid()}`, {
+            dimension: player.dimension.id,
+            location: e[i++],
+            text: e[i++],
+            scale: e[i++],
+            color: {
+                red: e[i++],
+                blue: e[i++],
+                green: e[i++],
+            },
+        })
+        system.runTimeout(() => {
+            renderTexts()
+        }, 15)
+    })
+}
+
+export function floatingTextV2RemoveUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Delete A Floating Text V2')
+
+    const texts = mcl.jsonListGetBoth('darkoak:floatingtextv2:')
+    if (texts.length === 0) {
+        player.sendMessage('§cNo Floating Text V2\'s Found§r')
+        return
+    }
+    for (let index = 0; index < texts.length; index++) {
+        const t = texts[index].value
+        bui.label(f, `Dimension: ${t?.dimension}, Location: ${t?.location}\nScale: ${t?.scale}, Color: [${t?.color?.red}, ${t?.color?.blue}, ${t?.color?.green}]\nText: ${t?.text}`)
+        bui.button(f, 'Delete?')
+        bui.divider(f)
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+        mcl.wRemove(texts.at(evd.selection).id)
+        system.runTimeout(() => {
+            renderTexts()
+        }, 15)
+    })
+}
+
+export function bundleCommandMainUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Bundle Command')
+
+    bui.button(f, 'Add New Bundle')
+    bui.button(f, 'Modify A Bundle')
+    bui.button(f, 'Remove A Bundle')
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) return
+
+        switch (evd.selection) {
+            case 0: {
+                bundleCommandAddUI(player)
+                break
+            }
+            case 1: {
+                bundleCommandModifyPicker(player)
+                break
+            }
+            case 2: {
+                bundleCommandRemoveUI(player)
+                break
+            }
+        }
+    })
+}
+
+/**
+ * @param {Player} player 
+ * @param {{id: string, value: {name?: string, commands?: string[]}} | undefined} bu
+ */
+export function bundleCommandAddUI(player, bu) {
+    let f = new ModalFormData()
+    bui.title(f, 'Add Bundle Command')
+    const d = bu?.value
+
+    bui.textField(f, 'Name:', 'Example: buyitem', d?.name ?? '')
+
+    bui.label(f, 'This Supports Replacers And $#$ Replacement. For Example:\nCommand: tp $1$ $2$ #($3$ * 2)# $4$\nTo Run: /bundle run "<name> Darkoakboat2121 100 33 358"\nGets Teleported To: 100 66 358')
+
+    for (let index = 0; index < 10; index++) {
+        bui.textField(f, `Command ${index + 1}:`, `Example: tp @s 0 64 0`, d?.commands?.at(index) ?? '')
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            bundleCommandMainUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        const i = 0
+
+        let commands = []
+        for (let index = 1; index < e.length; index++) {
+            const c = e[index]
+            commands.push(c)
+        }
+
+        mcl.jsonWSet((bu?.id ?? `darkoak:bundle:${mcl.timeUuid()}`), {
+            name: e[0],
+            commands: commands
+        })
+    })
+}
+
+export function bundleCommandModifyPicker(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Modify A Bundle Command')
+
+    const bundles = mcl.jsonListGetBoth('darkoak:bundle:')
+    for (let index = 0; index < bundles.length; index++) {
+        const d = bundles[index].value
+        bui.label(f, `Name: ${d?.name}`)
+        bui.label(f, `Commands: ${d?.commands?.filter(e => e)?.join('\n')}`)
+        bui.button(f, 'Modify This?')
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            bundleCommandMainUI(player)
+            return
+        }
+        bundleCommandAddUI(player, bundles[evd.selection])
+    })
+}
+
+export function bundleCommandRemoveUI(player) {
+    let f = new ActionFormData()
+    bui.title(f, 'Remove A Bundle Command')
+
+    const bundles = mcl.jsonListGetBoth('darkoak:bundle:')
+    for (let index = 0; index < bundles.length; index++) {
+        const d = bundles[index].value
+        bui.label(f, `Name: ${d?.name}`)
+        bui.label(f, `Commands: ${d?.commands?.filter(e => e)?.join('\n')}`)
+        bui.button(f, 'Remove This?')
+    }
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            bundleCommandMainUI(player)
+            return
+        }
+        mcl.wRemove(bundles[evd.selection].id)
+    })
+}
+
+export function dynamicLightingSettings(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Dynamic Lighting Settings')
+
+    const d = mcl.jsonWGet('darkoak:dynamiclighting')
+
+    bui.toggle(f, 'Enabled?', d?.enabled)
+
+    bui.slider(f, 'Light Level', 1, 15, d?.lightlevel, 1)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            otherPlayerSettingsUI(player)
+            return
+        }
+        const e = bui.formValues(evd)
+        let i = 0
+        mcl.jsonWSet('darkoak:dynamiclighting', {
+            enabled: e[i++],
+            lightlevel: e[i++],
+        })
+    })
+}
 
 
+export function testUI(player) {
+    // const f = CustomForm.create(player, 'Test Form')
 
+    // const text = new Observable('Test?')
+    // const vis = new Observable(true)
+
+    // f.textField('Test 1:', text, {'visible': vis})
+    // f.button('Try hiding', () => {
+    //     vis.setData(false)
+    // })
+
+    // f.show()
+}
 
 
 

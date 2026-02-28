@@ -11,7 +11,7 @@ export function WEcommands(evd) {
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:weclear',
         description: 'Clears Selection (Does Not Remove Blocks)',
-        permissionLevel: CommandPermissionLevel.GameDirectors
+        permissionLevel: CommandPermissionLevel.GameDirectors,
     }, (evd) => {
         if (evd?.sourceEntity) {
             let particeClear = mcl.jsonPGet(evd?.sourceEntity, 'darkoak:worldedit')?.id

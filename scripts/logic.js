@@ -1,6 +1,6 @@
 import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel, CustomCommandOrigin, EquipmentSlot } from "@minecraft/server"
 import { transferPlayer } from "@minecraft/server-admin"
-import { cd } from "./data/defaults"
+import { cd, dataGet } from "./data/defaults"
 import { specialRanks } from "./data/arrays"
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting API*/
@@ -41,10 +41,11 @@ export class mcl {
     /**
      * @param {number} low 
      * @param {number} high 
+     * @param {number} off Shifts the seed by this amount
      * @returns 
      */
-    static xorRandomNum(low, high) {
-        let seed = Date.now()
+    static xorRandomNum(low = 0, high = 100, off = 0) {
+        let seed = Date.now() + off
         let state = seed >>> 0
 
         state ^= state << 13
@@ -94,6 +95,7 @@ export class mcl {
      * @param {string} string 
      */
     static stringToNumber(string) {
+        if (!string || string.length < 1) return 0
         let characters = string.split('')
         let num = 0
 
@@ -142,6 +144,31 @@ export class mcl {
             factorial: mcl.factorial(num),
         }
     }
+
+    // /**
+    //  * @param {any[]} array 
+    //  * @returns 
+    //  */
+    // static arrayToString(array, addSpace = false) {
+    //     if (!addSpace) {
+    //         return array.join('\n')
+    //     } else {
+    //         let newArray = []
+    //         for (let index = 0; index < array.length; index++) {
+    //             const el = array[index]
+    //             if (index === 0) {
+    //                 newArray.push(el)
+    //             } else if (index === 1) {
+    //                 newArray.push(`${el}`)
+    //             } else if (index % 2 === 0) {
+    //                 newArray.push(`\n${el}`)
+    //             } else {
+    //                 newArray.push(`${el}`)
+    //             }
+    //         }
+    //         return newArray.join('')
+    //     }
+    // }
 
     /**Calculates the factorial of a number
      * @param {number} num 
@@ -310,6 +337,7 @@ export class mcl {
     static wRemove(id) {
         try {
             world.setDynamicProperty(id)
+            cd.delete(id)
             return true
         } catch {
             return false
@@ -348,9 +376,11 @@ export class mcl {
      * @param {object} data 
      * @returns {boolean} Returns true if it successfully saved, false if didn't save
      */
-    static jsonWSet(id, data) {
+    static jsonWSet(id, data, instantSet = true) {
         try {
-            world.setDynamicProperty(id, JSON.stringify(data))
+            const jd = JSON.stringify(data)
+            world.setDynamicProperty(id, jd)
+            if (instantSet) cd.set(id, data)
             return true
         } catch {
             return false
@@ -363,7 +393,7 @@ export class mcl {
      * @param {any} data 
      */
     static jsonWUpdate(id, updateKey, data) {
-        let cd = mcl.jsonWGet(id)
+        let cd = dataGet(id)
         if (!cd) cd = {}
         cd[updateKey] = data
         mcl.jsonWSet(id, cd)
@@ -625,9 +655,13 @@ export class mcl {
      * @returns {boolean}
      */
     static isOp(player) {
-        if (player.playerPermissionLevel == PlayerPermissionLevel.Operator) {
-            return true
-        } else return false
+        try {
+            if (player.playerPermissionLevel == PlayerPermissionLevel.Operator) {
+                return true
+            } else return false
+        } catch {
+            return false
+        }
     }
 
     /**Returns true if the player has the admin tag or if the player is the host
@@ -717,6 +751,24 @@ export class mcl {
      */
     static getHeldItem(player) {
         return player.getComponent(EntityComponentTypes.Inventory)?.container?.getItem(player.selectedSlotIndex)
+    }
+
+    /**Returns the item in the offhand
+     * @param {Player} player 
+     * @returns {ItemStack | undefined}
+     */
+    static getOffhand(player) {
+        return player.getComponent(EntityComponentTypes.Equippable)?.getEquipment(EquipmentSlot.Offhand)
+    }
+
+    static getHands(player) {
+        const main = mcl.getHeldItem(player)
+        const offhand = mcl.getOffhand(player)
+        return {
+            main: main,
+            offhand: offhand,
+            either: main ?? offhand
+        }
     }
 
     /**Advanced container inventory
@@ -1320,7 +1372,7 @@ export class mcl {
      */
     static kick(player, message) {
         const op = world.getAllPlayers().filter(e => e.commandPermissionLevel === CommandPermissionLevel.Admin)[0]
-        op.runCommand(`kick "${player?.name}" ${message}`)
+        op?.runCommand(`kick "${player?.name}" ${message}`)
     }
 
     /**
@@ -1467,17 +1519,31 @@ export class mcl {
     /**
      * @param {Dimension} dimen 
      * @param {{x: number, y: number, z: number}} loc 
+     * @param {boolean} [entity=false] 
+     * @param {undefined | string} [type=undefined] 
+     * @returns {Player | Entity}
      */
-    static getNearestPlayer(dimen, loc) {
-        const players = world.getAllPlayers()
-        let distances = players.filter(e => e.dimension === dimen).map(player => ({
-            player,
-            distance: mcl.distance(player.location, loc)
-        }))
+    static getNearestPlayer(dimen, loc, entity = false, type = undefined) {
+        if (entity) {
+            const entities = dimen.getEntities({ type: type })
+            let distances = entities.map(e => ({
+                e,
+                distance: mcl.distance(e.location, loc)
+            }))
+            distances.sort((a, b) => a?.distance - b?.distance)
 
-        distances.sort((a, b) => a?.distance - b?.distance)
+            return distances.map(e => e.e)[0]
+        } else {
+            const players = world.getAllPlayers()
+            let distances = players.filter(e => e.dimension === dimen).map(player => ({
+                player,
+                distance: mcl.distance(player.location, loc)
+            }))
 
-        return distances.map(pd => pd.player)[0]
+            distances.sort((a, b) => a?.distance - b?.distance)
+
+            return distances.map(pd => pd.player)[0]
+        }
     }
 
     /**If 'check' is inside an area (loc1 and loc2), returns true
@@ -1573,9 +1639,9 @@ export class mcl {
     }
 
     /**Spreads an arrays content along a timeframe and provides a callback for each element
-     * @param {any[]} array 
-     * @param {number} totalTime 
-     * @param {(e?: any, i: number) => {}} callback 
+     * @param {any[]} array The array to spread
+     * @param {number} totalTime In seconds
+     * @param {(e?: any, i: number) => {}} callback What to do to each element
      */
     static arraySpreader(array, totalTime, callback) {
         const interval = totalTime * 1000
@@ -1589,6 +1655,29 @@ export class mcl {
         }
     }
 
+    /**
+     * 
+     * @param {{x: number, y: number, z: number}} loc1 
+     * @param {{x: number, y: number, z: number}} loc2 
+     * @param {(x: number, y: number, z: number) => {}} callback 
+     */
+    static forLocationInside(loc1, loc2, callback) {
+        const minX = Math.min(loc1?.x, loc2?.x)
+        const maxX = Math.max(loc1?.x, loc2?.x)
+        const minY = Math.min(loc1?.y, loc2?.y)
+        const maxY = Math.max(loc1?.y, loc2?.y)
+        const minZ = Math.min(loc1?.z, loc2?.z)
+        const maxZ = Math.max(loc1?.z, loc2?.z)
+
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                for (let z = minZ; z <= maxZ; z++) {
+                    callback(x, y, z)
+                }
+            }
+        }
+    }
+
     /**Removes a player from the world, returns whether it worked
      * @param {Player} player 
      */
@@ -1596,9 +1685,10 @@ export class mcl {
         try {
             mcl.kick(player, 'GET OUT')
             mcl.softKick(player)
-            player.sendMessage(`§a§k ${mcl.timeUuid()}`)
-            player.sendMessage(`§a§k ${mcl.timeUuid()}`)
-            player.sendMessage(`§a§k ${mcl.timeUuid()}`)
+            system.runTimeout(() => {
+                player?.triggerEvent('darkoak:crash')
+                player?.triggerEvent('darkoak:crash2')
+            })
             return false
         } catch {
             return true
@@ -1667,5 +1757,49 @@ export class mcl {
                 }
             }
         }
+    }
+
+    /**If condition is true returns option1, if false returns option2
+     * @param {boolean} condition 
+     * @param {any} option1 
+     * @param {any} option2 
+     */
+    static decide(condition, option1, option2) {
+        if (condition) return option1
+        return option2
+    }
+
+
+    static async classToData(instance) {
+
+        let results = {}
+        let seen = new Set()
+        let proto = Object.getPrototypeOf(instance)
+
+        while (proto && proto !== Object.prototype) {
+            for (const name of Object.getOwnPropertyNames(proto)) {
+                if (name === 'constructor' || seen.has(name)) continue
+                const prop = instance[name]
+                if (typeof prop === 'function') {
+                    try {
+                        const value = prop.call(instance)
+                        results[name] = value instanceof Promise ? await value : value
+                    } catch (e) {
+                        results[name] = `Error: ${e.message}`
+                    }
+                    seen.add(name)
+                } else {
+                    try {
+                        results[name] = prop
+                    } catch (e) {
+                        results[name] = `Error: ${e.message}`
+                    }
+                    seen.add(name)
+                }
+            }
+            proto = Object.getPrototypeOf(proto)
+        }
+
+        return results
     }
 }

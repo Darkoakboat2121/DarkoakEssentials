@@ -27,7 +27,7 @@ export function placeBreakProtection(evd) {
             x: x,
             z: z,
         }, area?.p1, area?.p2)) {
-            
+
             if ((evd instanceof PlayerBreakBlockBeforeEvent)) {
                 const blocks = mcl.listGetValues('darkoak:gen:')
                 for (let ind = 0; ind < blocks.length; ind++) {
@@ -240,14 +240,12 @@ export function dimensionBan(player) {
  * @param {Player} player 
  */
 export function worldProtectionOther(player) {
-    if (mcl.isCreating(player)) return
+    const isCreating = mcl.isCreating(player)
     const item = mcl.getHeldItem(player)
 
     const d = mcl.jsonWGet('darkoak:worldprotection')
-    /**@type {{type: string}[]} */
-    const bans = mcl.jsonWGet('darkoak:banneditems') || []
 
-    if (item) {
+    if (item && !isCreating) {
         const contain = mcl.getItemContainer(player)
         if (d?.water) {
             const wpw = worldProtectionWater
@@ -270,8 +268,32 @@ export function worldProtectionOther(player) {
         }
     }
 
-    for (let index = 0; index < bans.length; index++) {
-        const b = bans[index]
-        player.runCommand(`clear @s ${b?.type || 'minecraft:air'}`)
+    if (d?.dragons) {
+        let dragons = mcl.getEntityByTypeId('minecraft:ender_dragon', player.dimension)
+        for (let index = 0; index < dragons.length; index++) {
+            dragons[index].remove()
+        }
+    }
+    if (d?.withers) {
+        let ents = mcl.getEntityByTypeId('minecraft:wither', player.dimension)
+        for (let index = 0; index < ents.length; index++) {
+            ents[index].remove()
+        }
+    }
+    if (d?.cmdbm) {
+        let ents = mcl.getEntityByTypeId('minecraft:command_block_minecart', player.dimension)
+        for (let index = 0; index < ents.length; index++) {
+            ents[index].remove()
+        }
+    }
+
+
+    /**@type {{type: string}[]} */
+    const bans = mcl.jsonWGet('darkoak:banneditems') || []
+    if (bans.length > 0 && !isCreating) {
+        for (let index = 0; index < bans.length; index++) {
+            const b = bans[index]
+            player.runCommand(`clear @s ${b?.type || 'minecraft:air'}`)
+        }
     }
 }

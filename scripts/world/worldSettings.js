@@ -175,20 +175,26 @@ export function welcomeMessage(evd) {
             } else {
                 evd.player.sendMessage(arrays.replacer(evd.player, d?.welcome || ''))
             }
-        }, 100)
+            if (d?.welcomeCommand) mcl.pCommand(evd.player, arrays.replacer(evd.player, d?.welcomeCommand))
+        }, 50)
     } else if (evd instanceof PlayerLeaveBeforeEvent) {
-        if (d?.byeS) {
-            world.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
-        } else {
-            evd.player.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
-        }
+        //system.runTimeout(() => {
+            if (d?.byeS) {
+                world.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
+            } else {
+                evd.player.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
+            }
+            if (d?.byeCommand) mcl.pCommand(evd.player, arrays.replacer(evd.player, d?.byeCommand))
+        //})
     } else {
-        const name = evd.name
-        if (d?.prejoinAdmin) {
-            mcl.adminMessage((d?.prejoin || '').replace('#name#', name), false)
-        } else {
-            world.sendMessage((d?.prejoin || '').replace('#name#', name))
-        }
+        system.runTimeout(() => {
+            const name = evd.name
+            if (d?.prejoinAdmin) {
+                mcl.adminMessage((d?.prejoin || '').replace('#name#', name), false)
+            } else {
+                world.sendMessage((d?.prejoin || '').replace('#name#', name))
+            }
+        })
     }
 }
 

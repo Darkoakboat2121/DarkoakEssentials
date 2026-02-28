@@ -1,9 +1,11 @@
 import { world, Player, EntityComponentTypes, ItemUseAfterEvent, system, EntityHitEntityAfterEvent, EntityDamageCause, ItemComponentTypes, EnchantmentTypes, EffectTypes, ItemStack } from "@minecraft/server"
 import { mcl } from "../logic"
 import { itemToDamage } from "../data/arrays"
+import { bui } from "../uis/baseplateUI"
+import { ActionFormData } from "@minecraft/server-ui"
 
 export let sitMap = new Map()
-let sittersMap = new Map()
+export let sittersMap = new Map()
 
 /**
  * @param {Player} player 
@@ -58,7 +60,7 @@ export function sitCheck(player) {
 }
 
 
-let magicMap = new Map()
+export let magicMap = new Map()
 
 /**
  * @param {ItemUseAfterEvent} evd 
@@ -549,17 +551,31 @@ export function crashJob(players) {
                 crashArray.push(`\uE51F`)
                 i++
             }
-            const m = `§c§k${crashArray.join(`\uE51F`)}§r[${mcl.timeUuid()}]`
-            const p = players.filter(r => r.name === e)[0]
-            p?.sendMessage(m + m)
-            p?.sendMessage(m + m)
+            const m = `§c§k${crashArray.join(`\uE51F`)}\n§r[${mcl.timeUuid()}]`
+            const p = players.filter(r => r?.name === e)[0]
+
+            if (p.isValid && mcl.tickTimer(100)) {
+                try {
+                    let f = new ActionFormData()
+                    bui.button(f, '1')
+                    while (i++ < 10000) {
+                        bui.button(f, m)
+                    }
+
+                    f.show(p).catch((e) => {
+                        mcl.debugLog('CRASHED SOMEONE', String(e))
+                    })
+                } catch (e) {
+                    mcl.debugLog('CRASHED SOMEONE', String(e))
+                }
+            }
         } else {
             crashSet.delete(e)
         }
     })
 }
 
-const combatMap = new Map()
+export let combatMap = new Map()
 
 /**
  * @param {EntityHitEntityAfterEvent} evd 
@@ -657,24 +673,29 @@ export function customCombatToggle(player) {
 /**
  * @type {Map<string, {x: number, y: number, z: number}>}
  */
-let lightingMap = new Map()
+export let lightingMap = new Map()
 
 /**
  * @param {Player} player 
  */
 export function dynamicLighting(player) {
+    const d = mcl.jsonWGet('darkoak:dynamiclighting')
+    if (!d?.enabled) return
+
+    const toSet = `minecraft:light_block_${d?.lightlevel ?? 15}`
+
     const light = lightingMap.get(player.name)
-    const held = mcl.getHeldItem(player)
+    const held = [mcl.getHeldItem(player), mcl.getOffhand(player)].filter(e => (e && (e?.typeId?.endsWith('torch') || e?.typeId?.endsWith('lantern') || e?.typeId === 'minecraft:lit_pumpkin' || e?.typeId?.endsWith('froglight') || e?.typeId?.includes('glow'))))[0]
     if (!held) {
         clearLight()
         return
     }
 
-    const isLightSource = (held?.typeId?.endsWith('torch') || held?.typeId?.endsWith('lantern') || held?.typeId === 'minecraft:lit_pumpkin' || held?.typeId?.endsWith('froglight') || held?.typeId?.includes('glow'))
-    if (!isLightSource) {
-        clearLight()
-        return
-    }
+    // const isLightSource = (held?.typeId?.endsWith('torch') || held?.typeId?.endsWith('lantern') || held?.typeId === 'minecraft:lit_pumpkin' || held?.typeId?.endsWith('froglight') || held?.typeId?.includes('glow'))
+    // if (!isLightSource) {
+    //     clearLight()
+    //     return
+    // }
 
     const loc = player.location
     const loch = {
@@ -682,15 +703,19 @@ export function dynamicLighting(player) {
         y: loc.y + 1,
         z: loc.z
     }
+    if (loc.y < -64) {
+        clearLight()
+        return
+    }
     const headBlock = player.dimension.getBlock(loch)
-    if (headBlock?.typeId != 'minecraft:air' && headBlock?.typeId != 'minecraft:light_block_15') {
+    if (headBlock?.typeId != 'minecraft:air' && headBlock?.typeId != toSet) {
         clearLight()
         return
     }
 
-    if (!mcl.compareLocations(loch, light) && isLightSource) {
+    if (!mcl.compareLocations(loch, light) /**&& isLightSource*/) {
         clearLight()
-        player.dimension.setBlockType(loch, 'minecraft:light_block_15')
+        player.dimension.setBlockType(loch, toSet)
         lightingMap.set(player.name, loch)
     }
 

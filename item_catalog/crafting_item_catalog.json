@@ -56,8 +56,17 @@
                             "darkoak:generators",
                             "darkoak:data_editor",
                             "darkoak:community",
-                            "darkoak:world_edit",
-                            "darkoak:sitter"
+                            "darkoak:world_edit"
+                        ]
+                    },
+                    {
+                        "group_identifier": {
+                            "icon": "darkoak:hitbox_tool",
+                            "name": "darkoak:tools"
+                        },
+                        "items": [
+                            "darkoak:sitter_tool",
+                            "darkoak:hitbox_tool"
                         ]
                     },
                     {

@@ -3,6 +3,7 @@ import { AsyncPlayerJoinBeforeEvent } from "@minecraft/server-admin"
 import { mcl } from "../logic"
 import * as arrays from "../data/arrays"
 import * as worldSettings from "../world/worldSettings"
+import { log } from "../world/anticheat"
 
 /**
  * @param {AsyncPlayerJoinBeforeEvent} evd 
@@ -28,7 +29,7 @@ export function prejoinSystem(evd) {
         for (let index = 0; index < arrays.susNames.length; index++) {
             const n = arrays.susNames[index]
             if (name.includes(n)) {
-                anticheat.log({ name: name }, `anti-ZD: ${name}`)
+                log({ name: name }, `anti-ZD: ${name}`)
                 if (evd.isValid()) evd.disconnect('Anti-ZD')
                 return 'susnames'
             }

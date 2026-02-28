@@ -22,7 +22,11 @@ export function updateData(initial = false) {
     if (initial || num === 0) {
         for (let index = 0; index < properties.length; index++) {
             const pro = properties[index]
-            cd.set(pro, dataGet(pro))
+            try {
+                cd.set(pro, dataGet(pro))
+            } catch (e) {
+                mcl.debugLog(`cd setting: ${pro}`, String(e))
+            }
         }
     } else {
         if (!mcl.tickTimer((num * 20))) return
@@ -32,7 +36,11 @@ export function updateData(initial = false) {
         for (let index = 0; index < properties.length; index++) {
             const pro = properties[index]
             system.runTimeout(() => {
-                cd.set(pro, dataGet(pro))
+                try {
+                    cd.set(pro, dataGet(pro))
+                } catch (e) {
+                    mcl.debugLog(`cd setting: ${pro}`, String(e))
+                }
             }, Math.floor(step * index / 50))
         }
     }
@@ -48,7 +56,11 @@ export function dataGet(id) {
         return undefined
     } else {
         try {
-            return JSON.parse(t)
+            try {
+                return JSON.parse(t)
+            } catch {
+                return t
+            }
         } catch (e) {
             console.error(`DATA ERROR ${id}: ` + String(e))
             mcl.debugLog('ERROR', `DATA ERROR ${id}: ` + String(e))
@@ -93,7 +105,7 @@ export function timers() {
 export const playerLog = new Map()
 export function playerDataLogger(player) {
     if (!mcl.tickTimer(20)) return
-    playerLog.set(player.name, mcl.playerToData(player))
+    //playerLog.set(player.name, mcl.playerToData(player))
 }
 
 export function defaultData() {

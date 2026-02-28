@@ -2,7 +2,7 @@
     "format_version": "1.21.50",
     "minecraft:item": {
         "description": {
-            "identifier": "darkoak:sitter",
+            "identifier": "darkoak:sitter_tool",
             "menu_category": {
                 "category": "items"
             }

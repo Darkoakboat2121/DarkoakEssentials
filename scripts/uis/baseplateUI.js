@@ -65,7 +65,7 @@ export class bui {
     static textField(f, label = '', placeholder = '', defaultText = '', tooltip = '') {
         const c = mcl.jsonWGet('darkoak:scriptsettings')
         return f.textField(`${c?.textfieldcolor || ''}${label.toString()}` || '', `${placeholder.toString()}` || '', {
-            tooltip: `${c?.textfieldtooltipcolor || ''}${tooltip.toString()}` || '',
+            tooltip: `${c?.textfieldtooltipcolor || ''}${tooltip.toString()}` || undefined,
             defaultValue: defaultText.toString() || ''
         })
     }
@@ -77,7 +77,7 @@ export class bui {
         const c = mcl.jsonWGet('darkoak:scriptsettings')
         return f.dropdown(`${c?.dropdowncolor || ''}${label.toString()}` || '', options.map(e => e.toString()) || [''], {
             defaultValueIndex: parseInt(defaultIndex.toString()) || 0,
-            tooltip: `${c?.dropdowntooltipcolor || ''}${tooltip.toString()}` || ''
+            tooltip: mcl.decide(tooltip, `${c?.dropdowntooltipcolor || ''}${tooltip.toString()}`, undefined)
         })
     }
 
@@ -106,10 +106,10 @@ export class bui {
      * @param {string} [tooltip=''] Tooltip icon text
      */
     static slider(f, label = '', minimum = 0, maximum = 10, defaultValue = minimum, valueStep = 1, tooltip = '') {
-        return f.slider(label.toString() || '', parseInt(minimum) || 0, parseInt(maximum) || 0, {
-            valueStep: parseInt(valueStep) || 1,
-            defaultValue: parseInt(defaultValue) || 0,
-            tooltip: tooltip.toString() || ''
+        return f.slider(label.toString() || '', parseFloat(minimum) || 0, parseFloat(maximum) || 0, {
+            valueStep: parseFloat(valueStep) || 1,
+            defaultValue: parseFloat(defaultValue) || 0,
+            tooltip: tooltip.toString() || undefined
         })
     }
 
@@ -172,7 +172,7 @@ export class bui {
         const c = mcl.jsonWGet('darkoak:scriptsettings')
         return f.toggle(`${c?.togglecolor || ''}${label.toString()}` || '', {
             defaultValue: !!defaultValue || false,
-            tooltip: `${c?.toggletooltipcolor || ''}${tooltip.toString()}` || ''
+            tooltip: `${c?.toggletooltipcolor || ''}${tooltip.toString()}` || undefined
         })
     }
 

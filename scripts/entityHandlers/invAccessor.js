@@ -42,8 +42,8 @@ export function invSeeLinker() {
         const invseerContainer = mcl.getItemContainer(invseer)
         const playerContainer = mcl.getItemContainer(player)
 
-        let invHistory = invHistoryMap.get(invseer.id) || Array(invseerContainer.size).fill(undefined);
-        let playerHistory = playerHistoryMap.get(player.name) || Array(playerContainer.size).fill(undefined);
+        let invHistory = invHistoryMap.get(invseer.id) || Array(invseerContainer.size).fill(undefined)
+        let playerHistory = playerHistoryMap.get(player.name) || Array(playerContainer.size).fill(undefined)
 
 
         for (let slot = 0; slot < invseerContainer.size; slot++) {

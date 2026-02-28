@@ -6,7 +6,7 @@
 		]
 	},
 	"header": {
-		"name": "§aDarkoak §9Essentials §aV2.6.9§r§f",
+		"name": "§aDarkoak §9Essentials §aV2.7.6§r§f",
 		"description": "§uAn essentials addon made to be §asimple§u. Made by Darkoakboat2121 &§r§f",
 		"min_engine_version": [
 			1,
@@ -16,8 +16,8 @@
 		"uuid": "ee032771-87b3-4f11-bdad-edc19ba94fb7",
 		"version": [
 			2,
-			6,
-			9
+			7,
+			6
 		]
 	},
 	"modules": [
@@ -60,6 +60,10 @@
 		},
 		{
 			"module_name": "@minecraft/server-gametest",
+			"version": "beta"
+		},
+		{
+			"module_name": "@minecraft/debug-utilities",
 			"version": "beta"
 		}
 	]

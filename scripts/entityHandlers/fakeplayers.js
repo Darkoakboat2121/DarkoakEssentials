@@ -1,6 +1,6 @@
 import { world, system, StartupEvent, CommandPermissionLevel, CustomCommandParamType, GameMode, ItemStack } from "@minecraft/server"
 import { mcl } from "../logic"
-import { SimulatedPlayer, spawnSimulatedPlayer } from "@minecraft/server-gametest"
+import { getPlayerSkin, SimulatedPlayer, spawnSimulatedPlayer } from "@minecraft/server-gametest"
 import { log } from "../world/anticheat"
 
 
@@ -30,7 +30,7 @@ export function combatManager(player) {
                 const nameRef = player?.name || player?.nameTag
                 player?.remove()
                 player?.disconnect()
-                log({name: nameRef}, 'anti-bot: bot got deleted')
+                log({ name: nameRef }, 'anti-bot: bot got deleted')
             } catch {
 
             }
@@ -82,7 +82,7 @@ export function combatManager(player) {
  * @param {StartupEvent} evd 
  */
 export function fakePlayerCommand(evd) {
-    evd.customCommandRegistry.registerEnum('darkoak:fakeplayer', ['chat(string)', 'spawn(none)', 'skin(player_name)', 'disconnect(none)', 'location_move(coords)', 'location_navigate(coords)', 'interact_block(coords)', 'attack(none)', 'look_location(coords)', 'respawn(bool|none)', 'combat(player_name|\'closest\')', 'follow(player_name|\'closest\')', 'jump(none|number)', 'command(string)'])
+    evd.customCommandRegistry.registerEnum('darkoak:fakeplayer', ['chat(string)', 'spawn(none)', 'skin(player_name)', 'disconnect(none)', 'location_move(coords)', 'location_navigate(coords)', 'interact_block(coords)', 'attack(none)', 'look_location(coords)', 'respawn(bool|none)', 'combat(player_name|\'closest\')', 'follow(player_name|\'closest\')', 'jump(none|number)', 'command(string)', 'interact(none)', 'interact_entity(coords)', 'interact_entities(coords)'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:fakeplayer',
         description: 'Manages Fake Players',
@@ -146,11 +146,12 @@ export function fakePlayerCommand(evd) {
                 case 'chat(string)':
                     sim.chat(todo)
                     break
-                case 'skin(player_name)':
+                case 'skin(player_name)': {
                     const pl = mcl.getPlayer(todo)
                     if (!pl) return
                     sim.setSkin(getPlayerSkin(pl))
                     break
+                }
                 case 'disconnect(none)':
                     sim.disconnect()
                     break
@@ -195,6 +196,26 @@ export function fakePlayerCommand(evd) {
                 case 'command(string)':
                     sim.runCommand(todo)
                     break
+                case 'interact(none)':
+                    sim.interact()
+                    break
+                case 'interact_entity(coords)': {
+                    const ents = sim.dimension.getEntitiesAtBlockLocation(coords)
+                    if (ents && ents.length > 0) {
+                        sim.interactWithEntity(ents[0])
+                    }
+                    break
+                }
+                case 'interact_entities(coords)': {
+                    // TIL that {} can be used with switch cases, all my switch cases will now use {} - 2/16/2026
+                    const ents = sim.dimension.getEntitiesAtBlockLocation(coords)
+                    if (ents && ents.length > 0) {
+                        for (let index = 0; index < ents.length; index++) {
+                            sim.interactWithEntity(ents[index])
+                        }
+                    }
+                    break
+                }
             }
         })
     })

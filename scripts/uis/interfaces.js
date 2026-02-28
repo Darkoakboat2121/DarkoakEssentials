@@ -256,9 +256,11 @@ export function welcomeMessageUI(player) {
     bui.divider(f)
     bui.textField(f, `Welcome Message:`, 'Example: Welcome to Super-Skygen!', d?.welcome)
     bui.toggle(f, 'Global Welcome?', d?.welcomeS)
+    bui.textField(f, 'Welcome Command:', 'Example: tp @s 0 0 0', d?.welcomeCommand)
     bui.divider(f)
     bui.textField(f, 'Goodbye Message:', 'Example: Goodbye #name#!', d?.bye)
     bui.toggle(f, 'Global Goodbye?', d?.byeS)
+    bui.textField(f, 'Goodbye Command:', 'Example: tp @s 0 0 0', d?.byeCommand)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -273,8 +275,10 @@ export function welcomeMessageUI(player) {
             prejoinSend: e[i++],
             welcome: e[i++],
             welcomeS: e[i++],
+            welcomeCommand: e[i++],
             bye: e[i++],
             byeS: e[i++],
+            byeCommand: e[i++],
         })
     }).catch()
 }
@@ -406,15 +410,15 @@ export function playerDataMainUI(player) {
 export function playerDataViewUI(playerToShow, playerToView) {
     let f = new ActionFormData()
     const player = playerToView
-    bui.title(f, `${player.name}`)
+    bui.title(f, `${player?.name || 'EMPTY'}`)
 
-    bui.label(f, `Name: ${player.name}, Nametag: [${player.nameTag}]`)
-    bui.label(f, `ID: ${player.id}, Is Host: ${mcl.isHost(player)}`)
-    bui.label(f, `Gamemode: ${player.getGameMode()}`)
-    bui.label(f, `Location: ${parseInt(player.location.x)} ${parseInt(player.location.y)} ${parseInt(player.location.z)}, Dimension: ${player.dimension.id}`)
+    bui.label(f, `Name: ${player?.name || 'EMPTY'}, Nametag: [${player?.nameTag}]`)
+    bui.label(f, `ID: ${player?.id}, Is Host: ${mcl.isHost(player)}`)
+    bui.label(f, `Gamemode: ${player?.getGameMode()}`)
+    bui.label(f, `Location: ${parseInt(player?.location?.x)} ${parseInt(player?.location?.y)} ${parseInt(player?.location?.z)}, Dimension: ${player?.dimension?.id}`)
     bui.label(f, `Effects: ${mcl.playerEffectsArray(player)}`)
     bui.label(f, `Tags: ${mcl.playerTagsArray(player).join(', §r§f')}`)
-    bui.label(f, `Max Render Distance: ${player?.clientSystemInfo?.maxRenderDistance}\nMemory Tier: ${player?.clientSystemInfo?.memoryTier}\nPlatform Type: ${player?.clientSystemInfo?.platformType}`)
+    bui.label(f, `Max Render Distance: ${player?.clientSystemInfo?.maxRenderDistance}\nMemory Tier: ${player?.clientSystemInfo?.memoryTier}\nPlatform Type: ${player?.clientSystemInfo?.platformType}\nCommand Perm Level: ${player?.commandPermissionLevel}\nGraphics Mode: ${player?.graphicsMode}\nInput: ${player?.inputInfo?.lastInputModeUsed}`)
 
     bui.divider(f)
     bui.label(f, 'Items:')
@@ -422,8 +426,8 @@ export function playerDataViewUI(playerToShow, playerToView) {
     const items = mcl.getAllItems(player)
     for (let index = 0; index < items.length; index++) {
         const item = items[index]
-        bui.label(f, `Type: ${item.typeId}, Amount: ${item.amount}`)
-        bui.label(f, `Name: ${item.nameTag || ''}`)
+        bui.label(f, `Type: ${item?.typeId}, Amount: ${item?.amount}`)
+        bui.label(f, `Name: ${item?.nameTag || ''}`)
         bui.divider(f)
     }
 
@@ -625,7 +629,9 @@ export function firePunishUI(player) {
         const e = bui.formValues(evd)
         if (e[0]) {
             ppl.push(names[e[0]])
-            mcl.jsonWSet('darkoak:fired', ppl)
+            while (!mcl.jsonWSet('darkoak:fired', ppl)) {
+                ppl.shift()
+            }
         } else {
             for (let index = 1; index < e.length; index++) {
                 if (e[index] == true) ppl.splice(index - 1, 1)
@@ -1360,13 +1366,20 @@ export function dashboardMainUI(player) {
 /**ui for deleting dynamic properties
  * @param {Player} player 
  */
-export function dataDeleterUI(player, search = '') {
+export function dataDeleterUI(player, search = '', searchVal = '') {
     let f = new ActionFormData()
     bui.title(f, 'Delete Data')
+    let hadToShift = false
 
-    const data = world.getDynamicPropertyIds().filter(e => e.includes(search))
+    let data = world.getDynamicPropertyIds().filter(e => (e.includes(search)))
+    if (searchVal) data = data.filter(e => (world.getDynamicProperty(e)?.includes(searchVal)))
+    while (data.length > 100) {
+        data.pop()
+        hadToShift = true
+    }
 
-    bui.button(f, `Search?\nCurrent Search: ${search}`)
+    bui.button(f, `Search?\nCurrent Search: (${search}, ${searchVal})`)
+    if (hadToShift) bui.label(f, `§cTo Prevent A Crash, This UI Is Not Showing You All Of The Elements. Use The Search Function`)
     bui.divider(f)
 
     for (let index = 0; index < data.length; index++) {
@@ -1380,7 +1393,7 @@ export function dataDeleterUI(player, search = '') {
     f.show(player).then((evd) => {
         if (evd.canceled) return
         if (evd.selection == 0) {
-            dataDeleterSearchUI(player, search)
+            dataDeleterSearchUI(player, search, searchVal)
             return
         }
         world.setDynamicProperty(data[evd.selection - 1])
@@ -1388,17 +1401,18 @@ export function dataDeleterUI(player, search = '') {
     }).catch()
 }
 
-export function dataDeleterSearchUI(player, search = '') {
+export function dataDeleterSearchUI(player, search = '', searchVal = '') {
     let f = new ModalFormData()
     bui.title(f, 'Data Deleter Searcher')
 
     bui.textField(f, 'ID Contains:', 'Example: mobgen', search)
+    bui.textField(f, 'Value Contains:', 'Example: Darkoakboat2121', searchVal)
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
             dataDeleterUI(player)
         } else {
-            dataDeleterUI(player, evd.formValues[0])
+            dataDeleterUI(player, evd.formValues[0], evd.formValues[1])
         }
     }).catch()
 }

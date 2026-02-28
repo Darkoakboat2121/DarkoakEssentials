@@ -45,8 +45,16 @@ export function signsPlus() {
             //         newLines.push(current)
             //     }
             // }
-            const currentFrame = d[frames[signFrame]]
+            let currentFrame = d[frames[signFrame]]
             newLines = [currentFrame?.f1, currentFrame?.f2, currentFrame?.f3, currentFrame?.f4].filter((e) => e)
+            if (newLines.length < 1) {
+                if (signFrame === 2) {
+                    currentFrame = d[frames[0]]
+                } else if (signFrame === 3) {
+                    currentFrame = d[frames[1]]
+                }
+                newLines = [currentFrame?.f1, currentFrame?.f2, currentFrame?.f3, currentFrame?.f4].filter((e) => e)
+            }
             if (d?.color?.rainbow) {
                 newLines = newLines.map((e) => {
                     const cc = colorCodes.filter(e => (e != '§k' && e != '§o' && e != '§l'))

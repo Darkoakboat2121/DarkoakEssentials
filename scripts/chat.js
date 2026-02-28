@@ -12,11 +12,17 @@ import { cd } from "./data/defaults"
 // Custom commands, ranks, censoring, antispam
 
 /**@type {Map<string, {message: string, time: number}>} */
-let messageMap = new Map()
+export let messageMap = new Map()
 let lastSender = ''
 
 /**@type {Map<string, {name: string, score: number}>} */
-let spammerMap = new Map()
+export let spammerMap = new Map()
+
+let chatGamesToggles = {
+    spammer: false,
+    scramble: false,
+    catcher: false
+}
 
 /**
  * @param {ChatSendBeforeEvent} evd
@@ -60,14 +66,20 @@ export function chatSystem(evd = undefined, player, message) {
         }
     }
 
+    if (mcl.jsonPGet(player, 'darkoak:privatechat') && !message.startsWith('*')) {
+        privateChat(player, message)
+        return
+    }
+
     // chat games
     /**@type {{unscrambleEnabled: boolean, unscrambleWords: string, unscrambleInterval: number, unscrambleCommand: string}} */
     const game = mcl.jsonWGet('darkoak:chatgames')
     const word = mcl.jsonWGet('darkoak:chatgame1:word')?.word
-    if (word) {
+    if (word && chatGamesToggles.scramble) {
         if (message.trim() == word.trim()) {
             world.sendMessage(`§a${player.name} won! The word was: §r§f${word}`)
             mcl.wRemove('darkoak:chatgame1:word')
+            chatGamesToggles.scramble = false
             system.runTimeout(() => {
                 if (game.unscrambleCommand) player.runCommand(replacer(player, game.unscrambleCommand))
             }, 2)
@@ -76,7 +88,7 @@ export function chatSystem(evd = undefined, player, message) {
     }
 
     const boat = mcl.jsonWGet('darkoak:boatcatcher:boat')?.boat
-    if (boat) {
+    if (boat && chatGamesToggles.catcher) {
         if (message.trim() == 'CATCH') {
             let bac = mcl.jsonPGet(player, 'darkoak:boatcatcher') || {}
 
@@ -85,12 +97,13 @@ export function chatSystem(evd = undefined, player, message) {
 
             world.sendMessage(`§a${player.name} Caught A(n) ${boat}!`)
             mcl.wRemove('darkoak:boatcatcher:boat')
+            chatGamesToggles.catcher = false
             return
         }
     }
 
     const spammerGame = mcl.jsonWGet('darkoak:spammer:game')
-    if (spammerGame?.enabled && message === 'SPAM') {
+    if (spammerGame?.enabled && message === 'SPAM' && chatGamesToggles.spammer) {
         spammerMap.set(player.name, {
             name: player.name,
             score: (spammerMap.get(player.name)?.score || 0) + 1
@@ -105,10 +118,15 @@ export function chatSystem(evd = undefined, player, message) {
     const res = mcl.listGetValues('darkoak:autoresponse:')
     for (let index = 0; index < res.length; index++) {
         const parts = JSON.parse(res[index])
-        if (message.includes(parts.word)) {
-            system.runTimeout(() => {
-                player.sendMessage(`§aAuto-Response: §r§f${parts.response}`)
-            }, 5)
+        /**@type {string[]} */
+        const words = parts.word.split(',')
+        for (let index = 0; index < words.length; index++) {
+            const w = words[index];
+            if (message.includes(w)) {
+                system.runTimeout(() => {
+                    player.sendMessage(`§aAuto-Response: §r§f${parts.response}`)
+                }, 5)
+            }
         }
     }
 
@@ -255,13 +273,14 @@ export function chatGames(chat) {
             loops++
 
             let words = d.unscrambleWords.split(',')
-            let word = words[mcl.randomNumber(words.length - 1)].trim()
+            let word = words[mcl.xorRandomNum(0, words.length - 1, (time1 + time2))].trim()
 
             world.sendMessage(`§a[${loops}] Unscramble for a prize! Word:§r§f ${mcl.stringScrambler(word)}`)
 
             mcl.jsonWSet('darkoak:chatgame1:word', {
                 word: word
             })
+            chatGamesToggles.scramble = true
         }
     }
 
@@ -278,6 +297,7 @@ export function chatGames(chat) {
             mcl.jsonWSet('darkoak:boatcatcher:boat', {
                 boat: btc
             })
+            chatGamesToggles.catcher = true
         }
     }
 
@@ -286,10 +306,12 @@ export function chatGames(chat) {
         mcl.jsonWSet('darkoak:spammer:game', {
             enabled: true
         })
+        chatGamesToggles.spammer = true
         system.runTimeout(() => {
             mcl.jsonWSet('darkoak:spammer:game', {
                 enabled: false
             })
+            chatGamesToggles.spammer = false
 
             let spammerArray = Array.from(spammerMap).map(([key, value]) => ({
                 name: value?.name,
@@ -317,11 +339,12 @@ export function chatGames(chat) {
  * @param {{antinametags: boolean | undefined}} d 
  */
 export function nametag(p, ocs, d) {
-
-    if (d?.antinametags && mcl.tickTimer(20)) {
+    let delay = 0
+    if (d?.antinametags && mcl.tickTimer(40)) {
         system.runTimeout(() => {
             p.nameTag = ''
         })
+        delay = 1
     }
 
     let cr = mcl.jsonWGet('darkoak:chatranks') || {
@@ -365,7 +388,7 @@ export function nametag(p, ocs, d) {
         } catch {
 
         }
-    })
+    }, delay)
 }
 
 export function landclaimCheck(a, b) {
@@ -496,7 +519,10 @@ function chatPreventives(player, message) {
         // anti spam
         if (d?.antispam && !mcl.isOp(player) && !mcl.isDOBAdmin(player)) {
             const trimmed = message.trim()
-            if (mcl.deleteFormatting(messageMap.get(player.name)?.message ?? '') === trimmed) return true
+            if (mcl.deleteFormatting(messageMap.get(player.name)?.message ?? '') === trimmed) {
+                player.sendMessage('§aYour Message Is The Same As Your Last Message')
+                return true
+            }
             if (
                 trimmed.includes('horion.download') ||
                 trimmed.includes('lumineproxy.org') ||
@@ -504,6 +530,7 @@ function chatPreventives(player, message) {
                 trimmed.includes('LUMINE UTILITY PROXY')
             ) {
                 log(player, `hack client message`)
+                player.sendMessage('§aYour Message Included Common Messages Made By Hack Clients')
                 return true
             }
             if (d?.antispam2) {
@@ -519,24 +546,34 @@ function chatPreventives(player, message) {
                     }
 
                     const percent = (amount / length) * 100
-                    if (percent >= (d?.antispam2sense ?? 50)) return true
+                    if (percent >= (d?.antispam2sense ?? 50)) {
+                        player.sendMessage('§cYour Message Matched Your Last Message Too Closely')
+                        return true
+                    }
                 }
             }
         }
 
-        if (d?.antichatflood && message.length > (d?.antichatfloodsense ?? 100)) return true
+        if (d?.antichatflood && message.length > (d?.antichatfloodsense ?? 100) && !mcl.isDOBAdmin(player)) {
+            player.sendMessage(`§cMessage Exceded Max Length: ${message.length}/${d?.antichatfloodsense ?? 100}`)
+            return true
+        }
 
-        if (d?.antispam3) {
+        if (d?.antispam3 && !mcl.isDOBAdmin(player)) {
             const past = messageMap.get(player?.name)
             if (past) {
                 const td = mcl.timeDifference(past.time)
-                if (Math.abs(td.timeDiff) < 800) return true
+                if (Math.abs(td.timeDiff) < 800) {
+                    player.sendMessage('§aYour Message Was Sent Too Quickly, Try Sending It Again')
+                    return true
+                }
             }
         }
 
         if (d?.antispamactive) {
             if (player.isJumping || player.isSprinting) {
                 log(player, `anti-spam-active`)
+                player.sendMessage('§aYou Were Moving While The Message Was Sent, This Could Be Lag')
                 return true
             }
         }
@@ -623,19 +660,23 @@ function messageModifiers(ocs, chat, player, d) {
  * @param {string} message 
  */
 export function messageLog(player, message) {
-    /**@type {{name: string, message: string, time: number}[]} */
-    let logs2 = mcl.jsonWGet('darkoak:messagelogs:v2') || [{ name: 'Default', message: 'Default', time: Date.now() }]
-    if (logs2.length > 0 && logs2[logs2.length - 1].name === player.name) {
-        logs2[logs2.length - 1].message += `\n| ${message}`
-    } else {
-        logs2.push({
-            name: player.name,
-            message: message,
-            time: Date.now()
-        })
-    }
-    while (!mcl.jsonWSet('darkoak:messagelogs:v2', logs2)) {
-        logs2.shift()
+    try {
+        /**@type {{name: string, message: string, time: number}[]} */
+        let logs2 = mcl.jsonWGet('darkoak:messagelogs:v2') || [{ name: 'Default', message: 'Default', time: Date.now() }]
+        if (logs2.length > 0 && logs2[logs2.length - 1].name === player.name) {
+            logs2[logs2.length - 1].message += `\n| ${message}`
+        } else {
+            logs2.push({
+                name: player.name,
+                message: message,
+                time: Date.now()
+            })
+        }
+        while (!mcl.jsonWSet('darkoak:messagelogs:v2', logs2)) {
+            logs2.shift()
+        }
+    } catch {
+
     }
 }
 
@@ -649,5 +690,19 @@ export function logJoinsLeaves(evd) {
         messageLog(evd.player, `§eJoined The Game§r, Time: ${now}, Loc: ${loc.x.toFixed(0)}, ${loc.y.toFixed(0)}, ${loc.z.toFixed(0)}`)
     } else if ((evd instanceof PlayerLeaveBeforeEvent)) {
         messageLog(evd.player, `§eLeaved The Game§r, Time: ${now}, Loc: ${loc.x.toFixed(0)}, ${loc.y.toFixed(0)}, ${loc.z.toFixed(0)}`)
+    }
+}
+
+export function privateChat(player, message) {
+    /**@type {{code: string}} */
+    const pc = mcl.jsonPGet(player, 'darkoak:privatechat')
+
+    if (chatPreventives(player, message)) return
+
+    const players = world.getAllPlayers().filter(e => ((mcl.jsonPGet(e, 'darkoak:privatechat')?.code === pc.code) || (e.hasTag('darkoak:mod') || e.hasTag('darkoak:admin'))))
+
+    for (let index = 0; index < players.length; index++) {
+        const p = players[index]
+        p.sendMessage(`§8[§7PVC-${pc.code}§8]§r ${player.name} -> ${message}`)
     }
 }

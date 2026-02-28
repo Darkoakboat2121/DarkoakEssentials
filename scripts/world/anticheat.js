@@ -5,7 +5,7 @@ import { badBlocksList, hackedItemsList, hackedItemsVanilla, susNames } from "..
 import { transferPlayer } from "@minecraft/server-admin"
 import { getPlayerSkin } from "@minecraft/server-gametest"
 
-let nukerMap = new Map()
+export let nukerMap = new Map()
 
 /**Anti nuker, works by checking the number of blocks broken in a small timeframe
  * @param {PlayerBreakBlockBeforeEvent} evd 
@@ -35,7 +35,7 @@ export function antiNuker(evd) {
     }
 }
 
-let placeMap = new Map()
+export let placeMap = new Map()
 
 /**Anti fast place, works by checking the number of blocks placed in a small timeframe
  * @param {PlayerPlaceBlockBeforeEvent} evd 
@@ -82,7 +82,7 @@ export function antiFastPlace(evd) {
     }
 }
 
-let antiAutoMap = new Map()
+export let antiAutoMap = new Map()
 /**Anti killaura, works by checking the number of clicks in a small timeframe
  * @param {EntityHitEntityAfterEvent} evd 
  */
@@ -95,7 +95,7 @@ export function antiCps(evd) {
     const currentCPS = mcl.pGet(player, 'darkoak:ac:cps') || 0
     mcl.pSet(player, 'darkoak:ac:cps', currentCPS + 1)
 
-    if (currentCPS > (d?.antikillaurasense || 15) && d?.antikillaura) {
+    if (currentCPS > (d?.anticpssense || 15) && d?.anticps) {
         log(player, `anti-killaura (${currentCPS})`)
     }
 
@@ -396,6 +396,9 @@ export function stackARID(player, item, inventory, index, d) {
     }
 }
 
+/**@type {Map<string, {player: Player, detector: Entity}>} */
+export let antiKauraMap = new Map()
+
 /**system interval function, player type
  * @param {Player} player 
  * @param {Player[]} players 
@@ -443,22 +446,22 @@ export function anticheatMain(player, players) {
                 y: loc?.y - 1,
                 z: loc?.z,
             })
-            if (block && block?.typeId === 'minecraft:air') {
-                let allAir = 0
-                const below = block
-                const bb = below.below()
-                const blocksToCheck = [below, below.west(), below.east(), below.north(), below.south(), below.east().north(), below.east().south(), below.west().north(), below.west().south(),
-                    bb, bb.west(), bb.east(), bb.north(), bb.south(), bb.east().north(), bb.east().south(), bb.west().north(), bb.west().south()]
-                for (let index = 0; index < blocksToCheck.length; index++) {
-                    const b = blocksToCheck[index]
-                    if (!b) continue
-                    if (b.typeId === 'minecraft:air') allAir += 1
-                }
+            if (block && block?.typeId === 'minecraft:air' && player?.isOnGround) {
+                // let allAir = 0
+                // const below = block
+                // const bb = below.below()
+                // const blocksToCheck = [below, below.west(), below.east(), below.north(), below.south(), below.east().north(), below.east().south(), below.west().north(), below.west().south(),
+                //     bb, bb.west(), bb.east(), bb.north(), bb.south(), bb.east().north(), bb.east().south(), bb.west().north(), bb.west().south()]
+                // for (let index = 0; index < blocksToCheck.length; index++) {
+                //     const b = blocksToCheck[index]
+                //     if (!b) continue
+                //     if (b.typeId === 'minecraft:air') allAir += 1
+                // }
 
-                if (player?.isOnGround && allAir >= blocksToCheck.length) {
-                    log(player, `anti-air-jump`)
-                    return
-                }
+                // if (player?.isOnGround && allAir >= blocksToCheck.length) {
+                //     log(player, `anti-air-jump`)
+                //     return
+                // }
             }
         }
 
@@ -479,7 +482,7 @@ export function anticheatMain(player, players) {
                 return
             }
             // part 2, every player gets a dynamic propery with their name, since the fakers share properties and their name is different, if their name is different from the propertys name, flag them
-            
+
             const sec = mcl.jsonPGet(player, 'darkoak:antiforceop')
             if (sec) {
                 if (player?.name !== sec?.name) {
@@ -575,7 +578,7 @@ export function anticheatMain(player, players) {
                 log(player, `anti-invalid 4, max-render-distance: ${mrd?.maxRenderDistance?.toString()}`)
                 if (d?.antiinvalid4kick) {
                     try {
-                        mcl.softKick(player)
+                        mcl.getout(player)
                     } catch {
 
                     }
@@ -624,16 +627,22 @@ export function anticheatMain(player, players) {
     //     return
     // }
 
-    // if (d?.antiinvisskins && mcl.tickTimer(100)) {
-    //     const skin = getPlayerSkin(player)
-    //     if (skin.skinColor.blue === 0 && skin.skinColor.green === 0 && skin.skinColor.red === 0) {
-    //         log(player, 'anti-invis-skin')
-    //         return
+    if (d?.antiinvisskins && mcl.tickTimer(100) && !player?.getEffect('minecraft:invisibility') && player?.hasTag('darkoak:isinvisible') && player.isValid) {
+        const loc = player?.location
+        const logLoc = `${loc.x} ${loc.y} ${loc.z}`
+        log(player, `anti-invis-skin: ${logLoc}`)
+        return
+    }
+
+    // if (d?.antikaura) {
+    //     if (antiKauraMap.has(player?.name)) {
+    //         const t = antiKauraMap.get(player?.name)
+    //         //t?.detector?.teleport(player.getViewDirection())
     //     }
     // }
 }
 
-let bowSpam = new Map()
+export let bowSpam = new Map()
 /**
  * @param {ItemReleaseUseAfterEvent} evd 
  */
@@ -766,7 +775,7 @@ export function antiSubsessionsRework(evd) {
 }
 
 /**@type {Map<string, number>} */
-let strikeMap = new Map()
+export let strikeMap = new Map()
 
 /**
  * @param {Player} player 
@@ -782,10 +791,10 @@ export function log(player, message) {
         message: message,
         time: Date.now()
     })
-    while(!mcl.jsonWSet('darkoak:anticheatlogs:v2', logs)) {
+    while (!mcl.jsonWSet('darkoak:anticheatlogs:v2', logs)) {
         logs.shift()
     }
-    
+
     const da = mcl.jsonWGet('darkoak:anticheat')
     if (da?.notify) {
         system.runTimeout(() => {

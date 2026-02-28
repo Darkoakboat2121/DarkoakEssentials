@@ -57,7 +57,6 @@ changelog:
         animated action forms ***
 
         arrow border killer *
-        dynamic shops *
         animated builds * (help soul please when we make this)
         vertical slabs!!!! *
         money and score linkage system *
@@ -66,41 +65,39 @@ changelog:
         trading system * (between p to p and p to e)
         anti combat log system *
         personal settings command (to disable sitting, tpa, other optional stuff) *
-        anti-invis-skins module *
-        thrices math idea *
-        chat color adder ui *
+        fake player spleef preset *
+        animated sidebar *
 
+        dynamic shops (player shops?) ***
+        export one player[] for all things to use if they dont have filters, put it in defaults lol *** --------------------------no from N
         
-        fake player spleef preset ***
         
-        
-        sitter item
-        anti-force-op
-        dynamic lighting system ----- needs settings! probably other player settings
+        offhand command
+        players now get messages when they violated an antispam
+        /p (private messaging system)
+        search button to adminandplayer list
+        ender dragons, withers, and command block minecarts to world protection
+
+
         crates (rewards should be commands) -----still needs work
-        anti-spam-delay
-        
         
 
-
+        actual clans (should have: clan leader (can kick outta clan), clan members, private clan messaging) *
         scythe dummy item *
-        rideable attribute *
-        dev tools: emulated packet reading, error messages *
+        dev tools: emulated packet reading *
         we circle maker /wecircle *
         spawn protection settings *
         extra ui to community ui, has creatable buttons with commands *
         uis should have references to uis that it came from, allows all uis to have back buttons with only one length *
         hole filler *
         afk timer *
-        /boats leaderboard with @a *
-        kits! *
         owner system *
         alt uis *
 
 
     fixed:
-        replacer function... again... (it only accepts nested multiples of special elements "#[1#[5]#]#" = 15, ones like "#[1]# #[2]#" dont work)
-        gens
+        dynamic lighting void bug
+        data deleter ui crash
 
         sitting and wind charges *
         lava / water bucket use on world protected areas ***
@@ -110,17 +107,22 @@ changelog:
 
         
     changes:
-        the item mover lag clear option makes items move every second but staggered for performance
-        the chat and anticheat logs now make space for larger elements, allowing more logs to be stored while being much less error prone
-        antispam2 now checks the percentage of matching text
+        the data deleter UI now has a searchval option
+        plot players ui now have option for adding players so that player cant modify the plot. the toggle is on by default
+        the addrankui now has chat and name color adding options
+        auto-reponse now accepts multipel words/phrases to a replay
 
+        
+        zones system should have private chats *
         /wepaste should have axis rotation *
         /attribute having a growth / shrinkage instead of instant, it should be togglable *
         more stuff to profiles *
+        community item to phone item with new systems and better implementations of existing systems *
 
     experimental:
         anti-zd
         invsee
+        grappling hook
 
         http requests *
 
@@ -216,6 +218,7 @@ Step
 Velocity
 Reach
 Spammer: 1
+Killaura: an invisible floating text that follows behind each players head rotation and if a player hits it (normals cant cause the text is behind them), they get flagged
 NoPacket
 Block Reach: 1
 Tower

@@ -70,6 +70,13 @@ export function plotGenerator(start, i, player) {
             dimen.runCommand(`fill ${plotStart.x} ${plotStart.y} ${plotStart.z} ${plotEnd.x} ${plotEnd.y - 15} ${plotEnd.z} grass`)
             dimen.runCommand(`fill ${plotStart.x} ${plotStart.y - 15} ${plotStart.z} ${plotEnd.x} ${plotEnd.y - 15} ${plotEnd.z} allow`)
             dimen.runCommand(`fill ${plotStart.x} ${plotStart.y + 1} ${plotStart.z} ${plotEnd.x} 319 ${plotEnd.z} air`)
+
+            const wallHeight = 20
+            dimen.runCommand(`fill ${plotStart.x - 1} ${plotStart.y + wallHeight} ${plotStart.z - 1} ${plotStart.x - 1} ${plotStart.y + 1} ${plotEnd.z + 1} barrier`)
+            dimen.runCommand(`fill ${plotEnd.x + 1} ${plotStart.y + wallHeight} ${plotStart.z - 1} ${plotEnd.x + 1} ${plotStart.y + 1} ${plotEnd.z + 1} barrier`)
+            dimen.runCommand(`fill ${plotStart.x} ${plotStart.y + wallHeight} ${plotStart.z - 1} ${plotEnd.x} ${plotStart.y + 1} ${plotStart.z - 1} barrier`)
+            dimen.runCommand(`fill ${plotStart.x} ${plotStart.y + wallHeight} ${plotEnd.z + 1} ${plotEnd.x} ${plotStart.y + 1} ${plotEnd.z + 1} barrier`)
+
             world.tickingAreaManager.removeTickingArea(evd)
         })
     })
@@ -114,7 +121,7 @@ export function plotAdder(player) {
  * @param {StartupEvent} evd 
  */
 export function plotCommands(evd) {
-    evd.customCommandRegistry.registerEnum('darkoak:plotoptions', ['redeem', 'players', 'travel'])
+    evd.customCommandRegistry.registerEnum('darkoak:plotoptions', ['redeem', 'players', 'travel', 'freevisits'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:plot',
         description: 'Plot System',
@@ -178,18 +185,58 @@ export function plotCommands(evd) {
                     })
                 } else {
                     const visit = mcl.jsonWGet(`darkoak:plot:${travel}`)
-                    if (visit?.players?.includes(player?.name)) {
-                        system.runTimeout(() => {
-                            player.teleport({
-                                x: visit.plotStart.x + Math.floor((visit.plotEnd.x - visit.plotStart.x) / 2),
-                                y: visit.plotStart.y + 1,
-                                z: visit.plotStart.z + Math.floor((visit.plotEnd.z - visit.plotStart.z) / 2),
-                            })
-                        })
+                    /**@type {{name: string, allowModify: boolean}[]} */
+                    const players = visit?.players
+                    if (visit?.settings?.freeVisit) {
+                        tpToPlot()
+                        return
                     }
+                    if (players && players.length > 0) {
+                        for (let index = 0; index < players.length; index++) {
+                            const p = players[index]
+                            if (typeof p === 'string') {
+                                if (p === player.name) {
+                                    tpToPlot()
+                                    return
+                                }
+                            } else if (typeof p === 'object') {
+                                if (p.name === player.name) {
+                                    tpToPlot()
+                                    return
+                                }
+                            }
+                        }
+                    }
+                    // if (visit?.players?.includes(player?.name) || visit?.settings?.freeVisit) {
+                        function tpToPlot() {
+                            system.runTimeout(() => {
+                                player.teleport({
+                                    x: visit.plotStart.x + Math.floor((visit.plotEnd.x - visit.plotStart.x) / 2),
+                                    y: visit.plotStart.y + 1,
+                                    z: visit.plotStart.z + Math.floor((visit.plotEnd.z - visit.plotStart.z) / 2),
+                                })
+                            })
+                        }
+                    //}
                 }
 
                 break
+            case 'freevisits': {
+                let canVisit = []
+
+                const plots = mcl.jsonListGetBoth(`darkoak:plot:`)
+                for (let index = 0; index < plots.length; index++) {
+                    const pl = plots[index].value
+                    if (pl?.settings?.freeVisit) canVisit.push(plots[index]?.id?.split(':')[2])
+                }
+                if (canVisit.length === 0) {
+                    player.sendMessage(`§cThere Are No Plots With Free-Visit Enabled§r`)
+                } else {
+                    player.sendMessage(`§aYou Can Visit:\n${canVisit.join(' | ')}§r`)
+                }
+
+                break
+            }
         }
     })
 }
@@ -200,7 +247,7 @@ export function plotCommands(evd) {
  */
 export function plotBreakPlaceProtection(evd) {
     if (evd.cancel) return
-    if (mcl.isCreating(evd.player)) return
+    if (evd.player && mcl.isCreating(evd.player)) return
 
     const d = mcl.jsonWGet('darkoak:plotsettings')
     const dimens = ['overworld', 'nether', 'the_end']
@@ -208,7 +255,7 @@ export function plotBreakPlaceProtection(evd) {
 
     let plots = mcl.jsonListGetBoth('darkoak:plot:')
     for (let index = 0; index < plots.length; index++) {
-        
+
         /**@type {{i: number, plotStart: {x: number, y: number, z: number}, plotEnd: {x: number, y: number, z: number}, players: string[]}} */
         const plot = plots[index].value
         if (!plot) continue
@@ -243,7 +290,20 @@ export function plotBreakPlaceProtection(evd) {
             block.y >= minY && block.y <= maxY &&
             block.z >= minZ && block.z <= maxZ
         ) {
-            if (plot?.players?.includes(evd?.player?.name) || plots[index]?.id?.split(':')[2] === evd?.player?.name) return
+            if (plots[index]?.id?.split(':')[2] === evd?.player?.name) return
+
+            /**@type {{name: string, allowModify: boolean}[]} */
+            const players = plot?.players
+            if (players && players.length > 0) {
+                for (let index = 0; index < players.length; index++) {
+                    const p = players[index]
+                    if (typeof p === 'string') {
+                        if (p === evd?.player?.name) return
+                    } else if (typeof p === 'object') {
+                        if (p.name === evd?.player?.name && p.allowModify) return
+                    }
+                }
+            }
             evd.cancel = true
             return
         }

@@ -2,7 +2,7 @@
 // This file holds data and some helper functions
 
 import { mcl } from "../logic"
-import { Block, Entity, EntityComponentTypes, Player, PlayerJoinAfterEvent, PlayerLeaveBeforeEvent, system, world } from "@minecraft/server"
+import { Block, Entity, EntityComponentTypes, ItemTypes, Player, PlayerJoinAfterEvent, PlayerLeaveBeforeEvent, system, world } from "@minecraft/server"
 
 /**List of usernames to ban automatically if prebans is set to true (proof) [notes], prebanable: [discrimination, hacking, backdooring]*/
 export const preBannedList = [
@@ -115,7 +115,6 @@ export const preBannedList = [
     'N0v13', //Client dev
     'MojangContact', //Client dev
     'FXE404', //Client dev
-    'Batmanbb7', //Racism
     'Zwuiix', //Client dev
     'GitHub Copilot', //Alt
     'c1mv', //Alt
@@ -192,6 +191,7 @@ export const preBannedList = [
     'RekeneiZsolt', //Op exploit (BlitzProxy)
     'EndingAce8561',
     // 'KKThaDestroyer1', //Basic (i have impart the powerful hacks in bedrock it cost 30 dollars), darko note: i cant believe someone would pay for a client
+    'Qaz is bored', //Basic
 ]
 
 export const prebansSet = new Set(preBannedList)
@@ -288,6 +288,7 @@ export const spranks = {
     donater: '',
     vip: ''
 }
+
 
 /**
  * @param {Player} player 
@@ -439,6 +440,7 @@ export const spranks = {
  */
 export function replacer(d, text) {
     let f = text
+    if ((d instanceof Entity) && !d.isValid) return f
     const loc = d.location
     const ap = world.getAllPlayers()
     const time = new Date()
@@ -519,6 +521,7 @@ export function replacer(d, text) {
         .replaceAll('#playerlist#', ap.map(e => e.name).join())
         .replaceAll('#dimension#', d?.dimension?.id)
         .replaceAll('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
+        .replaceAll('\\n', '\n')
 
     if (f.includes(':')) {
         for (let index = 0; index < emojis.length; index++) {
@@ -641,8 +644,11 @@ export function replacer(d, text) {
     return f
 }
 
+export let dummySize = 0
+system.runTimeout(() => {
+    dummySize = ItemTypes?.getAll()?.filter(e => e?.id?.startsWith('darkoak:dummy'))?.length ?? 50
+})
 
-export const dummySize = 35
 export const version = '2.2.3, This Is Probably Wrong'
 
 export const hashtags = [
@@ -786,6 +792,7 @@ export const colorCodes = [
 ]
 
 export const emojis = [
+    //itemojis
     { m: ':dark_oak_boat:', e: '' },
     { m: ':elytra:', e: '' },
     { m: ':golden_horse_armor:', e: '' },
@@ -798,6 +805,27 @@ export const emojis = [
     { m: ':lever:', e: '' },
     { m: ':banner_pattern_1:', e: '' },
     { m: ':empty_boots_1:', e: '' },
+
+    //mistemojis
+    { m: ':discord:', e: '' },
+    { m: ':mcpedl:', e: '' },
+    { m: ':darkoak:', e: '' },
+    { m: ':darkoak_angry:', e: '' },
+    { m: ':darkoak_blush:', e: '' },
+    { m: ':darkoak_sad:', e: '' },
+    { m: ':misty:', e: '' },
+    { m: ':misty_blush:', e: '' },
+    { m: ':misty_angry:', e: '' },
+    { m: ':misty_sad:', e: '' },
+
+    { m: ':youtube:', e: '' },
+    { m: ':heart1:', e: '' },
+    { m: ':star:', e: '' },
+    { m: ':happy_face:', e: '' },
+    { m: ':x_mark:', e: '' },
+    { m: ':check_mark:', e: '' },
+
+    //kaimojis
     { m: ':tableflip:', e: '(╯‵□′)╯︵┻━┻' },
     { m: ':untableflip:', e: '(ヘ･_･)ヘ┳━┳' },
     { m: ':doubletableflip:', e: '┻━┻ ︵ヽ(`Д´)ﾉ︵ ┻━┻' },
@@ -936,7 +964,8 @@ export const professionalism = [
     { m: 'nigger', e: '*racism here*' },
     { m: 'nigga', e: '*racism here*' },
     { m: 'wdym', e: 'what do you mean' },
-    { m: 'wb', e: 'welcome back' }
+    { m: 'wb', e: 'welcome back' },
+    { m: 'gtg', e: 'got to go' }
 ]
 
 export const trackingKeysObject = [
@@ -1091,6 +1120,14 @@ export const susNamesSet = new Set(susNames)
 export const devs = [
     'Darkoakboat2121',
 ]
+
+// export const offhandAllowed = [
+//     'torch',
+//     'copper_torch',
+//     'redstone_torch',
+//     'soul_torch',
+//     'shield'
+// ]
 
 export const enchantments = [
     'protection',

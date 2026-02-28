@@ -166,7 +166,7 @@ export function enchantOnUse(evd, d) {
     }
 }
 
-let jumpMap = new Map()
+export let jumpMap = new Map()
 
 /**
  * @param {Player} player 
