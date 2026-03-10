@@ -101,11 +101,27 @@ export function timers() {
 //     mcl.adminMessage(`${evd.id} by ${evd.player?.name} sent ${evd.message}`)
 // })
 
-/**@type {Map<string, {name: string}>} */
+/**@type {Map<string, Player>} */
 export const playerLog = new Map()
-export function playerDataLogger(player) {
-    if (!mcl.tickTimer(20)) return
-    //playerLog.set(player.name, mcl.playerToData(player))
+/**
+ * @param {Player[]} players 
+ */
+export function playerDataLogger(players) {
+    if (!mcl.tickTimer(1200)) return
+
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+
+    mcl.arraySpreader(players, 60, (player, i) => {
+        if (player.isValid) {
+            try {
+                const data = mcl.playerToData(player)
+                playerLog.set(player?.name, data)
+                if (d?.collectPlayers) mcl.jsonWSet(`darkoak:player:${player?.name}`, data)
+            } catch {
+
+            }
+        }
+    })
 }
 
 export function defaultData() {
@@ -175,3 +191,16 @@ export function defaultData() {
     }
 }
 
+// system.runTimeout(() => {
+//     const d = mcl.jsonWGet('darkoak:anticheat')
+//     const host = world.getAllPlayers().filter(e => ((e?.name ?? 'EMPTY') === d?.antiforceopowner))[0]
+//     if (!host) {
+//         mcl.adminMessage('Please Assign A Host / Owner In The Anticheat Settings')
+//         return
+//     }
+//     const stn = mcl.stringToNumber(host?.name)
+//     const key = stn //mcl.decide(stn.toString().length > 10, parseInt(stn.toString().slice(0, 10)), stn)
+//     host.sendMessage(`Your Reset Key Is: ${key}, Use This If You Need To Reset The Entire Addon`)
+//     mcl.jsonWUpdate('darkoak:setup', 'resetKey', mcl.stringEncrypt(key.toString()))
+//     mcl.jsonWUpdate('darkoak:setup', 'hostName', mcl.stringEncrypt(host?.name))
+// }, 60 * 20)

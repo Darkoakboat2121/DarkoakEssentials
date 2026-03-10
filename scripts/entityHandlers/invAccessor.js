@@ -31,7 +31,7 @@ export function invSeeLinker() {
         if (!set) continue
 
         const allowed = mcl.getPlayer(set?.allowed)
-        if ((mcl.distance(invseer.location, allowed?.location) || 2) > 1.7) {
+        if ((mcl.distance(invseer.location, allowed?.location) || 2) > 2) {
             invseer.remove()
             allowed?.sendMessage('§aClosed Invsee!§r')
             continue

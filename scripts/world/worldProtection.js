@@ -1,7 +1,7 @@
-import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent } from "@minecraft/server"
+import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, PlayerInteractWithEntityBeforeEvent, BlockTypes } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
-import { worldProtectionBadItems, worldProtectionWater } from "../data/arrays"
+import { allPlacerBuckets, worldProtectionBadItems, worldProtectionWater } from "../data/arrays"
 import { antiFastPlace } from "./anticheat"
 
 
@@ -61,26 +61,43 @@ export function placeBreakProtection(evd) {
             }
 
             const isInteract = (evd instanceof PlayerInteractWithBlockBeforeEvent)
+            const isPlacing = (evd instanceof PlayerPlaceBlockBeforeEvent)
+            // if thing to "interact" is water or lava bucket, 
+
             const allowed = mcl.allowCheck(block)
             if ((evd instanceof PlayerBreakBlockBeforeEvent)) {
-                if (area?.break) return
-                if (area?.breakallow && allowed) return
+                if (area?.break || (area?.breakallow && allowed)) return
+                cancelEvent()
+                return
             }
-            if ((evd instanceof PlayerPlaceBlockBeforeEvent)) {
-                if (area?.build) return
-                if (area?.buildallow && allowed) return
+            if (isPlacing) {
+                if (area?.build || (area?.buildallow && allowed)) return
+                cancelEvent()
+                return
+                // const ploc = evd.player.location
+                // //if (Math.floor(ploc.x) === evd.block.x && Math.floor(ploc.y - 1) === evd.block.y && Math.floor(ploc.z) === evd.block.z) 
+                // 
             }
             if (isInteract) {
-                if (area?.interactblocks) return
-                if (area?.interactblocksallow && allowed) return
+                if (!(area?.build || (area?.buildallow && allowed)) && allPlacerBuckets.includes(evd?.itemStack?.typeId)) {
+                    cancelEvent()
+                    return
+                }
+                if (area?.interactblocks || (area?.interactblocksallow && allowed)) return
+                if (evd?.itemStack && BlockTypes.get(evd?.itemStack.typeId)) {
+                    return
+                }
+                cancelEvent()
+                return
             }
-            evd.cancel = true
-            if (isInteract) {
-                if (mcl.tickTimer(15)) evd.player.sendMessage('§cThis Land Is Protected!§r')
-            } else {
-                evd.player.sendMessage('§cThis Land Is Protected!§r')
+            function cancelEvent() {
+                if (isInteract) {
+                    if (evd.isFirstEvent) evd.player.sendMessage('§cThis Land Is Protected!§r')
+                } else {
+                    evd.player.sendMessage('§cThis Land Is Protected!§r')
+                }
+                evd.cancel = true
             }
-            return
         }
     }
 }
@@ -92,6 +109,7 @@ export function placeBreakLandclaim(evd) {
     if (mcl.isCreating(evd.player)) return
 
     let places = mcl.listGetValues('darkoak:landclaim:')
+    if (!places || places?.length === 0) return
     for (let index = 0; index < places.length; index++) {
         /**
          * @type {{ p1: { x: number, z: number }, p2: { x: number, z: number }, owner: "dark", players: ["", ""]}}

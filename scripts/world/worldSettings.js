@@ -168,7 +168,7 @@ export function welcomeMessage(evd) {
     const d = mcl.jsonWGet('darkoak:welcome')
     if (!d) return
     if (evd instanceof PlayerSpawnAfterEvent) {
-        if (!evd.initialSpawn) return
+        if (!evd.initialSpawn || !evd.player.isValid) return
         system.runTimeout(() => {
             if (d?.welcomeS) {
                 world.sendMessage(arrays.replacer(evd.player, d?.welcome || ''))

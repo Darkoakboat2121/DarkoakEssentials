@@ -94,15 +94,86 @@ export class mcl {
     /**Converts a string to a number by getting each characters unicode number and adding them together
      * @param {string} string 
      */
-    static stringToNumber(string) {
+    static stringToNumber(string, sequenced = false) {
         if (!string || string.length < 1) return 0
-        let characters = string.split('')
-        let num = 0
+        if (!sequenced) {
+            let characters = string.split('')
+            let num = 0
 
-        for (let index = 0; index < characters.length; index++) {
-            num += string.charCodeAt(index)
+            for (let index = 0; index < characters.length; index++) {
+                num += string.charCodeAt(index)
+            }
+            return num
+        } else {
+            let num = ''
+            let chars = string.split('')
+            for (let index = 0; index < chars.length; index++) {
+                num += string.charCodeAt(index).toString()
+            }
+            return parseInt(num)
         }
-        return num
+    }
+
+    /**
+     * @param {string} string 
+     */
+    static stringEncrypt(string, decrypt = false) {
+        const key = 187
+        let newString = []
+        if (decrypt) {
+            for (let index = 0; index < string.length; index++) {
+                let char = string.charCodeAt(index)
+                char = (char - key) % 65535
+                newString.push(char)
+            }
+            return String.fromCharCode(...newString)
+        } else {
+            for (let index = 0; index < string.length; index++) {
+                let char = string.charCodeAt(index)
+                char = (char + key) % 65535
+                newString.push(char)
+            }
+            return String.fromCharCode(...newString)
+        }
+    }
+
+    /**
+     * @param {string | {x: number, y: number, z?: number}} string 
+     * @param {boolean} reverse 
+     */
+    static stringToLoc(string, float = false) {
+        if (typeof string === 'object') {
+            return `${string?.x} ${string?.y} ${string?.z}`.replaceAll('  ', ' ')
+        } else {
+            const parts = string.split(' ')
+            if (parts.length != 3) {
+                if (float) return {
+                    x: parseFloat(parts[0]),
+                    y: parseFloat(parts[1]),
+                }
+                return {
+                    x: parseInt(parts[0]),
+                    y: parseInt(parts[1]),
+                }
+            }
+            if (float) return {
+                x: parseFloat(parts[0]),
+                y: parseFloat(parts[1]),
+                z: parseFloat(parts[2]),
+            }
+            return {
+                x: parseInt(parts[0]),
+                y: parseInt(parts[1]),
+                z: parseInt(parts[2]),
+            }
+        }
+    }
+
+    /**
+     * @param {string} string 
+     */
+    static regexCleaner(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     }
 
     /**Deletes '§' from strings and the following letter, and converts common replacements
@@ -1138,7 +1209,7 @@ export class mcl {
         return {
             clientSystemInfo: player?.clientSystemInfo,
             dimension: {
-                heightRange: player?.dimension.heightRange,
+                heightRange: player?.dimension?.heightRange,
                 id: player?.dimension.id
             },
             xpEarnedAtCurrentLevel: player?.xpEarnedAtCurrentLevel,
@@ -1146,8 +1217,8 @@ export class mcl {
             id: player?.id,
             inputInfo: {
                 getMovementVector: player?.inputInfo.getMovementVector(),
-                lastInputModeUsed: player?.inputInfo.lastInputModeUsed,
-                touchOnlyAffectsHotbar: player?.inputInfo.touchOnlyAffectsHotbar
+                lastInputModeUsed: player?.inputInfo?.lastInputModeUsed,
+                touchOnlyAffectsHotbar: player?.inputInfo?.touchOnlyAffectsHotbar
             },
             isClimbing: player?.isClimbing,
             typeId: player?.typeId,
@@ -1311,10 +1382,11 @@ export class mcl {
      */
     static allowCheck(block) {
         try {
+            const dim = block.dimension
             for (let index = block.y; index > -64; index--) {
                 const loc = block.location
                 try {
-                    if (block.dimension.getBlock({ x: loc.x, y: index, z: loc.z })?.typeId === 'minecraft:allow') return true
+                    if (dim.getBlock({ x: loc.x, y: index, z: loc.z })?.typeId === 'minecraft:allow') return true
                 } catch {
                     continue
                 }
@@ -1616,7 +1688,7 @@ export class mcl {
      * @param {{x: number, y: number, z: number}} loc 
      * @param {(evd: TickingArea) => {}} callback 
      */
-    static loader(loc, callback) {
+    static loader(loc, dimension, callback) {
         const id = `darkoak:loader:${mcl.timeUuid()}`
         if (world.tickingAreaManager.hasTickingArea(id)) {
             world.tickingAreaManager.removeTickingArea(id)
@@ -1631,7 +1703,8 @@ export class mcl {
                 x: loc.x + 10,
                 y: loc.y + 10,
                 z: loc.z + 10,
-            }
+            },
+            dimension: dimension
         }).then((evd) => {
             callback(evd)
             world.tickingAreaManager.removeTickingArea(id)
@@ -1652,6 +1725,27 @@ export class mcl {
             system.runTimeout(() => {
                 callback(e, index)
             }, Math.floor(step * index / 50))
+        }
+    }
+
+    /**Spreads an arrays content along a timeframe and provides a callback for each element, this sets the next timeout in the timeout
+     * @param {any[]} array The array to spread
+     * @param {number} totalTime In seconds
+     * @param {(e?: any, i: number) => {}} callback What to do to each element
+     * @deprecated
+     */
+    static arraySpreader2(array, totalTime, callback) {
+        const interval = totalTime * 1000
+        const step = array.length > 0 ? interval / array.length : interval
+
+        for (let index = 0; index < array.length; index++) {
+            const e = array[index]
+            system.waitTicks(step * index / 50).then(() => {
+                callback(e, index)
+            })
+            // system.runTimeout(() => {
+            //     
+            // }, Math.floor())
         }
     }
 
@@ -1676,6 +1770,27 @@ export class mcl {
                 }
             }
         }
+    }
+
+    /**
+     * @param {{x: number, y: number, z: number}} loc1 
+     * @param {{x: number, y: number, z: number}} loc2 
+     */
+    static locationMinMax(loc1, loc2) {
+        const minX = Math.min(loc1?.x, loc2?.x)
+        const maxX = Math.max(loc1?.x, loc2?.x)
+        const minY = Math.min(loc1?.y, loc2?.y)
+        const maxY = Math.max(loc1?.y, loc2?.y)
+        const minZ = Math.min(loc1?.z, loc2?.z)
+        const maxZ = Math.max(loc1?.z, loc2?.z)
+        return {
+            minX, minY, minZ,
+            maxX, maxY, maxZ,
+        }
+    }
+
+    static isOwner(player) {
+        return player.hasTag('darkoak:owner')
     }
 
     /**Removes a player from the world, returns whether it worked

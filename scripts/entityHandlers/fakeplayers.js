@@ -1,7 +1,8 @@
-import { world, system, StartupEvent, CommandPermissionLevel, CustomCommandParamType, GameMode, ItemStack } from "@minecraft/server"
+import { world, system, StartupEvent, CommandPermissionLevel, CustomCommandParamType, GameMode, ItemStack, PlayerPlaceBlockBeforeEvent, PlayerInteractWithBlockBeforeEvent, PlayerBreakBlockBeforeEvent, Player, EntityAttachPoint, PlayerInteractWithEntityBeforeEvent } from "@minecraft/server"
 import { mcl } from "../logic"
 import { getPlayerSkin, SimulatedPlayer, spawnSimulatedPlayer } from "@minecraft/server-gametest"
 import { log } from "../world/anticheat"
+import { DebugBox, debugDrawer } from "@minecraft/debug-utilities"
 
 
 const combatDistance = 5
@@ -82,7 +83,7 @@ export function combatManager(player) {
  * @param {StartupEvent} evd 
  */
 export function fakePlayerCommand(evd) {
-    evd.customCommandRegistry.registerEnum('darkoak:fakeplayer', ['chat(string)', 'spawn(none)', 'skin(player_name)', 'disconnect(none)', 'location_move(coords)', 'location_navigate(coords)', 'interact_block(coords)', 'attack(none)', 'look_location(coords)', 'respawn(bool|none)', 'combat(player_name|\'closest\')', 'follow(player_name|\'closest\')', 'jump(none|number)', 'command(string)', 'interact(none)', 'interact_entity(coords)', 'interact_entities(coords)'])
+    evd.customCommandRegistry.registerEnum('darkoak:fakeplayer', ['chat(string)', 'spawn(none)', 'skin(player_name)', 'disconnect(none)', 'location_move(coords)', 'location_navigate(coords)', 'interact_block(coords)', 'attack(none)', 'look_location(coords)', 'respawn(bool|none)', 'combat(player_name|\'closest\')', 'follow(player_name|\'closest\')', 'jump(none|number)', 'command(string)', 'interact(none)', 'interact_entity(coords)', 'interact_entities(coords)', 'control(player_name)'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:fakeplayer',
         description: 'Manages Fake Players',
@@ -104,7 +105,7 @@ export function fakePlayerCommand(evd) {
             }
         ]
     }, (evd, name, action, todo) => {
-        const source = evd.initiator || evd.sourceBlock || evd.sourceEntity
+        const source = evd?.initiator || evd?.sourceBlock || evd?.sourceEntity
         const loc = source.location
 
         if (action === 'spawn(none)') {
@@ -153,6 +154,13 @@ export function fakePlayerCommand(evd) {
                     break
                 }
                 case 'disconnect(none)':
+                    const cam = mcl.jsonPGet(sim, 'darkoak:sim')
+                    const reset = mcl.getPlayer(cam?.nameController)
+                    if (reset) {
+                        reset.camera.clear()
+                        mcl.pRemove(reset, 'darkoak:fakeplayercontrol')
+                        console.error('ran')
+                    }
                     sim.disconnect()
                     break
                 case 'location_move(coords)':
@@ -216,7 +224,136 @@ export function fakePlayerCommand(evd) {
                     }
                     break
                 }
+                case 'control(player_name)': {
+                    const toControl = mcl.getPlayer(todo)
+                    if (toControl) {
+                        mcl.jsonPSet(toControl, 'darkoak:fakeplayercontrol', {
+                            nameController: toControl.name,
+                            nameFaker: sim.name,
+                        })
+                        mcl.jsonPSet(sim, 'darkoak:sim', {
+                            nameController: toControl.name,
+                            nameFaker: sim.name,
+                        })
+                    }
+                    break
+                }
             }
         })
     })
+}
+
+/**@type {Map<string, {}>} */
+let actionMap = new Map()
+
+/**
+ * @param {PlayerPlaceBlockBeforeEvent | PlayerInteractWithBlockBeforeEvent | PlayerBreakBlockBeforeEvent | PlayerInteractWithEntityBeforeEvent} evd 
+ */
+export function controlFakeplayerPrevent(evd) {
+    const d = mcl.jsonPGet(evd.player, 'darkoak:fakeplayercontrol')
+    if (d && d?.nameController === evd.player.name) {
+        let type = ''
+        switch (true) {
+            case (evd instanceof PlayerBreakBlockBeforeEvent): {
+                type = 'break'
+                break
+            }
+            case (evd instanceof PlayerInteractWithBlockBeforeEvent): {
+                type = 'interactblock'
+                break
+            }
+            case (evd instanceof PlayerPlaceBlockBeforeEvent): {
+                type = 'place'
+                break
+            }
+            case (evd instanceof PlayerInteractWithEntityBeforeEvent): {
+                type = 'interactentity'
+                break
+            }
+        }
+        actionMap.set(evd.player.name, {
+            type: type
+        })
+        evd.cancel = true
+    }
+}
+
+/**
+ * @param {Player} player 
+ */
+export function controlFakeplayer(player) {
+    const d = mcl.jsonPGet(player, 'darkoak:fakeplayercontrol')
+    if (!d || d?.nameController != player.name) return
+    /**@type {SimulatedPlayer} */
+    const sim = mcl.getPlayer(d?.nameFaker)
+
+    //sim.setBodyRotation(player.getRotation().y)
+
+    player.addEffect('minecraft:slowness', 5, {
+        amplifier: 255,
+        showParticles: false
+    })
+    const movement = player.inputInfo.getMovementVector()
+    sim.moveRelative(movement.x, movement.y, 1)
+    if (player.isJumping) sim.jump()
+    if (player.isSneaking) sim.isSneaking = true
+
+
+    const hl = sim.getHeadLocation()
+
+    const vd = player.getViewDirection()
+    sim.lookAtLocation({
+        x: hl.x + vd.x,
+        y: hl.y + vd.y,
+        z: hl.z + vd.z,
+    })
+
+    try {
+        sim.respawn()
+    } catch {
+
+    }
+
+    const l = {
+        x: hl.x,
+        y: hl.y,
+        z: hl.z,
+    }
+    player.camera.setCamera('minecraft:free', {
+        location: l,
+        rotation: sim.headRotation
+    })
+
+    const r = sim.getBlockFromViewDirection({
+        maxDistance: 7
+    })
+    const bl = r?.block
+    if (bl) {
+        const t = new DebugBox({
+            dimension: bl.dimension,
+            x: bl.x,
+            y: bl.y,
+            z: bl.z,
+        })
+        t.bound = {
+            x: 1, y: 1, z: 1
+        }
+        t.timeLeft = 0.1
+        t.visibleTo = [player]
+        debugDrawer.addShape(t, bl.dimension)
+    }
+
+    const action = actionMap.get(player.name)
+    if (!action) return
+    switch (action.type) {
+        case 'break': {
+            if (bl) sim.breakBlock(bl.location)
+            actionMap.delete(player.name)
+            break
+        }
+        case 'interactblock': {
+            sim.interact()
+            break
+        }
+    }
 }

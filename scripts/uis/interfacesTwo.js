@@ -10,6 +10,8 @@ import * as modal from "./modalUI"
 import { chatSystem } from "../chat"
 import { crashSet } from "../entityHandlers/players"
 import { renderTexts } from "../miscellaneous/floatingtextv2"
+import { playerLog } from "../data/defaults"
+import { pfidMap } from "../miscellaneous/prejoins"
 
 
 /**UI for data editor item
@@ -420,12 +422,13 @@ export function anticheatMain(player) {
 }
 
 
-export function anticheatSettings(player) {
+export function anticheatSettings(player, message = '') {
     let f = new ModalFormData()
     bui.title(f, 'Anticheat Settings')
 
     const d = mcl.jsonWGet('darkoak:anticheat')
 
+    bui.label(f, message)
     bui.label(f, '§cRemember To Always Verify If The Player Is Actually Hacking. Anticheat Always Has A Chance Of False Positives.§r')
 
     bui.toggle(f, 'Pre-bans', d?.prebans)
@@ -476,7 +479,7 @@ export function anticheatSettings(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Anti-gamemode-switcher', d?.antigamemode)
-    bui.label(f, 'Prevents Non-Admins From Changing Gamemodes §c(Buggy)§r')
+    bui.label(f, 'Prevents Non-Admins From Changing Gamemodes. Use The Tag "darkoak:canswitch" To Allow The Player To Switch Gamemodes')
 
     bui.divider(f)
 
@@ -572,8 +575,7 @@ export function anticheatSettings(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Anti-Streamer-Mode', d?.antistreamermode)
-    bui.label(f, 'Replaces Certain Characters With Mostly Identical Characters\nUsed To Bypass Streamer Mode, A Hack Used To Hide The Hackers Username So They Can Stream Without Worry')
-    bui.label(f, '§cMay Make Chat Look Weird!§r')
+    bui.label(f, 'Used To Bypass Streamer Mode, A Hack Used To Hide The Hackers Username So They Can Stream Without Worry')
 
     bui.divider(f)
 
@@ -668,8 +670,9 @@ export function anticheatSettings(player) {
     bui.divider(f)
 
     bui.toggle(f, 'Anti-Force-OP', d?.antiforceop)
-    bui.label(f, 'Forces Everyone Except Allowed Names To Have Member Permissions For Commands')
-    bui.textField(f, 'Allowed Players:', 'Example: Darkoakboat2121, Wertwert3612', (d?.antiforceopallowed ?? player?.name), 'Seperate Names Using Commas')
+    bui.label(f, 'Forces Everyone Except Allowed Names To Have Member Permissions For Commands.\n§4§lSeperate Names Using Commas!!!§r')
+    bui.textField(f, '§a§lOwner / Host Name:', `Example: ${player.name ?? 'EMPTY'}`, (d?.antiforceopowner ?? mcl.decide(mcl.isHost(player?.name), player?.name, mcl.getHost(player)?.name ?? '')))
+    bui.textField(f, '§t§lAllowed Players:', 'Example: Darkoakboat2121, Wertwert3612', (d?.antiforceopallowed ?? player?.name ?? ''), 'Seperate Names Using Commas')
 
     bui.divider(f)
 
@@ -706,20 +709,38 @@ export function anticheatSettings(player) {
     bui.label(f, 'Checks If Player Is Moving Too Fast')
     bui.slider(f, 'Speed Limit', 10, 40, d?.antispeedsense, 1)
 
-    bui.divider(f)// movement hacks --------/\
+    bui.divider(f) // movement hacks --------/\
+
+    bui.header(f, 'World')
+
+    bui.toggle(f, 'Anti-Ghost-Interact', d?.antighostinteract)
+    bui.label(f, 'Prevents Players From Interacting With Blocks Through Walls. Does Not Log')
 
     f.show(player).then((evd) => {
         if (evd.canceled || evd.cancelationReason) return
         const e = bui.formValues(evd)
         let i = 0
+
+        //antiforceopallowed checking, dont touch - P
+        // if (e[56]) {
+        //     const valid = world.getAllPlayers().map(e => e?.name ?? 'EMPTY')
+        //     /**@type {string} */
+        //     const allowed = e[56]?.split(',').map(e => e.trim()).filter(name => valid.includes(name)).join(',')
+        //     if (!allowed) {
+        //         anticheatSettings(player, '§cYou Set The Anti-Force-OP Names Incorrectly. You May Only Set Online Players.§r')
+        //         return
+        //     }
+        // }
+
+
         mcl.jsonWSet('darkoak:anticheat', {
-            prebans: e[i++],
-            antinuker: e[i++],
-            antinukersense: e[i++],
-            antifastplace: e[i++],
-            antifastplacesense: e[i++],
-            antispam: e[i++],
-            antispam2: e[i++],
+            prebans: e[i++], // 1
+            antinuker: e[i++], // 2
+            antinukersense: e[i++], // 3
+            antifastplace: e[i++], // 4
+            antifastplacesense: e[i++], // 5
+            antispam: e[i++], // 6
+            antispam2: e[i++], // 7
             antispam2sense: e[i++],
             antispam3: e[i++],
             antichatflood: e[i++],
@@ -769,6 +790,7 @@ export function anticheatSettings(player) {
             antibot: e[i++],
             subsession: e[i++],
             antiforceop: e[i++],
+            antiforceopowner: e[i++],
             antiforceopallowed: e[i++],
 
             //combat hacks
@@ -1623,6 +1645,7 @@ export function scriptSettings(player) {
 
     bui.toggle(f, 'Cancel Watchdog Terminating', d?.cancelWatchdog, 'If Enabled, Attempts To Cancel A Scripting Crash')
     bui.toggle(f, 'Log Data To Console', d?.datalog, 'Logs Data Changes To The Console')
+    bui.toggle(f, 'Collect Player Data?', d?.collectPlayers)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -1656,6 +1679,7 @@ export function scriptSettings(player) {
 
             cancelWatchdog: e[i++], // not working
             datalog: e[i++], // not working
+            collectPlayers: e[i++],
         })
     }).catch()
 }
@@ -1895,15 +1919,21 @@ export function floatingTextRemoveUI(player) {
 /**
  * @param {Player} player 
  */
-export function mobGenAddUI(player) {
+export function mobGenAddUI(player, mod) {
     let f = new ModalFormData()
     bui.title(f, 'Add Mob Gen')
 
-    bui.textField(f, 'Mob Type:', 'Example: minecraft:zombie')
-    bui.slider(f, 'Spawn Interval', 0, 10, 1, 1, 'Minutes Inbetween Spawns')
-    bui.slider(f, 'Max Number Of Mobs', 1, 10, 1, 1, 'Mobs Won\'t Spawn If There Is More Than This Amount Nearby')
+    let m = (mod?.value) ? JSON.parse(mod?.value) : {}
+    const loc = player.location
 
-    bui.label(f, 'Spawns At Your Present Location!')
+    bui.textField(f, 'Mob Type:', 'Example: minecraft:zombie', m?.mob ?? '')
+    bui.textField(f, 'Location To Spawn:', 'Example: 100 68 -94', m?.loc ?? `${parseInt(loc.x)} ${parseInt(loc.y)} ${parseInt(loc.z)}`)
+    bui.slider(f, 'Spawn Interval', 0, 10, m?.interval ?? 1, 1, 'Minutes Inbetween Spawns')
+    bui.slider(f, 'Max Number Of Mobs', 1, 10, m?.max ?? 1, 1, 'Mobs Won\'t Spawn If There Is More Than This Amount Nearby')
+    bui.toggle(f, 'Summon Max Amount At Once?', m?.maxsummon ?? false)
+
+    bui.toggle(f, 'Keep Mobs Nearby?', m?.keepnearby ?? true, 'If Enabled, Will Force Summoned Mobs To Stay Within The Spawner Bounds')
+    bui.slider(f, 'Bounds', 5, 30, m?.bounds ?? 10, 1, 'If Keep Mobs Nearby Is Enabled, Keeps Mobs Within This Distance To The Center')
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -1912,12 +1942,17 @@ export function mobGenAddUI(player) {
         }
         const e = bui.formValues(evd)
         let i = 0
-        mcl.jsonWSet(`darkoak:mobgen:${mcl.timeUuid()}`, {
+        const id = m?.id ?? `darkoak:mobgen:${mcl.timeUuid()}`
+        mcl.jsonWSet(id, {
             mob: e[i++],
-            loc: player.location,
+            loc: e[i++],
             interval: e[i++],
             max: e[i++],
+            maxsummon: e[i++],
+            keepnearby: e[i++],
+            bounds: e[i++],
             dimension: player.dimension.id,
+            id: id,
         })
     }).catch()
 }
@@ -1929,7 +1964,7 @@ export function mobGenRemoveUI(player) {
     const gens = mcl.listGetBoth('darkoak:mobgen:')
     for (let index = 0; index < gens.length; index++) {
         const gen = JSON.parse(gens[index].value)
-        bui.label(f, `Location: ${gen?.loc?.x} ${gen?.loc?.y} ${gen?.loc?.z}, Dimension: ${gen?.dimension}`)
+        bui.label(f, `Location: ${gen?.loc}, Dimension: ${gen?.dimension}`)
         bui.label(f, `Mob: ${gen?.mob}, Interval: ${gen?.interval}, Max Amount: ${gen?.max}`)
         bui.button(f, 'Delete?')
         bui.divider(f)
@@ -1951,7 +1986,7 @@ export function mobGenModifyUI(player) {
     const gens = mcl.listGetBoth('darkoak:mobgen:')
     for (let index = 0; index < gens.length; index++) {
         const gen = JSON.parse(gens[index].value)
-        bui.label(f, `Location: ${gen?.loc?.x} ${gen?.loc?.y} ${gen?.loc?.z}, Dimension: ${gen?.dimension}`)
+        bui.label(f, `Location: ${gen?.loc}, Dimension: ${gen?.dimension}`)
         bui.label(f, `Mob: ${gen?.mob}, Interval: ${gen?.interval}, Max Amount: ${gen?.max}`)
         bui.button(f, 'Modify?')
         bui.divider(f)
@@ -1962,7 +1997,7 @@ export function mobGenModifyUI(player) {
             genMainUI(player)
             return
         }
-        mobGenModifyNotPickerUI(player, gens[evd.selection])
+        mobGenAddUI(player, gens[evd.selection])
     })
 }
 
@@ -2251,17 +2286,25 @@ export function crashPlayerUI(player) {
 
     const u = bui.namePicker(f, undefined, 'Player:')
 
+    bui.dropdown(f, 'Type:', ['slow', 'chicken', 'instant'])
+    bui.label(f, 'Slow: Guarantee Crashing A Real Player, Does Not Work On Bots.\nChicken: Disconnect & Freeze Any Type Of Player, Only Use If Chickens Are Not Killed By Any Commands\nInstant: Disconnect Any Type Of Player Instantly')
+
     f.show(player).then((evd) => {
         if (evd.canceled) {
             interfaces.playerPunishmentsMainUI(player)
             return
         }
-        const p = mcl.getPlayer(u[bui.formValues(evd)[0]])
+        const e = bui.formValues(evd)
+        const p = mcl.getPlayer(u[e[0]])
+        if (!p) return
         if (mcl.isDOBAdmin(p)) {
             mcl.adminMessage(`${player.name} Attempted To Crash Admin: ${p.name}`)
             return
         }
-        crashSet.add(p.name)
+        crashSet.add({
+            name: p?.name,
+            type: e[1]
+        })
     })
 }
 
@@ -3889,6 +3932,104 @@ export function dynamicLightingSettings(player) {
             lightlevel: e[i++],
         })
     })
+}
+
+/**
+ * @param {Player} player 
+ */
+export function altFinderUI(player) {
+    let f = new ModalFormData()
+    bui.title(f, 'Alt Finder')
+
+    bui.label(f, 'This Scans Through All Players That Have Joined This Session And Finds Possible Alts')
+
+    bui.textField(f, 'Player Name:', 'Example: Darkoakboat2121')
+
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    bui.toggle(f, 'Retrieve From Data Instead Of Memory?', d?.collectPlayers)
+
+    f.show(player).then((evd) => {
+        if (evd.canceled) {
+            return
+        }
+
+        const e = bui.formValues(evd)
+
+        let tg
+        if (!e[1]) {
+            tg = playerLog.get(e[0])
+        } else {
+            tg = mcl.jsonWGet(`darkoak:player:${e[0]}`)
+        }
+
+        let info = {
+            clientSystemInfo: tg?.clientSystemInfo,
+            graphicsMode: tg?.graphicsMode,
+            inputInfo: tg?.inputInfo,
+            pfid: pfidMap?.get(tg?.name)
+        }
+
+        let list = []
+
+        let players
+        if (!e[1]) {
+            players = Array.from(playerLog)
+        } else {
+            players = mcl.listGetValues('darkoak:player:').map(e => JSON.parse(e))
+        }
+        for (let index = 0; index < players.length; index++) {
+            const p = players[index][1]
+            const pfid = pfidMap?.get(p?.name)
+            const score = similar(p, info, pfid)
+            list.push({
+                name: p?.name,
+                clientSystemInfo: p?.clientSystemInfo,
+                graphicsMode: p?.graphicsMode,
+                lastInputModeUsed: p?.inputInfo?.lastInputModeUsed,
+                pfid: pfid,
+                score: score
+            })
+        }
+
+        list.sort((a, b) => b.score - a.score)
+
+        altFinderList(player, list.slice(0, 10), info)
+
+        /**
+         * @param {Player} a 
+         * @param {Player} b 
+         */
+        function similar(a, b, pfid) {
+            let score = 0
+            if (a?.clientSystemInfo?.maxRenderDistance === b?.clientSystemInfo?.maxRenderDistance) score++
+            if (a?.clientSystemInfo?.memoryTier === b?.clientSystemInfo?.memoryTier) score++
+            if (a?.clientSystemInfo?.platformType === b?.clientSystemInfo?.platformType) score++
+            if (a?.graphicsMode === b?.graphicsMode) score++
+            if (a?.inputInfo?.lastInputModeUsed === b?.inputInfo?.lastInputModeUsed) score++
+            if (a?.inputInfo?.touchOnlyAffectsHotbar === b?.inputInfo?.touchOnlyAffectsHotbar) score++
+            if (pfid === b?.pfid) score++
+            return score
+        }
+    })
+}
+
+/**
+ * 
+ * @param {Player} player 
+ * @param {Player[]} list 
+ * @param {Player} info 
+ */
+export function altFinderList(player, list, info) {
+    let f = new ActionFormData()
+    bui.title(f, 'Possible Alt List:')
+
+    for (let index = 0; index < list.length; index++) {
+        const l = list[index]
+        bui.label(f, `Player: ${l?.name}, Matching Amount: ${l.score}/7\nListed Player/Player To Match Against\nMax Render Distance: ${l?.clientSystemInfo?.maxRenderDistance}/${info?.clientSystemInfo?.maxRenderDistance}\nMemory Tier: ${l?.clientSystemInfo?.memoryTier}/${info?.clientSystemInfo?.memoryTier}\nPlatform Type: ${l?.clientSystemInfo?.platformType}/${info?.clientSystemInfo?.platformType}\nGraphics Mode: ${l?.graphicsMode}/${info?.graphicsMode}\nInput: ${l?.inputInfo?.lastInputModeUsed}/${info?.inputInfo?.lastInputModeUsed}\nTouch Hotbar: ${l?.inputInfo?.touchOnlyAffectsHotbar}/${info?.inputInfo?.touchOnlyAffectsHotbar}\nPFID Matches: ${(l?.pfid === info?.pfid)}`)
+        bui.divider(f)
+    }
+
+    f.show(player)
 }
 
 

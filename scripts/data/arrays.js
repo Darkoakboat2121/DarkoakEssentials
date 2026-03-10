@@ -192,6 +192,11 @@ export const preBannedList = [
     'EndingAce8561',
     // 'KKThaDestroyer1', //Basic (i have impart the powerful hacks in bedrock it cost 30 dollars), darko note: i cant believe someone would pay for a client
     'Qaz is bored', //Basic
+    'creed1231', //Racism
+    'ILikeGames2013', //Racism
+    'JoinLumine', //Basic
+    'Lovepigs1211', //Racism (words for both black and white)
+    'S0lareFlares', //OP exploit
 ]
 
 export const prebansSet = new Set(preBannedList)
@@ -264,12 +269,24 @@ export const worldProtectionWater = [
     'minecraft:tropical_fish_bucket',
 ]
 
+export const allPlacerBuckets = [
+    'minecraft:water_bucket',
+    'minecraft:axolotl_bucket',
+    'minecraft:cod_bucket',
+    'minecraft:pufferfish_bucket',
+    'minecraft:salmon_bucket',
+    'minecraft:tadpole_bucket',
+    'minecraft:tropical_fish_bucket',
+    'minecraft:lava_bucket',
+    'minecraft:powder_snow_bucket',
+]
+
 export const hackedItemsVanilla = [
     'minecraft:client_request_placeholder_block',
     'minecraft:moving_block',
     'minecraft:unknown',
     'minecraft:info_update',
-    'minecraft:reserved6'
+    'minecraft:reserved6',
 ]
 
 /**Holds special rank images in F1 glyph */
@@ -460,6 +477,7 @@ export function replacer(d, text) {
                 .replaceAll('#perm#', d.commandPermissionLevel.toString())
                 .replaceAll('#slot#', d.selectedSlotIndex.toString())
                 .replaceAll('#cps#', `${(d.getDynamicProperty('darkoak:ac:cps') || '0').toString()}`)
+                .replaceAll('#gamemode#', d.getGameMode())
         }
 
         f = f
@@ -520,6 +538,7 @@ export function replacer(d, text) {
         .replaceAll('#players#', ap.length.toString())
         .replaceAll('#playerlist#', ap.map(e => e.name).join())
         .replaceAll('#dimension#', d?.dimension?.id)
+        .replaceAll('#ticks#', system.currentTick.toString())
         .replaceAll('§?', colorCodes[mcl.randomNumber(colorCodes.length)])
         .replaceAll('\\n', '\n')
 
@@ -637,7 +656,8 @@ export function replacer(d, text) {
                 let result = Function(`return ${inside}`)
                 f = f.replace(`#(${inside})#`, result)
             }
-        } catch {
+        } catch (e) {
+            mcl.debugLog('math replacer', String(e))
             break
         }
     }
@@ -837,7 +857,19 @@ export const emojis = [
     { m: ':cat2:', e: '/ᐠ｡ꞈ｡ᐟ\\' },
     { m: ':nerd:', e: '(⌐■_■)' },
     { m: ':nerd2:', e: '(⌐◕‿◕)' },
+    { m: ':kawaii:', e: '(✿◕‿◕✿)' },
+    { m: ':angwy:', e: 'ヾ(≧へ≦)〃' },
+    { m: ':star:', e: '( •̀ ω •́ )✧' },
+    { m: ':ghost:', e: '༼ つ ◕_◕ ༽つ' },
+    { m: ':highfive:', e: '(〃￣︶￣)人(￣︶￣〃)' },
+    { m: ':huh:', e: '(⊙_⊙)？' },
+    { m: ':bruh:', e: '(ㆆ_ㆆ)' },
+    { m: ':uppies:', e: '＼(ﾟｰﾟ＼)' },
+    { m: ':BRUH:', e: 'ＢＲＵＨ' },
+
+    //special mentions
     { m: ':format:', e: '§' },
+    //{ m: '\\n', e: '\n' }
 ]
 
 export const spanishToEnglish = [
@@ -1099,6 +1131,7 @@ export function SSColorIndex(def) {
     return index
 }
 
+/**A list of symbols that are illegal in modern xbox usernames */
 export const susNames = [
     '.gg/',
     'LumineProxy',
@@ -1114,8 +1147,62 @@ export const susNames = [
     '<',
     '>',
     '..',
+    '!',
+    '$',
+    '%',
+    '(',
+    ')',
+    '*',
+    ',',
+    '.',
+    '/',
+    ':', 
+    ';',
+    '?',
+    '@',
+    '[',
+    '\\',
+    ']',
+    '^',
+    '`',
+    '{',
+    '|',
+    '}',
+    '~',
+    '�',
+    '¡',
+    '¢',
+    '£',
+    '¤',
+    '¥',
+    '¦',
+    '¨',
+    '©',
+    'ª',
+    '«',
+    '¬',
+    '�',
+    '®',
+    '¯',
+    '°',
+    '±',
+    '²',
+    '³',
+    '´',
+    'μ',
+    '¶',
+    '·',
+    '¸',
+    '¹',
+    'º',
+    '»',
+    '¼',
+    '½',
+    '¾',
+    '¿',
 ]
 export const susNamesSet = new Set(susNames)
+//export const susNamesRegex = new RegExp(susNames.map(e => mcl.regexCleaner(e)).join('|'), 'i')
 
 export const devs = [
     'Darkoakboat2121',

@@ -5,7 +5,7 @@ import { mcl } from "../logic"
 import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, invSeeUI, itemGiverUI, itemSettingsUI, lagClearSettingsUI, messageLogUI, mistyBio, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, plotSettingsUI, pressionUI, redeemGiftcodeUI, removeRankUI, rolesMainUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 import { transferPlayer } from "@minecraft/server-admin"
-import { playerLog } from "../data/defaults"
+import { cd, playerLog } from "../data/defaults"
 
 // This file holds all the functions containing UI
 
@@ -1397,6 +1397,7 @@ export function dataDeleterUI(player, search = '', searchVal = '') {
             return
         }
         world.setDynamicProperty(data[evd.selection - 1])
+        cd.delete(data[evd.selection - 1])
         dataDeleterUI(player, search)
     }).catch()
 }

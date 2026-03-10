@@ -1,7 +1,11 @@
-import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus, EquipmentSlot, EnchantmentTypes, EntityComponentTypes, ItemComponentTypes } from "@minecraft/server"
+import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus, EquipmentSlot, EnchantmentTypes, EntityComponentTypes, ItemComponentTypes, Block } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { enchantments, particles, sounds } from "../data/arrays"
+import { DebugBox, debugDrawer } from "@minecraft/debug-utilities"
+
+/**@type {Map<string, string[]>} */
+let undoMap = new Map()
 
 /**
  * @param {StartupEvent} evd 
@@ -17,6 +21,7 @@ export function WEcommands(evd) {
             let particeClear = mcl.jsonPGet(evd?.sourceEntity, 'darkoak:worldedit')?.id
             if (mcl.pRemove(evd?.sourceEntity, 'darkoak:worldedit')) {
                 if (particeClear) system.clearRun(particeClear)
+                evd?.sourceEntity?.sendMessage('§aCleared Selection§r')
             }
         }
     })
@@ -37,6 +42,7 @@ export function WEcommands(evd) {
             system.runTimeout(() => {
                 if (world.structureManager.get(`darkoak:worldeditcopy_${player.name}`)) world.structureManager.delete(`darkoak:worldeditcopy_${player.name}`)
                 world.structureManager.createFromWorld(`darkoak:worldeditcopy_${player.name}`, player.dimension, selected.p1, selected.p2)
+                player.sendMessage(`§aCopied Selection [${JSON.stringify(selected?.p1)} to ${JSON.stringify(selected?.p2)}]§r`)
                 if (mcl.pRemove(player, 'darkoak:worldedit')) {
                     if (selected.id) system.clearRun(selected.id)
                 }
@@ -102,6 +108,7 @@ export function WEcommands(evd) {
                         rotation: rot,
                         mirror: mirror
                     })
+                    player.sendMessage(`§aPlaced A Copy [${JSON.stringify(selected?.p1)}]§r`)
                     if (mcl.pRemove(player, 'darkoak:worldedit')) {
                         if (selected.id) system.clearRun(selected.id)
                     }
@@ -167,6 +174,7 @@ export function WEcommands(evd) {
                 } else {
                     player.runCommand(`fill ${selected?.p1.x} ${selected?.p1.y} ${selected?.p1.z} ${selected?.p2.x} ${selected?.p2.y} ${selected?.p2.z} ${block.id} ${type || ''}`)
                 }
+                player.sendMessage(`§aFilled Selection [${JSON.stringify(selected?.p1)} to ${JSON.stringify(selected?.p2)}]§r`)
                 if (mcl.pRemove(player, 'darkoak:worldedit')) {
                     if (selected.id) system.clearRun(selected.id)
                 }
@@ -196,7 +204,7 @@ export function WEcommands(evd) {
             {
                 type: CustomCommandParamType.Enum,
                 name: 'darkoak:gradienttypes'
-            }
+            },
         ],
         optionalParameters: [
             {
@@ -211,8 +219,16 @@ export function WEcommands(evd) {
                 type: CustomCommandParamType.BlockType,
                 name: 'block3'
             },
+            {
+                type: CustomCommandParamType.BlockType,
+                name: 'block4'
+            },
+            {
+                type: CustomCommandParamType.BlockType,
+                name: 'block5'
+            },
         ]
-    }, (evd, type, block1, block2, block3) => {
+    }, (evd, type, block1, block2, block3, block4, block5) => {
         /**@type {Player} */
         const player = evd?.sourceEntity
         system.runTimeout(() => {
@@ -222,6 +238,7 @@ export function WEcommands(evd) {
                     player.sendMessage('Please Select An Area First')
                     return
                 }
+                /**@type {string[]} */
                 let blocks = []
                 switch (type) {
                     case 'stone':
@@ -234,7 +251,7 @@ export function WEcommands(evd) {
                         blocks = ['dirt', 'dirt_with_roots', 'coarse_dirt']
                         break
                     case 'custom':
-                        blocks = [block1?.id, block2?.id, block3?.id]
+                        blocks = [block1?.id, block2?.id, block3?.id, block4?.id, block5?.id]
                         blocks = blocks.filter(e => e != undefined)
                         break
                     case 'wood':
@@ -252,14 +269,39 @@ export function WEcommands(evd) {
                 const minZ = Math.min(selected.p1.z, selected.p2.z)
                 const maxZ = Math.max(selected.p1.z, selected.p2.z)
 
+                let toSet = new Set()
+
                 for (let x = minX; x <= maxX; x++) {
                     for (let y = minY; y <= maxY; y++) {
                         for (let z = minZ; z <= maxZ; z++) {
-                            player.runCommand(`setblock ${x} ${y} ${z} ${blocks[mcl.randomNumber(blocks.length)]}`)
+                            toSet.add(JSON.stringify({
+                                x: x,
+                                y: y,
+                                z: z,
+                            }))
+                            //player.runCommand(`setblock ${x} ${y} ${z} ${blocks[mcl.randomNumber(blocks.length)]}`)
                         }
                     }
                 }
 
+                undoMap.delete(player.name)
+                const toSetArray = Array.from(toSet)
+                mcl.arraySpreader(toSetArray, (Math.min(15, toSetArray.length / 100)), (e, i) => {
+                    const loc = JSON.parse(e)
+                    const chosen = blocks[mcl.xorRandomNum(0, blocks.length - 1, mcl.randomNumber(1000))]
+                    const current = player.dimension.getBlock(loc)
+                    if (current) {
+                        const undo = undoMap.get(player.name) || []
+                        undo.push(JSON.stringify({
+                            type: current.typeId,
+                            location: current.location,
+                        }))
+                        undoMap.set(player.name, undo)
+                        current?.setType(chosen)
+                    }
+                })
+
+                player.sendMessage(`§aFilled Selection [${JSON.stringify(selected?.p1)} to ${JSON.stringify(selected?.p2)}]§r`)
                 if (mcl.pRemove(player, 'darkoak:worldedit')) {
                     if (selected.id) system.clearRun(selected.id)
                 }
@@ -343,6 +385,11 @@ export function WEcommands(evd) {
             for (let x = minX; x <= maxX; x++) {
                 for (let y = minY; y <= maxY; y++) {
                     for (let z = minZ; z <= maxZ; z++) {
+                        // toSet.add(JSON.stringify({
+                        //     x: x,
+                        //     y: y,
+                        //     z: z,
+                        // }))
                         dimen.runCommand(`setblock ${x} ${y} ${z} ${blocks[mcl.randomNumber(blocks.length)]}`)
                     }
                 }
@@ -389,6 +436,8 @@ export function WEcommands(evd) {
                 const radiusSquared = radius * radius
                 const innerRadiusSquared = (radius - 1) * (radius - 1)
 
+                let toSet = new Set()
+
                 for (let x = -radius; x <= radius; x++) {
                     for (let y = -radius; y <= radius; y++) {
                         for (let z = -radius; z <= radius; z++) {
@@ -402,12 +451,22 @@ export function WEcommands(evd) {
                                     }
                                     try {
                                         if (!confirm) {
-                                            dimension.spawnParticle('minecraft:endrod', blockLocation)
+                                            //dimension.spawnParticle('minecraft:endrod', blockLocation)
+                                            const t = new DebugBox({
+                                                dimension: player.dimension,
+                                                x: blockLocation.x,
+                                                y: blockLocation.y,
+                                                z: blockLocation.z,
+                                            })
+                                            t.bound = { x: 1, y: 1, z: 1 }
+                                            t.timeLeft = 10
+                                            debugDrawer.addShape(t, player.dimension)
                                         } else if (confirm) {
-                                            dimension.setBlockType(blockLocation, block.id)
+                                            //dimension.setBlockType(blockLocation, block.id)
+                                            toSet.add(JSON.stringify(blockLocation))
                                         }
                                     } catch (e) {
-                                        console.log(`Failed to place block at ${blockLocation.x}, ${blockLocation.y}, ${blockLocation.z}: ${e}`)
+                                        console.error(`Failed to place block at ${blockLocation.x}, ${blockLocation.y}, ${blockLocation.z}: ${e}`)
                                     }
                                 }
                             } else if (distanceSquared <= radiusSquared) {
@@ -417,7 +476,8 @@ export function WEcommands(evd) {
                                     z: Math.floor(center.z + z),
                                 }
                                 try {
-                                    dimension.setBlockType(blockLocation, block.id)
+                                    //dimension.setBlockType(blockLocation, block.id)
+                                    toSet.add(JSON.stringify(blockLocation))
                                 } catch (e) {
                                     console.log(`Failed to place block at ${blockLocation.x}, ${blockLocation.y}, ${blockLocation.z}: ${e}`)
                                 }
@@ -426,12 +486,635 @@ export function WEcommands(evd) {
                     }
                 }
 
+                undoMap.delete(player.name)
+                const toSetArray = Array.from(toSet)
+                mcl.arraySpreader(toSetArray, toSetArray.length / 200, (e, i) => {
+                    const b = player.dimension.getBlock(JSON.parse(e))
+                    if (b) {
+                        const undo = undoMap.get(player.name) || []
+                        undo.push(JSON.stringify({
+                            type: b.typeId,
+                            location: b.location,
+                        }))
+                        undoMap.set(player.name, undo)
+                        b?.setType(block)
+                    }
+                })
+
+                if (confirm) player.sendMessage(`§aBuilt Sphere [${JSON.stringify(selected?.p2)}]§r`)
                 if (confirm && mcl.pRemove(player, 'darkoak:worldedit')) {
                     if (selected.id) system.clearRun(selected.id)
                 }
             }
         })
     })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:wecylinder',
+        description: 'Makes A Cylinder',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.BlockType,
+                name: 'block'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'radius'
+            },
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.Boolean,
+                name: 'hollow'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'wall_thickness'
+            },
+        ]
+    }, (evd, block, thickness, hollow, wall) => {
+        /**@type {Player} */
+        const player = evd?.sourceEntity
+        system.runTimeout(() => {
+            if (player) {
+                const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
+                if (!selected?.p2) {
+                    player.sendMessage('Please Select An Area First')
+                    return
+                }
+
+                const p1 = selected.p1;
+                const p2 = selected.p2;
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const dz = p2.z - p1.z;
+                const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
+                if (length === 0) {
+                    return
+                }
+
+                const ux = dx / length
+                const uy = dy / length
+                const uz = dz / length
+
+                const outer = thickness
+                const inner = hollow ? Math.max(0, thickness - (wall ?? 1)) : 0
+
+                const minX = Math.floor(Math.min(p1.x, p2.x) - outer)
+                const maxX = Math.ceil(Math.max(p1.x, p2.x) + outer)
+                const minY = Math.floor(Math.min(p1.y, p2.y) - outer)
+                const maxY = Math.ceil(Math.max(p1.y, p2.y) + outer)
+                const minZ = Math.floor(Math.min(p1.z, p2.z) - outer)
+                const maxZ = Math.ceil(Math.max(p1.z, p2.z) + outer)
+
+                let toSet = new Set()
+
+                for (let x = minX; x <= maxX; x++) {
+                    for (let y = minY; y <= maxY; y++) {
+                        for (let z = minZ; z <= maxZ; z++) {
+                            const qx = x - p1.x
+                            const qy = y - p1.y
+                            const qz = z - p1.z
+
+                            let t = qx * ux + qy * uy + qz * uz
+
+                            if (t < 0) t = 0
+                            if (t > length) t = length
+
+                            const cx = p1.x + ux * t
+                            const cy = p1.y + uy * t
+                            const cz = p1.z + uz * t
+
+                            const dx2 = x - cx
+                            const dy2 = y - cy
+                            const dz2 = z - cz
+                            const distSq = dx2 * dx2 + dy2 * dy2 + dz2 * dz2
+
+                            const outerSq = outer * outer
+                            const innerSq = inner * inner
+
+                            const shouldFill = hollow ? (distSq <= outerSq && distSq >= innerSq) : (distSq <= outerSq)
+                            if (!shouldFill) continue
+
+                            toSet.add(JSON.stringify({ x, y, z }))
+                        }
+                    }
+                }
+
+                undoMap.delete(player.name)
+                const toSetArray = Array.from(toSet)
+                mcl.arraySpreader(toSetArray, Math.min(15, toSetArray.length / 100), (e, i) => {
+                    const blockAtLoc = player.dimension.getBlock(JSON.parse(e))
+
+                    const undo = undoMap.get(player.name) || []
+                    undo.push(JSON.stringify({
+                        type: blockAtLoc.typeId,
+                        location: blockAtLoc.location
+                    }))
+                    undoMap.set(player.name, undo)
+                    blockAtLoc?.setType(block)
+
+                })
+
+                player.sendMessage(`§aBuilt Cylinder [${JSON.stringify(selected?.p1)} to ${JSON.stringify(selected?.p2)}]§r`)
+                if (mcl.pRemove(player, 'darkoak:worldedit')) {
+                    if (selected.id) system.clearRun(selected.id)
+                }
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:wecircle',
+        description: 'Makes A Circle',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.BlockType,
+                name: 'block'
+            },
+            {
+                type: CustomCommandParamType.Float,
+                name: 'radius'
+            }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:directions'
+            }
+        ]
+    }, (evd, block, radius, direction) => {
+        /**@type {Player} */
+        const player = evd?.sourceEntity
+        system.runTimeout(() => {
+            if (player) {
+                const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
+                if (!selected?.p2) {
+                    player.sendMessage('Please Select An Area First')
+                    return
+                }
+
+                const center = selected.p2
+                const radiusSquared = radius * radius
+                const dir = vector(direction)
+
+                /**@type {Set<string>} */
+                let toSet = new Set()
+
+                switch (dir) {
+                    case 'x': {
+                        for (let y = -radius; y <= radius; y++) {
+                            for (let z = -radius; z <= radius; z++) {
+                                const distSq = y * y + z * z
+                                if (distSq <= radiusSquared && distSq >= (radius - 1) * (radius - 1)) {
+                                    toSet.add(JSON.stringify({
+                                        x: Math.floor(center.x),
+                                        y: Math.floor(center.y + y),
+                                        z: Math.floor(center.z + z),
+                                    }))
+                                }
+                            }
+                        }
+                        break
+                    }
+                    case 'y': {
+                        for (let x = -radius; x <= radius; x++) {
+                            for (let z = -radius; z <= radius; z++) {
+                                const distSq = x * x + z * z
+                                if (distSq <= radiusSquared && distSq >= (radius - 1) * (radius - 1)) {
+                                    toSet.add(JSON.stringify({
+                                        x: Math.floor(center.x + x),
+                                        y: Math.floor(center.y),
+                                        z: Math.floor(center.z + z),
+                                    }))
+                                }
+                            }
+                        }
+                        break
+                    }
+                    case 'z': {
+                        for (let x = -radius; x <= radius; x++) {
+                            for (let y = -radius; y <= radius; y++) {
+                                const distSq = x * x + y * y
+                                if (distSq <= radiusSquared && distSq >= (radius - 1) * (radius - 1)) {
+                                    toSet.add(JSON.stringify({
+                                        x: Math.floor(center.x + x),
+                                        y: Math.floor(center.y + y),
+                                        z: Math.floor(center.z),
+                                    }))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                const toSetArray = Array.from(toSet)
+                mcl.arraySpreader(toSetArray, Math.min(5, toSetArray.length / 100), (e, i) => {
+                    player.dimension.getBlock(JSON.parse(e))?.setType(block)
+                })
+
+                player.sendMessage(`§aBuilt Circle [${JSON.stringify(selected?.p2)}]§r`)
+                if (mcl.pRemove(player, 'darkoak:worldedit')) {
+                    if (selected.id) system.clearRun(selected.id)
+                }
+            }
+
+            /**Argh i hate gru */
+            function vector(dir = 'Y+') {
+                switch (dir) {
+                    case 'X+': return 'x'
+                    case 'X-': return 'x'
+                    case 'Y+': return 'y'
+                    case 'Y-': return 'y'
+                    case 'Z+': return 'z'
+                    case 'Z-': return 'z'
+                    default: return 'y'
+                }
+            }
+
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:wepyramid',
+        description: 'Makes A Pyramid',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.BlockType,
+                name: 'block'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'width'
+            }
+        ]
+    }, (evd, block, width) => {
+        /**@type {Player} */
+        const player = evd?.sourceEntity
+        system.runTimeout(() => {
+            if (player) {
+                const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
+                if (!selected?.p2) {
+                    player.sendMessage('Please Select An Area First')
+                    return
+                }
+
+                const maxY = Math.max(selected.p1, selected.p2)
+                const minY = Math.min(selected.p1, selected.p2)
+
+                const centerX = selected.p2.x
+                const centerZ = selected.p2.z
+
+                let toSet = new Set()
+
+                for (let y = minY; y <= maxY; y++) {
+                    const levelFromBottom = y - minY
+                    const currentWidth = Math.max(0, width - levelFromBottom)
+
+                    if (currentWidth <= 0) continue
+
+                    const halfWidth = Math.floor(currentWidth / 2)
+                    for (let x = centerX - halfWidth; x <= centerX + halfWidth; x++) {
+                        for (let z = centerZ - halfWidth; z <= centerZ + halfWidth; z++) {
+                            toSet.add(JSON.stringify({
+                                x: x,
+                                y: y,
+                                z: z,
+                            }))
+                        }
+                    }
+                }
+
+                const toSetArray = Array.from(toSet)
+                mcl.arraySpreader(toSetArray, Math.min(10, toSetArray.length / 100), (e, i) => {
+                    player.dimension.getBlock(JSON.parse(e))?.setType(block)
+                })
+
+                player.sendMessage(`§aBuilt Pyramid [${JSON.stringify(selected?.p2)}]§r`)
+                if (mcl.pRemove(player, 'darkoak:worldedit')) {
+                    if (selected.id) system.clearRun(selected.id)
+                }
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:weactivecopy',
+        description: 'Actively Copies The Selection',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Location,
+                name: 'copy_to'
+            },
+            {
+                type: CustomCommandParamType.Boolean,
+                name: 'confirm'
+            }
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'rotation x'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'rotation y'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'rotation z'
+            },
+        ]
+    }, (evd, pasteTo, confirm, rotXf, rotYf, rotZf) => {
+        /**@type {Player} */
+        const player = evd?.sourceEntity
+        system.runTimeout(() => {
+            if (player) {
+                const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
+                if (!selected?.p2) {
+                    player.sendMessage('Please Select An Area First')
+                    return
+                }
+
+                const rotX = rotXf ?? 0
+                const rotY = rotYf ?? 0
+                const rotZ = rotZf ?? 0
+
+                const diff = {
+                    x: pasteTo.x - selected.p1.x,
+                    y: pasteTo.y - selected.p1.y,
+                    z: pasteTo.z - selected.p1.z,
+                }
+
+                let toSet = new Set()
+
+                const copy = mcl.getBlocksByVolume(player.dimension.id, selected.p1, selected.p2)
+                for (let index = 0; index < copy.length; index++) {
+                    const block = copy[index]
+                    const rotated = rotate(block)
+                    const destLoc = {
+                        x: rotated.x + diff.x,
+                        y: rotated.y + diff.y,
+                        z: rotated.z + diff.z,
+                    }
+                    if (block.typeId === 'minecraft:air') continue
+                    if (!confirm) {
+                        const t = new DebugBox({
+                            dimension: block.dimension,
+                            x: destLoc.x - 0.5,
+                            y: destLoc.y,
+                            z: destLoc.z - 0.5,
+                        })
+                        t.bound = { x: 1, y: 1, z: 1 }
+                        t.timeLeft = 20
+                        const bc = block.getMapColor()
+                        t.color = {
+                            red: bc.red,
+                            blue: bc.blue,
+                            green: bc.green,
+                        }
+                        debugDrawer.addShape(t, block.dimension)
+                    } else {
+                        toSet.add(JSON.stringify({
+                            destLoc: destLoc,
+                            copyLoc: {
+                                x: block.x,
+                                y: block.y,
+                                z: block.z
+                            },
+                            type: block.typeId
+                        }))
+                        //player.dimension.getBlock(destLoc)?.setType(block.typeId)
+                    }
+                }
+
+                if (confirm) {
+
+                    undoMap.delete(player.name)
+                    const toSetArray = Array.from(toSet)
+                    mcl.arraySpreader(toSetArray, Math.min(5, toSetArray.length / 100), (e, i) => {
+                        const d = JSON.parse(e)
+                        const destBlock = player.dimension.getBlock(d.destLoc)
+                        const undo = undoMap.get(player.name) || []
+                        undo.push(JSON.stringify({
+                            type: destBlock.type,
+                            location: destBlock.location
+                        }))
+                        undoMap.set(player.name, undo)
+                        mcl.pCommand(player, `clone ${d.copyLoc.x} ${d.copyLoc.y} ${d.copyLoc.z} ${d.copyLoc.x} ${d.copyLoc.y} ${d.copyLoc.z} ${d.destLoc.x} ${d.destLoc.y} ${d.destLoc.z}`)
+                    })
+
+                    player.sendMessage(`§aCopied [${JSON.stringify(selected?.p2)}]§r`)
+                    if (mcl.pRemove(player, 'darkoak:worldedit')) {
+                        if (selected.id) system.clearRun(selected.id)
+                    }
+                }
+
+                function rotate(loc) {
+
+                    let x = loc.x - selected.p1.x
+                    let y = loc.y - selected.p1.y
+                    let z = loc.z - selected.p1.z
+                    const rx = rotX * Math.PI / 180
+                    const ry = rotY * Math.PI / 180
+                    const rz = rotZ * Math.PI / 180
+
+                    let y1 = y * Math.cos(rx) - z * Math.sin(rx)
+                    let z1 = y * Math.sin(rx) + z * Math.cos(rx)
+                    y = y1
+                    z = z1
+
+                    let x1 = x * Math.cos(ry) + z * Math.sin(ry)
+                    let z2 = -x * Math.sin(ry) + z * Math.cos(ry)
+                    x = x1
+                    z = z2
+
+                    let x2 = x * Math.cos(rz) - y * Math.sin(rz)
+                    let y2 = x * Math.sin(rz) + y * Math.cos(rz)
+                    x = x2
+                    y = y2
+
+                    return {
+                        x: Math.round(x + selected.p1.x),
+                        y: Math.round(y + selected.p1.y),
+                        z: Math.round(z + selected.p1.z)
+                    }
+                }
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:weundo',
+        description: 'Undoes The Last World Edit Command',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+    }, (evd) => {
+        /**@type {Player} */
+        const player = evd?.sourceEntity
+        system.runTimeout(() => {
+            if (player) {
+                //const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
+                // if (!selected?.p2) {
+                //     player.sendMessage('Please Select An Area First')
+                //     return
+                // }
+
+                const undo = undoMap.get(player.name)
+                for (let index = 0; index < undo.length; index++) {
+                    const block = JSON.parse(undo[index])
+                    player.dimension.getBlock(block.location)?.setType(block.type)
+                }
+
+                // if (mcl.pRemove(player, 'darkoak:worldedit')) {
+                //     if (selected?.id) system.clearRun(selected.id)
+                // }
+            }
+        })
+    })
+
+    // evd.customCommandRegistry.registerCommand({
+    //     name: 'darkoak:qrcode',
+    //     description: 'Makes A QR Code',
+    //     permissionLevel: CommandPermissionLevel.GameDirectors,
+    //     mandatoryParameters: [
+    //         {
+    //             type: CustomCommandParamType.String,
+    //             name: 'website'
+    //         }
+    //     ]
+    // }, (evd, website) => {
+    //     /**@type {Player} */
+    //     const player = evd?.sourceEntity
+    //     system.runTimeout(() => {
+    //         if (player) {
+    //             const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
+    //             if (!selected?.p2) {
+    //                 player.sendMessage('Please Select An Area First')
+    //                 return
+    //             }
+
+    //             const matrix = getQR()
+    //             const start = selected.p1
+
+    //             for (let y = 0; y < matrix.length; y++) {
+    //                 for (let x = 0; x < matrix[y].length; x++) {
+    //                     if (matrix[y][x]) {
+    //                         player.dimension.getBlock({
+    //                             x: start.x + x,
+    //                             y: start.y,
+    //                             z: start.z + y
+    //                         })?.setType('minecraft:black_concrete')
+    //                     }
+    //                 }
+    //             }
+
+    //             if (mcl.pRemove(player, 'darkoak:worldedit')) {
+    //                 if (selected.id) system.clearRun(selected.id)
+    //             }
+
+    //             function getQR() {
+    //                 const size = 21
+    //                 const matrix = Array.from({
+    //                     length: size
+    //                 }, () => Array(size).fill(0))
+    //                 for (let i = 0; i < Math.min(website.length, size); i++) {
+    //                     const digit = parseInt(website[i], 10)
+    //                     for (let j = 0; j < size; j++) {
+    //                         matrix[i][j] = (j < digit) ? 1 : 0
+    //                     }
+    //                 }
+    //                 finder(0, 0)
+    //                 finder(size - 7, 0)
+    //                 finder(0, size - 7)
+    //                 return matrix
+
+
+    //                 function finder(x, y) {
+    //                     for (let dy = 0; dy < 7; dy++) {
+    //                         for (let dx = 0; dx < 7; dx++) {
+    //                             matrix[y + dy][x + dx] = (dx === 0 || dx === 6 || dy === 0 || dy === 6 || (dx > 1 && dx < 5 && dy > 1 && dy < 5)) ? 1 : 0
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     })
+    // })
+
+    // evd.customCommandRegistry.registerCommand({
+    //     name: 'darkoak:wepicture',
+    //     description: 'Maps A Picture To A 2D Plane',
+    //     permissionLevel: CommandPermissionLevel.GameDirectors,
+    //     mandatoryParameters: [
+    //         {
+    //             type: CustomCommandParamType.Location,
+    //             name: 'location of picture taker'
+    //         },
+    //         {
+    //             type: CustomCommandParamType.Location,
+    //             name: 'where to look'
+    //         }
+    //     ]
+    // }, (evd, loc, dir) => {
+    //     /**@type {Player} */
+    //     const player = evd?.sourceEntity
+    //     system.runTimeout(() => {
+    //         if (player) {
+    //             const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
+    //             if (!selected?.p2) {
+    //                 player.sendMessage('Please Select An Area First')
+    //                 return
+    //             }
+
+    //             const camera = player.dimension.spawnEntity('minecraft:camera', loc)
+    //             camera.lookAt(dir)
+    //             const loc = camera.location
+
+    //             const mm = mcl.locationMinMax(selected.p1, selected.p2)
+
+    //             const width = mm.maxX - mm.minX + 1
+    //             const height = mm.maxY - mm.minY + 1
+
+    //             for (let y = 0; y < height; y++) {
+    //                 for (let x = 0; x < width; x++) {
+    //                     const px = Math.floor((x / width) * )
+    //                 }
+    //             }
+
+    //             if (mcl.pRemove(player, 'darkoak:worldedit')) {
+    //                 if (selected.id) system.clearRun(selected.id)
+    //             }
+
+    //             function ray() {
+    //                 let distance = 0
+    //                 while (distance < 100) {
+    //                     const pos = {
+    //                         x: loc.x + dir.x * distance,
+    //                         y: loc.y + dir.y * distance,
+    //                         z: loc.z + dir.z * distance,
+    //                     }
+
+    //                     const block = player.dimension.getBlock(pos)
+    //                     if (block && !block.isAir) return block
+    //                     distance += 0.25
+    //                 }
+    //                 return undefined
+    //             }
+
+    //             function picture() {
+    //                 const aspect = width / height
+    //                 const fovRad = (fov * Math.PI) / 180 //PI mentioned
+
+    //                 const up = { x: 0, y: 1, z: 0 }
+
+    //             }
+    //         }
+    //     })
+    // })
 
     // evd.customCommandRegistry.registerEnum('darkoak:animationoptions', ['save', 'load', 'move', 'play', 'stop'])
     // evd.customCommandRegistry.registerCommand({
@@ -496,7 +1179,7 @@ export function WEselector(evd) {
     const c = mcl.jsonWGet('darkoak:scriptsettings')
     if (c?.worldeditmaster) return
 
-    /**@type {{p1: {x: number, y: number, z: number}, p2: {x: number, y: number, z: number}, id: number}} */
+    /**@type {{p1: {x: number, y: number, z: number}, p2: {x: number, y: number, z: number}, p3: {x: number, y: number, z: number}, id: number}} */
     const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
     if (mcl.isDOBAdmin(player) && item && item.typeId === 'darkoak:world_edit' && evd.isFirstEvent) {
         if (!selected?.p1) {
@@ -512,7 +1195,11 @@ export function WEselector(evd) {
 
         if (selected?.p1 && selected?.p2 && !selected?.id) {
             let idadder = system.runInterval(() => {
-                if (mcl.tickTimer(10)) mcl.particleOutline(selected.p1, selected.p2, undefined, 1)
+                if (mcl.tickTimer(10)) {
+                    mcl.particleOutline(selected.p1, selected.p2, undefined, 1)
+                    mcl.particleOutline(selected.p1, selected.p1, 'minecraft:basic_flame_particle', 1)
+                    mcl.particleOutline(selected.p2, selected.p2, 'minecraft:blue_flame_particle', 1)
+                }
             })
             system.runTimeout(() => {
                 try {
@@ -747,7 +1434,7 @@ export function betterVanillaCommands(evd) {
                 })
             }
         })
-        
+
     })
 
     // evd.customCommandRegistry.registerEnum('darkoak:slots', [EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet, EquipmentSlot.Mainhand, EquipmentSlot.Offhand, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36'])

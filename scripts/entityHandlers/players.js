@@ -535,7 +535,7 @@ function indivSlotter(player, slotnum) {
     }
 }
 
-/**@type {Set<string>} */
+/**@type {Set<{name: string, type: number}>} */
 export const crashSet = new Set()
 
 /**
@@ -544,29 +544,45 @@ export const crashSet = new Set()
 export function crashJob(players) {
     const pna = players.map(e => e?.name)
     crashSet.forEach(e => {
-        if (pna.includes(e)) {
-            let i = 0
-            let crashArray = []
-            while (i < 40) {
-                crashArray.push(`\uE51F`)
-                i++
-            }
+        if (pna.includes(e.name)) {
+            const p = players.filter(r => r?.name === e?.name)[0]
+            let crashArray = Array().fill(`\uE51F`, 0, 100)
             const m = `§c§k${crashArray.join(`\uE51F`)}\n§r[${mcl.timeUuid()}]`
-            const p = players.filter(r => r?.name === e)[0]
 
-            if (p.isValid && mcl.tickTimer(100)) {
-                try {
-                    let f = new ActionFormData()
-                    bui.button(f, '1')
-                    while (i++ < 10000) {
-                        bui.button(f, m)
+            switch (e.type) {
+                case 0: {
+                    if (p.isValid && mcl.tickTimer(100)) {
+                        try {
+                            let f = new ActionFormData()
+                            let i = 0
+                            while (i++ < 10000) {
+                                bui.button(f, m)
+                            }
+
+                            f.show(p).catch((er) => {
+                                mcl.debugLog('CRASHED SOMEONE', String(er))
+                            })
+                        } catch (er) {
+                            mcl.debugLog('CRASHED SOMEONE', String(er))
+                        }
                     }
-
-                    f.show(p).catch((e) => {
-                        mcl.debugLog('CRASHED SOMEONE', String(e))
-                    })
-                } catch (e) {
-                    mcl.debugLog('CRASHED SOMEONE', String(e))
+                    break
+                }
+                case 1: {
+                    try {
+                        p.triggerEvent('darkoak:crash2')
+                    } catch (er) {
+                        mcl.debugLog('CRASHED SOMEONE', String(er))
+                    }
+                    break
+                }
+                case 2: {
+                    try {
+                        p.triggerEvent('darkoak:crash')
+                    } catch (er) {
+                        mcl.debugLog('CRASHED SOMEONE', String(er))
+                    }
+                    break
                 }
             }
         } else {

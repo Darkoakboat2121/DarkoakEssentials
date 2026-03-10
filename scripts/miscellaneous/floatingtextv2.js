@@ -1,5 +1,5 @@
 import { world, system, BlockComponentTypes } from "@minecraft/server"
-import { DebugBox, debugDrawer, DebugText } from "@minecraft/debug-utilities"
+import { DebugBox, DebugDrawer, debugDrawer, DebugShape, DebugText } from "@minecraft/debug-utilities"
 import { mcl } from "../logic"
 
 export function renderTexts() {
@@ -16,8 +16,10 @@ export function renderTexts() {
                     y: loc[1],
                     z: loc[2],
                 }, text.text)
+
                 t.text = text.text
                 t.scale = text.scale / 10
+                t.rotation = {x: 0, y: 0, z: 0}
 
                 if (text.color) {
                     const col = {

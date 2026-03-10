@@ -67,9 +67,12 @@ changelog:
         personal settings command (to disable sitting, tpa, other optional stuff) *
         fake player spleef preset *
         animated sidebar *
+        dynamic shops (player shops?) *
+        export one player[] for all things to use if they dont have filters, put it in defaults lol * --------------------------no from N
 
-        dynamic shops (player shops?) ***
-        export one player[] for all things to use if they dont have filters, put it in defaults lol *** --------------------------no from N
+
+        world edit item to move where /weactivecopy places and to move the selection area **
+        
         
         
         offhand command
@@ -77,8 +80,16 @@ changelog:
         /p (private messaging system)
         search button to adminandplayer list
         ender dragons, withers, and command block minecarts to world protection
+        world edit now has red/blue particles where p1 and p2 are
+        /wecylinder, makes a line of blocks from point 1 to point 2 in a cylindrical pattern, set rad to 1 to have line
+        /wecircle, makes a circle
+        /weactivecopy, copies an area with a special viewing part
+        more emojis!
+        resetting system, for when the addon breaks
+        /weundo, only works for sphere, activecopy, and cylinder
 
 
+        alt finder UI -----still needs work
         crates (rewards should be commands) -----still needs work
         
 
@@ -98,9 +109,16 @@ changelog:
     fixed:
         dynamic lighting void bug
         data deleter ui crash
+        anti-gamemode-switcher
+        anti-streamer-mode, it also now doesnt make chat look weird
+        anti-force-op bug
+        lava / water bucket use on world protected areas
+
+
+        ghost building midair ** (possibly fixed)
+
 
         sitting and wind charges *
-        lava / water bucket use on world protected areas ***
         anti-velocity *
         owner fix *
         landclaims * (interactions with entities and admin claims)
@@ -111,6 +129,9 @@ changelog:
         plot players ui now have option for adding players so that player cant modify the plot. the toggle is on by default
         the addrankui now has chat and name color adding options
         auto-reponse now accepts multipel words/phrases to a replay
+        anti-dupe only logs every 5 seconds
+        anti-force-op has new improvements
+        mob gens got improvements
 
         
         zones system should have private chats *
@@ -133,6 +154,16 @@ changelog:
 
 
 
+whenever that one command error with looped out or whatever, try removing all commands, then adding them back
+
+NEW OP EXPLOIT
+spoofs being host
+does not complete joining, aka showing a join message (may complete but is very delayed)
+prejoins does detect them
+names are random and valid
+kicking the hosts name might be a work around, but runs into the setmaxplayers issue, the one where only real players can run it
+cannot /kick hacker because they register as host
+
         
         
 
@@ -144,6 +175,10 @@ IDEA NOTE: for things that constantly get data, delay each by 20 ticks for retri
 IDEA NOTE: "minecraft:entity_created" listen for this event, might use component system idk, datadrivenentitytrigger?
 
 IDEA NOTE: using the message limit json and the message filter json, you can spam 100 messages of a string to clear chat
+
+IDEA: {
+    picture taking item, maps picture to 2d plane by world edit
+}
 
 BOT PROBLEM:
 i have an idea

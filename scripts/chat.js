@@ -6,6 +6,7 @@ import { boatTypes, colorCodes, crasherSymbol, crasherSymbol2, emojis, professio
 import { landclaimMainUI, queueMessageUI } from "./uis/interfacesTwo"
 import { log } from "./world/anticheat"
 import { cd } from "./data/defaults"
+import { boatbot } from "./miscellaneous/boatbot"
 
 
 // This file handles all chat interactions such as:
@@ -135,7 +136,15 @@ export function chatSystem(evd = undefined, player, message) {
     // message logs
     if (ocs?.chatLogs) messageLog(player, message)
 
-    messageModifiers(ocs, chat, player)
+    messageModifiers(ocs, chat, player, mcl.jsonWGet('darkoak:anticheat'))
+
+    if (message.toLowerCase().includes('boatbot')) {
+        const botsMessage = message.toLowerCase().replaceAll('boatbot', '').replaceAll('.', '').replaceAll(',', '').replaceAll('?', '').replaceAll('\'', '')
+        const response = boatbot(player, botsMessage)
+        system.runTimeout(() => {
+            world.sendMessage(`[§tBoatbot§r] -> ${response}`)
+        }, 20)
+    }
 
     let ranks = mcl.getChatModifiers(player)
 
@@ -227,10 +236,19 @@ function hashtag(hashtagKey, sender) {
                 world.sendMessage(mcl.randomNumber(100).toString())
                 break
             case 'emojis':
-                for (let index = 0; index < emojis.length; index++) {
-                    const emoji = emojis[index]
-                    sender.sendMessage(`${emoji.m} -> ${emoji.e}`)
-                }
+                // let emojisList = []
+                // for (let index = 0; index < emojis.length; index++) {
+                //     const emoji = emojis[index]
+                //     sender.sendMessage(`${emoji.m} -> ${emoji.e}`)
+
+                // }
+                sender.sendMessage(emojis.map(e => {
+                    switch (e.m) {
+                        case ':format:': return `${e.m} -> Formatting Code`
+                        case '\\n': return `${e.m} -> Newline`
+                        default: return `${e.m} -> ${e.e}`
+                    }
+                }).join('\n'))
                 break
             case 'bind':
                 sender.sendMessage('Close Chat!')
@@ -275,7 +293,7 @@ export function chatGames(chat) {
             let words = d.unscrambleWords.split(',')
             let word = words[mcl.xorRandomNum(0, words.length - 1, (time1 + time2))].trim()
 
-            world.sendMessage(`§a[${loops}] Unscramble for a prize! Word:§r§f ${mcl.stringScrambler(word)}`)
+            world.sendMessage(`§a[${loops}] Unscramble for a prize! Word:§r§f "${mcl.stringScrambler(word)}"`)
 
             mcl.jsonWSet('darkoak:chatgame1:word', {
                 word: word
@@ -451,18 +469,30 @@ export function chatCommand(player, p) {
     }
 
     if (p?.command) {
-        let commandToRun = replaceArgs(p.command)
-        player.runCommand(replacer(player, commandToRun))
+        try {
+            let commandToRun = replaceArgs(p.command)
+            player.runCommand(replacer(player, commandToRun))
+        } catch (e) {
+            mcl.debugLog('Chat Command', String(e))
+        }
     }
 
     if (p?.command2) {
-        let commandToRun2 = replaceArgs(p.command2)
-        player.runCommand(replacer(player, commandToRun2))
+        try {
+            let commandToRun2 = replaceArgs(p.command2)
+            player.runCommand(replacer(player, commandToRun2))
+        } catch (e) {
+            mcl.debugLog('Chat Command', String(e))
+        }
     }
 
     if (p?.command3) {
-        let commandToRun3 = replaceArgs(p.command3)
-        player.runCommand(replacer(player, commandToRun3))
+        try {
+            let commandToRun3 = replaceArgs(p.command3)
+            player.runCommand(replacer(player, commandToRun3))
+        } catch (e) {
+            mcl.debugLog('Chat Command', String(e))
+        }
     }
 
     // const mess = p.message.split(' ', 2)
@@ -641,17 +671,28 @@ function messageModifiers(ocs, chat, player, d) {
     }
 
     if (d?.antistreamermode) {
-        chat.name = chat.name
-            .replace('B', 'Β')
-            .replace('A', 'Α')
-            .replace('E', 'Ε')
-            .replace('H', 'ʜ')
-            .replace('H', 'Η')
-            .replace('I', 'ɪ')
-            .replace('Y', 'ʏ')
-            .replace('K', 'Κ')
-            .replace('M', 'Μ')
-            .replace('N', 'Ν')
+        const ranks = mcl.getChatModifiers(player)
+        /**@type {string} */
+        let nameToChange = chat.name
+
+        const sliceLoc = Math.floor(nameToChange.length / 2)
+        const top = nameToChange.slice(0, sliceLoc)
+        const bottom = nameToChange.slice(sliceLoc)
+
+        chat.name = top + (ranks?.namecolors?.join('') || '§r') + bottom
+        // chat.name = chat.name
+        //     .replace('A', 'Α')
+        //     .replace('B', 'Β')
+        //     .replace('D', String.fromCharCode(394))
+        //     .replace('E', 'Ε')
+        //     .replace('H', 'ʜ')
+        //     .replace('H', 'Η')
+        //     .replace('I', 'ɪ')
+        //     .replace('Y', 'ʏ')
+        //     .replace('K', 'Κ')
+        //     .replace('M', 'Μ')
+        //     .replace('N', 'Ν')
+
     }
 }
 

@@ -173,17 +173,24 @@ export function cpsTester(player) {
     placeMap.set(player.name, 0)
 }
 
+let switcher = false
 /**
  * @param {PlayerGameModeChangeBeforeEvent} evd 
  */
 export function antiGameMode(evd) {
-    // const d = mcl.jsonWGet('darkoak:anticheat')
-    // if (!mcl.isDOBAdmin(evd.player) && d?.antigamemode) {
-    //     system.runTimeout(() => {
-    //         evd.player.setGameMode(evd.fromGameMode)
-    //     })
-    //     evd.cancel = true
-    // }
+    if (!evd.player.isValid) return
+    if (switcher) {
+        switcher = false
+        return
+    }
+    const d = mcl.jsonWGet('darkoak:anticheat')
+    if (!mcl.isDOBAdmin(evd.player) && d?.antigamemode && !evd.player.hasTag('darkoak:canswitch')) {
+        system.runTimeout(() => {
+            switcher = true
+            evd.player.setGameMode(evd.fromGameMode)
+        })
+        evd.cancel = true
+    }
 }
 
 /**
@@ -273,7 +280,7 @@ export function dupeIDChecker(player, d) {
                 if (match) {
                     const id = match[0]
                     if (idLog.has(id)) {
-                        log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
+                        if (mcl.tickTimer(100)) log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
                         if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
                     } else {
                         idLog.add(id)
@@ -283,7 +290,7 @@ export function dupeIDChecker(player, d) {
                 if (matchOld) {
                     const id = matchOld[1]
                     if (idLog.has(id)) {
-                        log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
+                        if (mcl.tickTimer(100)) log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
                         if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
                     } else {
                         idLog.add(id)
@@ -476,8 +483,8 @@ export function anticheatMain(player, players) {
         try {
             /**@type {string[]} */
             const allowed = d?.antiforceopallowed?.split(',')
-            if (!allowed.includes(player?.name) && player?.commandPermissionLevel != CommandPermissionLevel.Any) {
-                player.commandPermissionLevel = CommandPermissionLevel.Any
+            if (allowed && !allowed?.includes(player?.name) && player?.commandPermissionLevel != CommandPermissionLevel.Any && (player?.name ?? 'EMPTY') != d?.antiforceopowner) {
+                setBack()
                 log(player, `anti-force-op: failed perm check`)
                 return
             }
@@ -485,16 +492,23 @@ export function anticheatMain(player, players) {
 
             const sec = mcl.jsonPGet(player, 'darkoak:antiforceop')
             if (sec) {
-                if (player?.name !== sec?.name) {
-                    player.commandPermissionLevel = CommandPermissionLevel.Any
+                if (player?.name !== sec?.name && !player?.hasTag('darkoak:afofailed')) {
+                    setBack()
                     log(player, `anti-force-op: failed non-fake check`)
-                    player?.removeTag('darkoak:admin')
+                    player?.addTag('darkoak:afofailed')
                     return
                 }
             } else {
                 mcl.jsonPSet(player, 'darkoak:antiforceop', {
                     name: player?.name ?? 'EMPTY'
                 })
+            }
+
+            function setBack() {
+                player.commandPermissionLevel = CommandPermissionLevel.Any
+                switcher = true
+                player.setGameMode(GameMode.Survival)
+                player?.removeTag('darkoak:admin')
             }
         } catch (e) {
             mcl.debugLog('Anti-force-op, anticheat.js around line 480', String(e))
