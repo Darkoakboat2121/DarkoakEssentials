@@ -171,6 +171,18 @@ export class mcl {
 
     /**
      * @param {string} string 
+     * @param {number} amount Amount of chars in each element
+     */
+    static stringSplitter(string, amount) {
+        let arrayToReturn = []
+        for (let index = 0; index < string.length; index += amount) {
+            arrayToReturn.push(string.slice(index, index + amount))
+        }
+        return arrayToReturn
+    }
+
+    /**
+     * @param {string} string 
      */
     static regexCleaner(string) {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -844,10 +856,15 @@ export class mcl {
 
     /**Advanced container inventory
      * @param {Entity} player 
+     * @param {boolean} ender
      * @returns {Container}
      */
-    static getItemContainer(player) {
-        return player.getComponent(EntityComponentTypes.Inventory).container
+    static getItemContainer(player, ender = false) {
+        if (ender) {
+            return player.getComponent('minecraft:ender_inventory').container
+        } else {
+            return player.getComponent(EntityComponentTypes.Inventory).container
+        }
     }
 
     /**Returns a entities inventory in its entirety
@@ -1096,9 +1113,15 @@ export class mcl {
     /**Stops an entities movements
      * @param {Entity} player 
      */
-    static stopPlayer(player) {
-        const v = player?.getVelocity()
-        player?.applyKnockback({ x: v?.x * -1, z: v?.z * -1 }, v?.y * -1)
+    static stopPlayer(player, useTP = false) {
+        if (useTP) {
+            player?.teleport(player.location, {
+                keepVelocity: false
+            })
+        } else {
+            const v = player?.getVelocity()
+            player?.applyKnockback({ x: v?.x * -1, z: v?.z * -1 }, v?.y * -1)
+        }
     }
 
     /**
@@ -1558,7 +1581,7 @@ export class mcl {
                         })
                         if (block) blocks.push(block)
                     } catch {
-
+                        continue
                     }
                 }
             }
@@ -1728,11 +1751,11 @@ export class mcl {
         }
     }
 
-    /**Spreads an arrays content along a timeframe and provides a callback for each element, this sets the next timeout in the timeout
-     * @param {any[]} array The array to spread
+    /**Spreads an arrays content along a timeframe and provides a callback for each element, this sets using waitticks
+     * @template T
+     * @param {T[]} array The array to spread
      * @param {number} totalTime In seconds
-     * @param {(e?: any, i: number) => {}} callback What to do to each element
-     * @deprecated
+     * @param {(e: T, i: number) => {}} callback What to do to each element
      */
     static arraySpreader2(array, totalTime, callback) {
         const interval = totalTime * 1000
@@ -1747,6 +1770,37 @@ export class mcl {
             //     
             // }, Math.floor())
         }
+    }
+
+    /**Spreads an arrays content along a timeframe and provides a callback for each element, uses interval
+     * @template T
+     * @param {T[]} array The array to spread
+     * @param {number} totalTime In seconds
+     * @param {(e: T, i: number) => {}} callback What to do to each element
+     */
+    static arraySpreader3(array, totalTime, callback) {
+        const totalTicks = totalTime * 20
+        const ipt = array.length / totalTicks
+
+        let i = 0
+        let ticks = 0
+
+        const r = system.runInterval(() => {
+            ticks++
+            const shouldPerform = Math.floor(ipt * ticks)
+            while (i < shouldPerform && i < array.length) {
+                try {
+                    callback(array[i], i)
+                    i++
+                } catch (e) {
+                    console.error(String(e))
+                }
+            }
+
+            if (i >= array.length) {
+                system.clearRun(r)
+            }
+        }, 1)
     }
 
     /**
@@ -1833,8 +1887,9 @@ export class mcl {
      * @param {number} [radius=5] 
      * @param {string} type 
      * @param {boolean} hollow 
+     * @param {string} keep Type to replace
      */
-    static sphereGenerator(loc, dimension = 'overworld', radius = 5, type, hollow) {
+    static sphereGenerator(loc, dimension = 'overworld', radius = 5, type, hollow, keep) {
         const radiusSquared = radius * radius
         const innerRadiusSquared = (radius - 1) * (radius - 1)
 
@@ -1916,5 +1971,53 @@ export class mcl {
         }
 
         return results
+    }
+}
+
+
+
+export class miu {
+
+    /**
+     * @param {Player} player 
+     */
+    static getFirst(player) {
+        const inven = mcl.getItemContainer(player)
+        return inven.getItem(inven.firstItem() ?? 0)
+    }
+
+    /**
+     * @param {Player} player 
+     * @param {ItemStack} item 
+     */
+    static give(player, item) {
+        const inven = mcl.getItemContainer(player)
+        return inven.addItem(item)
+    }
+
+    /**Changes an item, apply any changes in the callback. If player is defined, changes the item from the players inventory, else return the new itemstack
+     * @param {ItemStack} item 
+     * @param {(item: ItemStack) => void} newInfo 
+     * @param {Player} [player=undefined] 
+     */
+    static itemChanger(item, newInfo, player = undefined) {
+        if (player) {
+            const inven = mcl.getItemContainer(player)
+            const index = inven.find(item)
+            set()
+            try {
+                inven.setItem(index, set())
+            } catch (e) {
+                console.error(String(e))
+            }
+        } else {
+            return set()
+        }
+
+        function set() {
+            let newItem = item.clone()
+            newInfo(newItem)
+            return newItem
+        }
     }
 }

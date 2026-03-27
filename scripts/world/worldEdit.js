@@ -1,11 +1,11 @@
-import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus, EquipmentSlot, EnchantmentTypes, EntityComponentTypes, ItemComponentTypes, Block } from "@minecraft/server"
+import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus, EquipmentSlot, EnchantmentTypes, EntityComponentTypes, ItemComponentTypes, Block, BlockTypes } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { enchantments, particles, sounds } from "../data/arrays"
 import { DebugBox, debugDrawer } from "@minecraft/debug-utilities"
 
 /**@type {Map<string, string[]>} */
-let undoMap = new Map()
+export let undoMap = new Map()
 
 /**
  * @param {StartupEvent} evd 
@@ -195,7 +195,7 @@ export function WEcommands(evd) {
     // })
 
     // -P
-    evd.customCommandRegistry.registerEnum('darkoak:gradienttypes', ['stone', 'stonebricks', 'dirt', 'wood', 'darkwood', 'custom'])
+    evd.customCommandRegistry.registerEnum('darkoak:gradienttypes', ['stone', 'stonebricks', 'dirt', 'wood', 'darkwood', 'all', 'custom'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:wegradient',
         description: 'Applys A Gradient Path',
@@ -260,6 +260,10 @@ export function WEcommands(evd) {
                     case 'darkwood':
                         blocks = ['dark_oak_wood', 'spruce_wood']
                         break
+                    case 'all': {
+                        blocks = BlockTypes.getAll().map(e => e.id)
+                        break
+                    }
                 }
 
                 const minX = Math.min(selected.p1.x, selected.p2.x)
@@ -604,17 +608,20 @@ export function WEcommands(evd) {
 
                 undoMap.delete(player.name)
                 const toSetArray = Array.from(toSet)
-                mcl.arraySpreader(toSetArray, Math.min(15, toSetArray.length / 100), (e, i) => {
-                    const blockAtLoc = player.dimension.getBlock(JSON.parse(e))
+                mcl.arraySpreader3(toSetArray, Math.min(2), (e, i) => {
+                    try {
+                        const blockAtLoc = player.dimension.getBlock(JSON.parse(e))
 
-                    const undo = undoMap.get(player.name) || []
-                    undo.push(JSON.stringify({
-                        type: blockAtLoc.typeId,
-                        location: blockAtLoc.location
-                    }))
-                    undoMap.set(player.name, undo)
-                    blockAtLoc?.setType(block)
-
+                        const undo = undoMap.get(player.name) || []
+                        undo.push(JSON.stringify({
+                            type: blockAtLoc.typeId,
+                            location: blockAtLoc.location
+                        }))
+                        undoMap.set(player.name, undo)
+                        blockAtLoc?.setType(block)
+                    } catch (err) {
+                        console.error(String(err))
+                    }
                 })
 
                 player.sendMessage(`§aBuilt Cylinder [${JSON.stringify(selected?.p1)} to ${JSON.stringify(selected?.p2)}]§r`)
@@ -1256,22 +1263,34 @@ export function betterVanillaCommands(evd) {
         let totalBlocks = blocks.length
         let delayPerBlock = time ? (time / totalBlocks) : 0
 
-        for (let index = 0; index < blocks.length; index++) {
-            const block = blocks[index]
+        if (time) {
+            mcl.arraySpreader3(blocks, time, (block, index) => {
+                blockCopy(block)
+            })
+        } else {
+            system.runTimeout(() => {
+                for (let index = 0; index < blocks.length; index++) {
+                    blockCopy(blocks[index])
+                }
+            })
+        }
+        function blockCopy(block) {
             const src = block.location
             const dest = {
                 x: src.x + offset.x,
                 y: src.y + offset.y,
                 z: src.z + offset.z,
             }
-            if (mcl.blocksMatch(dimen.getBlock(dest), block)) continue
-
-            let delay = index * delayPerBlock
+            let destB
+            try {
+                destB = dimen?.getBlock(dest)
+            } catch {
+                return
+            }
+            if (!destB || mcl.blocksMatch(destB, block)) return
 
             try {
-                system.runTimeout(() => {
-                    dimen.runCommand(`clone ${src.x} ${src.y} ${src.z} ${src.x} ${src.y} ${src.z} ${dest.x} ${dest.y} ${dest.z}`)
-                }, delay)
+                dimen.runCommand(`clone ${src.x} ${src.y} ${src.z} ${src.x} ${src.y} ${src.z} ${dest.x} ${dest.y} ${dest.z}`)
                 amount++
             } catch (e) {
                 console.log(String(e))

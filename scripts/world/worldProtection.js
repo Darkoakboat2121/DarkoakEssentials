@@ -72,6 +72,9 @@ export function placeBreakProtection(evd) {
             }
             if (isPlacing) {
                 if (area?.build || (area?.buildallow && allowed)) return
+                // system.runTimeout(() => {
+                //     evd.block.setType('minecraft:air')
+                // })
                 cancelEvent()
                 return
                 // const ploc = evd.player.location
@@ -84,9 +87,9 @@ export function placeBreakProtection(evd) {
                     return
                 }
                 if (area?.interactblocks || (area?.interactblocksallow && allowed)) return
-                if (evd?.itemStack && BlockTypes.get(evd?.itemStack.typeId)) {
-                    return
-                }
+                // if (evd?.itemStack && BlockTypes.get(evd?.itemStack.typeId)) {
+                //     return
+                // }
                 cancelEvent()
                 return
             }

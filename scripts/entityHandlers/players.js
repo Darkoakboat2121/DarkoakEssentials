@@ -11,12 +11,15 @@ export let sittersMap = new Map()
  * @param {Player} player 
  */
 export function sitCheck(player) {
+
     const sitters = mcl.getAllEntities('darkoak:sitter')
     for (let index = 0; index < sitters.length; index++) {
         const s = sitters[index]
         if (s.getComponent(EntityComponentTypes.Rideable).getRiders().length < 1) {
             const ls = s.location
-            mcl.getPlayer(sittersMap.get(s.nameTag))?.teleport({
+
+            const name = sittersMap.get(s.nameTag)
+            if (name) mcl.getPlayer(name)?.teleport({
                 x: ls.x,
                 y: ls.y + 0.3,
                 z: ls.z,
@@ -24,13 +27,13 @@ export function sitCheck(player) {
             sittersMap.delete(s.nameTag)
             s.remove()
         }
-        system.runTimeout(() => {
+        // system.runTimeout(() => {
             try {
                 mcl.stopPlayer(s)
-            } catch {
-
+            } catch (e) {
+                
             }
-        })
+        // })
     }
 
     const d = mcl.jsonWGet('darkoak:community:general')

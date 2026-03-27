@@ -5,7 +5,17 @@
             "identifier": "minecraft:player",
             "spawn_category": "creature",
             "is_spawnable": false,
-            "is_summonable": false
+            "is_summonable": false,
+            "properties": {
+                "darkoak:test": {
+                    "type": "float",
+                    "default": "(1.0)",
+                    "range": [
+                        0.1,
+                        10.0
+                    ]
+                }
+            }
         },
         "component_groups": {
             "minecraft:add_raid_omen": {
@@ -306,9 +316,7 @@
             "darkoak:heliophobia": {
                 "minecraft:burns_in_daylight": {}
             },
-            "darkoak:new": {
-                
-            },
+            "darkoak:new": {},
             "darkoak:grapple": {
                 "minecraft:leashable": {
                     "can_be_stolen": false,
@@ -679,6 +687,20 @@
                             ]
                         },
                         "event": "darkoak:is_not_invis"
+                    },
+                    {
+                        "filters": {
+                            "all_of": [
+                                {
+                                    "test": "float_property",
+                                    "domain": "darkoak:test",
+                                    "subject": "self",
+                                    "operator": "equals",
+                                    "value": 1.1
+                                }
+                            ]
+                        },
+                        "event": "darkoak:is_in_ui"
                     }
                 ]
             }
@@ -725,6 +747,11 @@
             "darkoak:is_not_invis": {
                 "queue_command": {
                     "command": "tag @s remove darkoak:isinvisible"
+                }
+            },
+            "darkoak:is_in_ui": {
+                "queue_command": {
+                    "command": "tag @s add darkoak:test"
                 }
             },
             "darkoak:size0.1": {

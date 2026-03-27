@@ -1,16 +1,16 @@
 import { world, system, Player, Entity, ItemStack, Block, ItemTypes, ItemComponentTypes } from "@minecraft/server"
-import { ActionFormData, MessageFormData, ModalFormData, uiManager, UIManager } from "@minecraft/server-ui"
+import { ActionFormData, CustomForm, MessageFormData, ModalFormData, Observable, uiManager, UIManager } from "@minecraft/server-ui"
 import { debugDrawer, DebugText } from "@minecraft/debug-utilities"
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
 import { customEnchantActions, customEnchantEvents } from "../enchanting"
-import { hashtags, preBannedList, icons, compress, decompress, replacer, crasherSymbol, modalTextTypes, colorCodes, SSColorIndex } from "../data/arrays"
+import { hashtags, preBannedList, icons, compress, decompress, replacer, crasherSymbol, modalTextTypes, colorCodes, SSColorIndex, rickrollLyrics } from "../data/arrays"
 import { bui } from "./baseplateUI"
 import * as modal from "./modalUI"
 import { chatSystem } from "../chat"
 import { crashSet } from "../entityHandlers/players"
 import { renderTexts } from "../miscellaneous/floatingtextv2"
-import { playerLog } from "../data/defaults"
+import { cd, playerLog } from "../data/defaults"
 import { pfidMap } from "../miscellaneous/prejoins"
 
 
@@ -557,6 +557,8 @@ export function anticheatSettings(player, message = '') {
     bui.toggle(f, 'Anti-Dupe 2', d?.antidupe2)
     bui.label(f, 'Adds An ID To Max Stacked Items And Removes The ID Once Unstacked, Requires Anti-Dupe 1 To Be Enabled')
 
+    bui.slider(f, 'Use Version', 1, 2, d?.antidupeversion ?? 1, 1, 'The Version Of Anti-dupe To Use. Anti-dupe V2 Has Better Security But May Give False Positives If Previously Using V1')
+
     bui.divider(f)
 
     bui.toggle(f, 'Anti-NBT 2', d?.antinbt2)
@@ -765,6 +767,7 @@ export function anticheatSettings(player, message = '') {
             antidupe1: e[i++],
             antidupeclear: e[i++],
             antidupe2: e[i++],
+            antidupeversion: e[i++],
             antinbt2: e[i++],
             antiadminitems: e[i++],
             antiairplace: e[i++],
@@ -2057,10 +2060,11 @@ export function banOfflineUI(player) {
     bui.title(f, 'Ban Player')
 
     const playerList = mcl.getPlayerList()
-    bui.dropdown(f, 'Player:', playerList, 0)
-    bui.textField(f, 'This Text Overrides The Dropdown!\nPlayer:', 'Example: Darkoakboat2121')
-    bui.textField(f, 'Reason / Ban Message', 'Example: Hacking')
-    bui.textField(f, 'Ban Time In Hours (Leave Empty For Forever):', 'Example: 24')
+    bui.dropdown(f, 'Player:', playerList, 0) // 0
+    bui.textField(f, 'This Text Overrides The Dropdown!\nPlayer:', 'Example: Darkoakboat2121') // 1
+    bui.textField(f, 'Reason / Ban Message', 'Example: Hacking') // 2
+    bui.textField(f, 'Ban Time In Hours (Leave Empty For Forever):', 'Example: 24') // 3
+    bui.toggle(f, 'Ghost Ban?', false, 'If This is Enabled, This Ban Will Show As An Error To The Banned Player') // 4
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -2078,14 +2082,16 @@ export function banOfflineUI(player) {
             return
         }
 
-        let time = e[2]
+        let time = e[3]
         if (isNaN(time) || time === '' || parseInt(time) <= 0) {
             time = -1
         }
         mcl.jsonWSet(`darkoak:bans:${mcl.timeUuid()}`, {
             player: selected,
-            message: e[1],
-            time: parseInt(time) * 3600
+            message: e[2],
+            time: parseInt(time) * 3600,
+            timeOfBan: Date.now(),
+            ghost: e[4]
         })
         mcl.adminMessage(`${selected} Has Been Banned!`)
     }).catch()
@@ -3252,6 +3258,7 @@ export function invSeeUI(player) {
     bui.label(f, '§cUse At Your Own Risk! It Can Be Quite Buggy§r')
 
     let names = bui.namePicker(f, undefined, 'Player:')
+    bui.toggle(f, 'View Ender Chest?', false)
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -3266,7 +3273,7 @@ export function invSeeUI(player) {
         })
 
         const invseerContainer = mcl.getItemContainer(invSeer)
-        const playerContainer = mcl.getItemContainer(mcl.getPlayer(names[e[0]]))
+        const playerContainer = mcl.getItemContainer(mcl.getPlayer(names[e[0]]), e[1])
         for (let slot = 9; slot < 36; slot++) {
             const playerItem = playerContainer.getItem(slot)
             invseerContainer.setItem(slot - 9, playerItem)
@@ -3275,7 +3282,8 @@ export function invSeeUI(player) {
         invSeer.nameTag = names[e[0]]
         invSeer.setDynamicProperty('darkoak:invsee', JSON.stringify({
             allowed: player.name,
-            target: names[e[0]]
+            target: names[e[0]],
+            ender: e[1],
         }))
         player.sendMessage('§aPress Interact!§r')
     })
@@ -4034,20 +4042,190 @@ export function altFinderList(player, list, info) {
 
 
 export function testUI(player) {
-    // const f = CustomForm.create(player, 'Test Form')
+    const f = CustomForm.create(player, 'Test Form')
 
-    // const text = new Observable('Test?')
-    // const vis = new Observable(true)
+    const text = Observable.create('test lol', {
+        clientWritable: true
+    })
+    const vis = Observable.create(true, {
+        clientWritable: true
+    })
 
-    // f.textField('Test 1:', text, {'visible': vis})
-    // f.button('Try hiding', () => {
-    //     vis.setData(false)
-    // })
+    f.textField('Test 1:', text, { 'visible': vis })
+    f.button('Try hiding', () => {
+        vis.setData(!vis.getData())
+    })
 
-    // f.show()
+    f.button('add element?', () => {
+        f.label('hey this is cool')
+    }, {
+
+    })
+    const isVisible = Observable.create(true)
+    f.button('disable myself', () => {
+        isVisible.setData(false)
+    }, {
+        visible: isVisible
+    })
+
+    const rro = Observable.create(rickrollLyrics[0])
+    let l = rickrollLyrics.length
+    let i = 0
+    f.label(rro)
+    let r = system.runInterval(() => {
+        i++
+        if (i > l - 1) {
+            system.clearRun(r)
+        } else {
+            rro.setData(rickrollLyrics[i])
+        }
+    }, 30)
+
+    f.show().then((evd) => {
+
+    })
 }
 
+/**
+ * @param {Player} player 
+ */
+export function dataDeleterUIV2(player, search = '', searchVal = '', useReg = false) {
+    let f = CustomForm.create(player, 'Data Deleter V2')
 
+    let data = world.getDynamicPropertyIds()
+    if (!useReg) {
+        if (search) data = data.filter(e => (e.includes(search)))
+        if (searchVal) data = data.filter(e => (world.getDynamicProperty(e)?.includes(searchVal)))
+    } else {
+        let keyReg, valReg // this works???????
+        try {
+            if (search) keyReg = new RegExp(search)
+            if (searchVal) valReg = new RegExp(searchVal)
+        } catch {
+            f.close()
+            player.sendMessage(`§cInvalid RegExp§r`)
+            return
+        }
+        if (keyReg instanceof RegExp) data = data.filter(e => (keyReg.test(e)))
+        if (valReg instanceof RegExp) data = data.filter(e => (valReg.test(world.getDynamicProperty(e) ?? '')))
+    }
+
+    f.button(`Search?\nCurrent Search: (${search}, ${searchVal})`, () => {
+        f.close()
+        system.runTimeout(() => {
+            dataDeleterSearchUIV2(player, search, searchVal, useReg)
+        }, 20)
+    })
+
+    for (let index = 0; index < data.length; index++) {
+        const d = data[index]
+        const buttonShower = Observable.create(false, {
+            clientWritable: true
+        })
+        const buttonText = Observable.create(`Show: ${d}?`, {
+            clientWritable: true
+        })
+        const hider = Observable.create(true, {
+            clientWritable: true
+        })
+        f.divider({
+            visible: buttonShower
+        })
+        f.spacer({
+            visible: buttonShower
+        })
+        f.button(buttonText, () => {
+            const opp = !buttonShower.getData()
+            buttonShower.setData(opp)
+            buttonText.setData(opp ? `Hide: ${d}?` : `Show: ${d}`)
+        }, {
+            visible: hider
+        })
+        f.spacer({
+            visible: buttonShower
+        })
+        f.label(`ID: ${d}`, {
+            visible: buttonShower
+        })
+        f.spacer({
+            visible: buttonShower
+        })
+        const valueLabel = mcl.stringSplitter((world.getDynamicProperty(d) ?? 'undefined').toString(), 30).join('\n')
+        f.label(valueLabel, {
+            visible: buttonShower
+        })
+        f.spacer({
+            visible: buttonShower
+        })
+        f.button(`Delete?`, () => {
+            world.setDynamicProperty(d)
+            cd.delete(d)
+            hider.setData(false)
+            buttonShower.setData(false)
+        }, {
+            visible: buttonShower
+        })
+        f.spacer({
+            visible: buttonShower
+        })
+        f.divider({
+            visible: buttonShower
+        })
+
+    }
+
+    f.show()
+}
+
+/**
+ * @param {Player} player 
+ */
+export function dataDeleterSearchUIV2(player, search = '', searchVal = '', useReg = false) {
+    let f = CustomForm.create(player, 'Data Deleter V2 Searcher')
+
+    const toggled = Observable.create(useReg, {
+        clientWritable: true
+    })
+    const untoggled = Observable.create(!useReg, {
+        clientWritable: true
+    })
+    toggled.subscribe((evd) => {
+        untoggled.setData(!evd)
+    })
+
+    const idValue = Observable.create(search, {
+        clientWritable: true
+    })
+    const valueValue = Observable.create(searchVal, {
+        clientWritable: true
+    })
+
+    f.toggle('Use RegExp', toggled, {
+        description: 'For Those Who Prefer RegExp'
+    })
+    f.textField('ID Contains:', idValue, {
+        visible: untoggled
+    })
+    f.textField('Value Contains:', valueValue, {
+        visible: untoggled
+    })
+    f.textField('ID RegExp:', idValue, {
+        visible: toggled
+    })
+    f.textField('Value RegExp:', valueValue, {
+        visible: toggled
+    })
+
+    f.button('Search?', () => {
+        f.close()
+        system.runTimeout(() => {
+            dataDeleterUIV2(player, idValue.getData(), valueValue.getData(), toggled.getData())
+        }, 20)
+    })
+
+
+    f.show()
+}
 
 
 
@@ -4059,7 +4237,7 @@ export function darkoakboatBio(player) {
     bui.title(f, 'Darkoakboat2121')
 
     bui.label(f, 'Hiya, im the boat himself. Im the dev of this very addon.')
-    bui.label(f, 'Read it: http://secdown.rf.gd/book-of-bandits/')
+    bui.label(f, 'Read it: https://secdown.rf.gd/book-of-bandits/')
 
     bui.show(f, player)
 }

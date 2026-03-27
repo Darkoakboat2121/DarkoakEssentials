@@ -1,6 +1,6 @@
 import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent, EffectTypes, InputPermissionCategory, EquipmentSlot, PlayerJoinAfterEvent, CommandPermissionLevel, DataDrivenEntityTriggerAfterEvent, PlayerSpawnAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
-import { mcl } from "../logic"
+import { mcl, miu } from "../logic"
 import { badBlocksList, hackedItemsList, hackedItemsVanilla, susNames } from "../data/arrays"
 import { transferPlayer } from "@minecraft/server-admin"
 import { getPlayerSkin } from "@minecraft/server-gametest"
@@ -243,12 +243,13 @@ export function antiNpc(evd) {
 
 // }
 
-
+const idv2Log = new Set()
+const partialStackLogger = new Set()
 
 /**
  * @param {Player} player 
  */
-export function dupeIDChecker(player, d) {
+export function dupeIDChecker(player, d, reset) {
     const inventory = mcl.getItemContainer(player)
     const idLog = new Set()
     const equiped = player.getComponent(EntityComponentTypes.Equippable)
@@ -260,41 +261,101 @@ export function dupeIDChecker(player, d) {
 
         // anti dupe
         if (d?.antidupe1) {
-            // anti dupe id adder
-            addID(player, item, inventory, index)
-            stackARID(player, item, inventory, index, d)
+            switch (d?.antidupeversion) {
+                case 2: {
+                    if (!addIDMulti(player, item)) continue
 
-            // const content = item.getComponent(ItemComponentTypes.Inventory)
-            // if (content) {
-            //     const contents = content.container
-            //     for (let findex = 0; index < contents.size; index++) {
-            //         const fitem = contents.getItem(findex)
-            //         if (!fitem) continue
-            //         addID(player, fitem, contents, findex)
-            //     }
-            // }
-            // anti dupe checker
-            const lore = item.getLore() || []
-            for (let index2 = 0; index2 < lore.length; index2++) {
-                const match = lore[index2].match(/\[R(\d+)T(\d+)\]/)
-                if (match) {
-                    const id = match[0]
-                    if (idLog.has(id)) {
-                        if (mcl.tickTimer(100)) log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
-                        if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
-                    } else {
-                        idLog.add(id)
+                    if (reset) idv2Log.clear()
+
+                    const lore = item.getLore()
+                    for (let index2 = 0; index2 < lore.length; index2++) {
+                        const l = lore[index2]
+                        if (!l.startsWith('ad|')) {
+                            if (index2 === lore.length - 1) {
+                                // partial stack logger system here
+                            }
+                            continue
+                        }
+                        const parts = l.split('|\n')
+                        const id = parts[1]
+                        const type = parts[2]
+
+                        if (idv2Log.has(id) || item.typeId != type) {
+                            if (mcl.tickTimer(200)) log(player, `anti-dupe-v2\nItem: ${item.typeId}, ID: ${id}\nShould be: ${item.typeId}`)
+                            if (d?.antidupeclear) inventory.setItem(index)
+                        } else idv2Log.add(id)
                     }
+
+
+                    /**
+                     * @param {Player} player 
+                     * @param {ItemStack} item 
+                     * @param {*} inventory 
+                     * @param {*} index 
+                     */
+                    function addIDMulti(player, item, inventory, index) {
+                        if (player.getGameMode() === GameMode.Creative) return false
+                        let lore = item.getLore()
+                        let hasID = lore.some(e => e.includes('ad|'))
+                        const newID = `ad|\n${mcl.timeUuid()}|\n${item.typeId}`
+                        if (item.isStackable && d?.antidupe2) { // runs on stackable items
+                            if (item.amount === item.maxAmount) {
+                                if (hasID) return true
+                                lore.push(newID)
+                                miu.itemChanger(item, (evd) => {
+                                    evd.setLore(lore)
+                                }, player)
+                                return true
+                            } else if (lore.length > 0) {
+                                let newLore = lore.filter(e => !e.startsWith('ad|'))
+                                miu.itemChanger(item, (evd) => {
+                                    evd.setLore(newLore)
+                                }, player)
+                                partialStackLogger.add(`${newID}|\n${item.amount}`)
+                                return true
+                            }
+                            return true
+                        } else if (!hasID) { // runs on non-stackable items that dont have IDs
+                            lore.push(newID)
+                            miu.itemChanger(item, (evd) => {
+                                evd.setLore(lore)
+                            }, player)
+                            return true
+                        }
+                        return true
+                    }
+                    break
                 }
-                const matchOld = lore[index2].match(/\[(\d+)\]/)
-                if (matchOld) {
-                    const id = matchOld[1]
-                    if (idLog.has(id)) {
-                        if (mcl.tickTimer(100)) log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
-                        if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
-                    } else {
-                        idLog.add(id)
+                default: {
+                    // anti dupe id adder
+                    addID(player, item, inventory, index)
+                    stackARID(player, item, inventory, index, d)
+
+                    // anti dupe checker
+                    const lore = item.getLore() || []
+                    for (let index2 = 0; index2 < lore.length; index2++) {
+                        const match = lore[index2].match(/\[R(\d+)T(\d+)\]/)
+                        if (match) {
+                            const id = match[0]
+                            if (idLog.has(id)) {
+                                if (mcl.tickTimer(100)) log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
+                                if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
+                            } else {
+                                idLog.add(id)
+                            }
+                        }
+                        const matchOld = lore[index2].match(/\[(\d+)\]/)
+                        if (matchOld) {
+                            const id = matchOld[1]
+                            if (idLog.has(id)) {
+                                if (mcl.tickTimer(100)) log(player, `anti-dupe 1\nItem: ${item.typeId}, ID: ${id}`)
+                                if (d?.antidupeclear) mcl.getItemContainer(player).setItem(index)
+                            } else {
+                                idLog.add(id)
+                            }
+                        }
                     }
+                    break
                 }
             }
         }
@@ -365,7 +426,7 @@ export function dupeIDChecker(player, d) {
 export function addID(player, item, inventory, index) {
     let lore = item.getLore()
     let hasID = lore.some(line => /\[.*?\]/.test(line))
-    if (!item.isStackable && player.getGameMode() != GameMode.creative) {
+    if (!item.isStackable && player.getGameMode() != GameMode.Creative) {
         if (!hasID) {
             const newID = `[${mcl.timeUuid()}]`
             lore.push(newID)

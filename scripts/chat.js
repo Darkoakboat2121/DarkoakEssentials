@@ -357,6 +357,7 @@ export function chatGames(chat) {
  * @param {{antinametags: boolean | undefined}} d 
  */
 export function nametag(p, ocs, d) {
+    if (!mcl.tickTimer(5)) return
     let delay = 0
     if (d?.antinametags && mcl.tickTimer(40)) {
         system.runTimeout(() => {

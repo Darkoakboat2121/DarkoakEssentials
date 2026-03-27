@@ -23,28 +23,28 @@ export function prejoinSystem(evd) {
     const admins = mcl.getAdminList(true)
     if (admins.has(name)) {
         if (evd.isValid()) evd.allowJoin()
-        return 'admins'
+        return 'Player was an admin and skipped checks'
     }
 
     const d = mcl.jsonWGet('darkoak:anticheat')
     if (d?.antizd) {
         if (!name || name?.length < 1 || name?.length > 16) {
             if (evd.isValid()) disconnect('Anti-ZD')
-            return 'name length'
+            return `Name length too short: ${name?.length}`
         }
         for (let index = 0; index < arrays.susNames.length; index++) {
             const n = arrays.susNames[index]
             if (name.includes(n)) {
                 log({ name: name }, `anti-ZD: ${name}`)
                 if (evd.isValid()) disconnect('Anti-ZD')
-                return 'susnames'
+                return `Name included "${n}" which is an illegal character`
             }
         }
-        if (!evd?.persistentId || pfidSet.has(evd?.persistentId)) {
+        if (!evd?.persistentId) { // pfidset wont work cause if rejoining, they use the same pfid, check the map instead for comparing name to value, and ofc add extra pfid checks
             if (evd.isValid()) disconnect('Anti-ZD')
-            return 'no or invalid pfid'
+            return `No PFID or invalid PFID, length: ${evd?.persistentId?.length}`
         }
-        pfidSet.add(evd?.persistentId)
+        // pfidSet.add(evd?.persistentId)
     }
 
     if (d?.prebans && arrays.prebansSet.has(name)) {
@@ -57,7 +57,7 @@ export function prejoinSystem(evd) {
         //     }
         // }
         if (evd.isValid()) disconnect('You\'ve Been Prebanned From This Server, Apply To Be Removed From The List Here: https://discord.gg/cE8cYYeFFx')
-        return 'prebans'
+        return `User is prebanned`
     }
 
     const bans = mcl.listGetBoth('darkoak:bans:')
@@ -67,17 +67,25 @@ export function prejoinSystem(evd) {
             const data = JSON.parse(ban.value)
             if (data?.player != name) continue
             if (data?.time === 0) {
-                if (evd.isValid()) disconnect('You Are Permanently Banned')
-                return 'perma banned'
+                if (data?.ghost) {
+                    if (evd.isValid()) disconnect('An unspecified error has occurred.')
+                } else {
+                    if (evd.isValid()) disconnect(`You Are Permanently Banned For "${data?.message ?? 'No Message Provided'}"`)
+                }
+                return `User is perma banned from this server`
             }
             if ((Date.now() - data?.timeOfBan) < data?.time) {
                 const td = mcl.timeDifference(data?.timeOfBan + data?.time)
-                if (evd.isValid()) disconnect(`You\'ve Been Banned For "${data?.message}"\nYou Will Be Unbanned In ${Math.abs(td.hours) - 1}:${Math.abs(td.minutes)}:${Math.abs(td.seconds)}`)
-                return 'time banned'
+                if (data?.ghost) {
+                    if (evd.isValid()) disconnect('An unspecified error has occurred.')
+                } else {
+                    if (evd.isValid()) disconnect(`You\'ve Been Banned For "${data?.message ?? 'No Message Provided'}"\nYou Will Be Unbanned In ${Math.abs(td.hours) - 1}:${Math.abs(td.minutes)}:${Math.abs(td.seconds)}`)
+                }
+                return `User has ban time remaining`
             } else {
                 mcl.adminMessage(`${data.player}\'s Ban Has Expired`)
                 mcl.wRemove(ban.id)
-                return 'ban removed'
+                return `Users ban has been removed`
             }
         }
     }
@@ -87,14 +95,14 @@ export function prejoinSystem(evd) {
         const wlp = whitelist?.whitelist.split(',').map(e => e.trim())
         if (!wlp.includes(name)) {
             if (evd.isValid()) disconnect('This World Has A Whitelist Enabled.')
-            return 'whitelist'
+            return `User is not on whitelist`
         }
     }
 
     if (w?.prejoinSend) worldSettings.welcomeMessage(evd)
 
     if (evd.isValid()) evd.allowJoin()
-    return 'everything'
+    return `Passed all checks`
 
     function disconnect(message = undefined) {
         try {

@@ -15,3 +15,8 @@ item=darkoak:community
 item=darkoak:generators
 item=darkoak:world_protection
 item=darkoak:data_editor
+
+block=darkoak:passover1
+block=darkoak:passover2
+
+block=minecraft:board

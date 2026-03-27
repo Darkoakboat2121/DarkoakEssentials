@@ -69,6 +69,7 @@ changelog:
         animated sidebar *
         dynamic shops (player shops?) *
         export one player[] for all things to use if they dont have filters, put it in defaults lol * --------------------------no from N
+        grabber item *
 
 
         world edit item to move where /weactivecopy places and to move the selection area **
@@ -87,6 +88,9 @@ changelog:
         more emojis!
         resetting system, for when the addon breaks
         /weundo, only works for sphere, activecopy, and cylinder
+        upwards wall & interact no movement blocks & passover blocks (any entity above them with a limit of ten blocks gets a tag, basically a gate system)
+        data deleter v2
+        anti-dupe v2
 
 
         alt finder UI -----still needs work
@@ -108,11 +112,14 @@ changelog:
 
     fixed:
         dynamic lighting void bug
-        data deleter ui crash
+        data deleter ui crash (data deleter v2 may be a better alternative)
         anti-gamemode-switcher
         anti-streamer-mode, it also now doesnt make chat look weird
         anti-force-op bug
         lava / water bucket use on world protected areas
+        build decay
+
+        offline bans ------------------------ CHECK THIS N - P
 
 
         ghost building midair ** (possibly fixed)
@@ -132,6 +139,7 @@ changelog:
         anti-dupe only logs every 5 seconds
         anti-force-op has new improvements
         mob gens got improvements
+        /dobclone is more performant with the linear animation feature
 
         
         zones system should have private chats *
@@ -166,6 +174,7 @@ cannot /kick hacker because they register as host
 
         
         
+dummy item icon changer
 
 IDEA NOTE: for the array things, use a var and a ++ iterator so you can just copy them for long settings
 naman1141

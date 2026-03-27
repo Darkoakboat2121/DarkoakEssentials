@@ -1,0 +1,24 @@
+{
+    "format_version": "1.26.0",
+    "minecraft:item": {
+        "description": {
+            "identifier": "darkoak:interact_no_movement",
+            "menu_category": {
+                "category": "items"
+            }
+        },
+        "components": {
+            "minecraft:allow_off_hand": false,
+            "minecraft:can_destroy_in_creative": true,
+            "minecraft:display_name": {
+                "value": "§aInteract No Movement§r"
+            },
+            "minecraft:max_stack_size": 1,
+            "minecraft:glint": true,
+            "minecraft:icon": "magma_cream",
+            "minecraft:block_placer": {
+                "block": "darkoak:interact_no_movement"
+            }
+        }
+    }
+}

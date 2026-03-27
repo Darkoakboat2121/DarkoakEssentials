@@ -9,8 +9,9 @@ export function npcHandler() {
         const npc = npcs[index]
         const data = JSON.parse(npc.getDynamicProperty('darkoak:npc'))
         if (!data?.allowed) {
+            const player = mcl.getNearestPlayer(npc.dimension, npc.location)
+            log(player ?? { name: 'EMPTY' }, `npc at ${mcl.stringToLoc(npc.location, false)}`)
             npc.remove()
-            log('ahhhh npc')
         }
     }
 }

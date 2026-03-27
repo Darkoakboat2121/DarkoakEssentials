@@ -196,7 +196,9 @@ export const preBannedList = [
     'ILikeGames2013', //Racism
     'JoinLumine', //Basic
     'Lovepigs1211', //Racism (words for both black and white)
-    'S0lareFlares', //OP exploit
+    'FolkPineapple', //OP exploit
+    'GoldenBroYT3096', //Racism
+    'Eclpse G0d', //Racism
 ]
 
 export const prebansSet = new Set(preBannedList)
@@ -469,15 +471,15 @@ export function replacer(d, text) {
 
         if ((d instanceof Player)) {
             f = f
-                .replaceAll('#name#', d.name)
-                .replaceAll('#namet#', d.name.replaceAll(' ', '').toString())
-                .replaceAll('#device#', d.clientSystemInfo.platformType.toString())
-                .replaceAll('#graphics#', d.graphicsMode.toString())
-                .replaceAll('#input#', d.inputInfo.lastInputModeUsed.toString())
-                .replaceAll('#perm#', d.commandPermissionLevel.toString())
-                .replaceAll('#slot#', d.selectedSlotIndex.toString())
+                .replaceAll('#name#', d?.name)
+                .replaceAll('#namet#', d?.name?.replaceAll(' ', '').toString())
+                .replaceAll('#device#', d?.clientSystemInfo?.platformType?.toString())
+                .replaceAll('#graphics#', d?.graphicsMode?.toString())
+                .replaceAll('#input#', d?.inputInfo?.lastInputModeUsed?.toString())
+                .replaceAll('#perm#', d?.commandPermissionLevel?.toString())
+                .replaceAll('#slot#', d?.selectedSlotIndex?.toString())
                 .replaceAll('#cps#', `${(d.getDynamicProperty('darkoak:ac:cps') || '0').toString()}`)
-                .replaceAll('#gamemode#', d.getGameMode())
+                .replaceAll('#gamemode#', d?.getGameMode())
         }
 
         f = f
@@ -509,9 +511,9 @@ export function replacer(d, text) {
         try {
             const view = d.getViewDirection()
             f = f
-                .replaceAll('#viewx#', view.x.toFixed(1))
-                .replaceAll('#viewy#', view.y.toFixed(1))
-                .replaceAll('#viewz#', view.z.toFixed(1))
+                .replaceAll('#viewx#', view.x.toFixed(2))
+                .replaceAll('#viewy#', view.y.toFixed(2))
+                .replaceAll('#viewz#', view.z.toFixed(2))
         } catch {
 
         }
@@ -531,6 +533,17 @@ export function replacer(d, text) {
         .replaceAll('#locationx#', `${loc.x.toFixed(0)}`)
         .replaceAll('#locationy#', `${loc.y.toFixed(0)}`)
         .replaceAll('#locationz#', `${loc.z.toFixed(0)}`)
+
+        .replaceAll('#locationr#', `${Math.round(loc.x).toFixed(0)} ${Math.round(loc.y).toFixed(0)} ${Math.round(loc.z).toFixed(0)}`)
+        .replaceAll('#locationxr#', `${Math.round(loc.x).toFixed(0)}`)
+        .replaceAll('#locationyr#', `${Math.round(loc.y).toFixed(0)}`)
+        .replaceAll('#locationzr#', `${Math.round(loc.z).toFixed(0)}`)
+
+        .replaceAll('#locationd#', `${loc.x.toFixed(2)} ${loc.y.toFixed(2)} ${loc.z.toFixed(2)}`)
+        .replaceAll('#locationxd#', `${loc.x.toFixed(2)}`)
+        .replaceAll('#locationyd#', `${loc.y.toFixed(2)}`)
+        .replaceAll('#locationzd#', `${loc.z.toFixed(2)}`)
+
         .replaceAll('#tps#', mcl.jsonWGet('darkoak:tps')?.tps?.toString())
         .replaceAll('#t-seconds#', (system.currentTick / 20).toFixed(0))
         .replaceAll('#s-seconds#', mcl.jsonWGet('darkoak:sseconds')?.seconds?.toString())
@@ -2666,6 +2679,22 @@ export const sounds = [
     'use.wood',
     'vr.stutterturn',
 ]
+
+
+export let rickrollLyrics = [
+    `We're no strangers to love`,
+    `You know the rules and so do I`,
+    `A full commitment's what I'm thinking of`,
+    `You wouldn't get this from any other guy`,
+    `I just wanna tell you how I'm feeling`,
+    `Gotta make you understand`,
+    `I'm absolutely coding up a meme right now`,
+    `And yes, this is legally distinct somehow`,
+    `Never gonna give you bugs in prod`,
+    `Never gonna let your server down`,
+    `Never gonna run around and desync you`,
+]
+
 
 
 // dynamic propertys can hold 32767 characters

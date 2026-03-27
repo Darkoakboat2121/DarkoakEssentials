@@ -645,9 +645,10 @@ export function banPlayerUI(player) {
     let f = new ModalFormData()
     bui.title(f, 'Ban Player')
 
-    const names = bui.namePicker(f, undefined, '\nPlayer:')
-    bui.textField(f, 'Reason / Ban Message', 'Example: Hacking')
-    bui.textField(f, 'Ban Time In Hours (Leave Empty For Forever):', 'Example: 24')
+    const names = bui.namePicker(f, undefined, '\nPlayer:') // 0
+    bui.textField(f, 'Reason / Ban Message', 'Example: Hacking') // 1
+    bui.textField(f, 'Ban Time In Hours (Leave Empty For Forever):', 'Example: 24') // 2
+    bui.toggle(f, 'Ghost Ban?', false, 'If This is Enabled, This Ban Will Show As An Error To The Banned Player') // 3
 
     f.show(player).then((evd) => {
         if (evd.canceled) {
@@ -667,8 +668,9 @@ export function banPlayerUI(player) {
         mcl.jsonWSet(`darkoak:bans:${mcl.timeUuid()}`, {
             player: names[e[0]],
             message: e[1],
-            time: parseInt(time) * 3600000,
+            time: parseInt(time) * 3600,
             timeOfBan: Date.now(),
+            ghost: e[3]
         })
         mcl.softKick(gp)
         mcl.adminMessage(`${names[e[0]]} Has Been Banned!`)

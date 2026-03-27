@@ -150,16 +150,23 @@ export function fakePlayerCommand(evd) {
                 case 'skin(player_name)': {
                     const pl = mcl.getPlayer(todo)
                     if (!pl) return
-                    sim.setSkin(getPlayerSkin(pl))
+                    const sd = getPlayerSkin(pl)
+                    sim.setSkin({
+                        armSize: sd?.armSize,
+                        personaPieces: sd?.personaPieces,
+                        skinColor: sd?.skinColor,
+                    })
                     break
                 }
                 case 'disconnect(none)':
                     const cam = mcl.jsonPGet(sim, 'darkoak:sim')
                     const reset = mcl.getPlayer(cam?.nameController)
                     if (reset) {
-                        reset.camera.clear()
+                        system.runTimeout(() => {
+                            reset.camera.clear()
+                            mcl.pCommand(reset, 'camera @s clear')
+                        })
                         mcl.pRemove(reset, 'darkoak:fakeplayercontrol')
-                        console.error('ran')
                     }
                     sim.disconnect()
                     break

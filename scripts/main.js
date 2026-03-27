@@ -1,11 +1,15 @@
 // first is minecraft resources
-import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType, StructureSaveMode, EntityComponentTypes, CustomCommandStatus, CustomCommandError, CustomCommandSource, ItemComponentTypes, BlockComponentTypes, EquipmentSlot, Block, Dimension, ItemLockMode } from "@minecraft/server"
+import { world, system, Player, GameMode, ItemStack, ItemUseAfterEvent, PlayerInteractWithBlockBeforeEvent, Entity, ScriptEventCommandMessageAfterEvent, PlayerJoinAfterEvent, PlayerSpawnAfterEvent, StartupEvent, CommandPermissionLevel, CustomCommandParamType, StructureSaveMode, EntityComponentTypes, CustomCommandStatus, CustomCommandError, CustomCommandSource, ItemComponentTypes, BlockComponentTypes, EquipmentSlot, Block, Dimension, ItemLockMode, EnchantmentTypes } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import { beforeEvents, transferPlayer } from "@minecraft/server-admin"
 import { getPlayerSkin, SimulatedPlayer, spawnSimulatedPlayer } from "@minecraft/server-gametest"
 
+// import * as e from "@minecraft/server-ui-bindings"
+// console.error(isInternal)
+// console.error(ddui)
+
 // second initializing mcl module
-import { mcl } from "./logic"
+import { mcl, miu } from "./logic"
 
 // third is setting defaults
 import { timers, defaultData, cd, updateData, playerDataLogger } from "./data/defaults" // defaults finally has a use lets gooooo
@@ -228,10 +232,10 @@ world.beforeEvents.playerPlaceBlock.subscribe((evd) => {
     worldProtection.placeBreakProtection(evd)
     worldProtection.placeBreakLandclaim(evd)
     anticheat.antiFastPlace(evd)
-    worldSettings.worldSettingsBuild(evd)
     roles.roleBuild(evd)
     plotBreakPlaceProtection(evd)
     controlFakeplayerPrevent(evd)
+    worldSettings.worldSettingsBuild(evd)
 
     // system.sendScriptEvent('darkoak:beforeplayerplaceblock', JSON.stringify({
     //     block: evd.block,
@@ -272,6 +276,7 @@ world.beforeEvents.playerLeave.subscribe((evd) => {
     worldSettings.welcomeMessage(evd)
     arrays.storePlayerData(evd.player)
     chat.logJoinsLeaves(evd)
+    worldSettings.decayCleanup(evd)
     system.runTimeout(() => {
         try {
             // system.sendScriptEvent('darkoak:beforeplayerleave', JSON.stringify({
@@ -339,6 +344,10 @@ system.beforeEvents.startup.subscribe((evd) => {
     customSlashCommands(evd)
 })
 
+system.beforeEvents.shutdown.subscribe((evd) => {
+    worldSettings.decayCleanup(evd)
+})
+
 // system for handling most system intervals
 system.runInterval(() => {
     updateData()
@@ -354,6 +363,8 @@ system.runInterval(() => {
     invSeeLinker()
     keepMobGensNear()
 
+    worldSettings.decayCleanup()
+
 
     const players = world.getAllPlayers()
     //bans(players, cd.get('darkoak:anticheat'))
@@ -364,6 +375,7 @@ system.runInterval(() => {
 
     for (let index = 0; index < players.length; index++) {
         const player = players[index]
+        const isLast = (players.findLastIndex(e => e.name === player.name) === players.length - 1)
         worldProtection.worldProtectionOther(player)
         worldSettings.borderAndTracking(player, mcl.jsonWGet('darkoak:worldborder'))
         enchantOnJump(player, cd.get('darkoak:scriptsettings'))
@@ -374,7 +386,7 @@ system.runInterval(() => {
         onHold(player, players)
         playerLister(player)
         worldProtection.dimensionBan(player)
-        anticheat.dupeIDChecker(player, cd.get('darkoak:anticheat'))
+        anticheat.dupeIDChecker(player, cd.get('darkoak:anticheat'), isLast)
         worldSettings.verify(player)
         combatManager(player)
         sitCheck(player)
@@ -386,6 +398,7 @@ system.runInterval(() => {
         dynamicLighting(player)
 
         controlFakeplayer(player)
+        worldSettings.walls(player)
 
         //plotAdder(player)
         // mcl.particleOutline({x: -167, y: 62, z: -76}, {x: -171, y: 66, z: -80}, undefined, 0.1, player.dimension.id)
@@ -736,7 +749,7 @@ function gens() {
                         for (let z = minZ; z <= maxZ; z++) {
                             try {
                                 if (!block.getBlock({ x, y, z })) continue
-                                const seed = (x + y + z + index + mcl.stringToNumber(b?.block))
+                                const seed = (mcl.randomNumber(100))
                                 if (b?.mixspread) {
                                     spread.push({ x, y, z, block: possible[mcl.xorRandomNum(0, possible.length - 1, seed)] })
                                 } else {
@@ -1502,6 +1515,12 @@ function onHold(player, players) {
             t.bound = { x: 1, y: 1, z: 1 }
             t.visibleTo = [player]
             t.timeLeft = 0.2
+            const bc = b.getMapColor()
+            // t.color = {
+            //     red: 1.0 - bc.red,
+            //     blue: 1.0 - bc.blue,
+            //     green: 1.0 - bc.green,
+            // }
             debugDrawer.addShape(t, player.dimension)
         }
     }
@@ -1864,6 +1883,7 @@ function customSlashCommands(evd) {
     }, (evd, entity, command) => {
         system.runTimeout(() => {
             for (let index = 0; index < entity.length; index++) {
+                /**@type {Player} */
                 const e = entity[index]
                 e.runCommand(arrays.replacer(e, command))
             }
@@ -2095,7 +2115,7 @@ function customSlashCommands(evd) {
         })
     })
 
-    evd.customCommandRegistry.registerEnum('darkoak:debugtypes', ['aclog', 'playerlist', 'bytes', 'bytesize', 'what', 'http', 'uis', 'clipboard', 'fakeplayer', 'dupe', 'dupe_without_id', 'debugfilter', 'playerraw', 'setmax', 'owner', 'member(any)', 'deleteIDS'])
+    evd.customCommandRegistry.registerEnum('darkoak:debugtypes', ['aclog', 'playerlist', 'bytes', 'bytesize', 'what', 'http', 'uis', 'clipboard', 'fakeplayer', 'dupe', 'dupe_without_id', 'debugfilter', 'playerraw', 'setmax', 'owner', 'member(any)', 'deleteIDS', 'newItem'])
     evd.customCommandRegistry.registerCommand({
         name: 'darkoak:debug',
         description: 'Be Careful!',
@@ -2197,7 +2217,7 @@ function customSlashCommands(evd) {
                             time: Date.now(),
                             verified: true
                         })
-                        fp.commandPermissionLevel = CommandPermissionLevel.Host
+                        fp.commandPermissionLevel = CommandPermissionLevel.Owner
                         // fp.runCommand('execute as @s run setmaxplayers 20')
                         // fp.runCommand('setmaxplayers 20')
                         // fp.dimension.runCommand(`execute as ${fp.name} run setmaxplayers 20`)
@@ -2205,7 +2225,6 @@ function customSlashCommands(evd) {
                         // fp.chat('/setmaxplayers 20')
                         // fp.chat('i tryed - N')
                         fp.chat('/setmaxplayers 20')
-                        console.error(fp.commandPermissionLevel)
                         system.runTimeout(() => {
                             fp.chat('/setmaxplayers 20')
                             fp.remove()
@@ -2235,6 +2254,16 @@ function customSlashCommands(evd) {
                         world.setDynamicProperty(id)
                     }
                     break
+                case 'newItem': {
+                    miu.itemChanger(mcl.getHeldItem(player), (evd) => {
+                        evd.setLore([JSON.stringify({
+                            notifier: 'antidupe',
+                            type: evd.typeId,
+                            id: mcl.timeUuid()
+                        })])
+                    }, player)
+                    break
+                }
             }
         })
     })
@@ -3372,6 +3401,66 @@ function customSlashCommands(evd) {
             //eq.setEquipment(EquipmentSlot.Mainhand, offhand)
             //eq.setEquipment(EquipmentSlot.Offhand, new ItemStack('minecraft:apple', 1))
         })
+    })
+
+    // evd.customCommandRegistry.registerCommand({
+    //     name: 'darkoak:offhand2',
+    //     description: 'Places Your Mainhand Into Your Offhand, And Your Offhand Into Your Mainhand',
+    //     permissionLevel: CommandPermissionLevel.Any,
+    // }, (evd) => {
+    //     /**@type {Player} */
+    //     const player = evd?.sourceEntity
+    //     if (!player) return
+
+    //     const eq = player.getComponent(EntityComponentTypes.Equippable)
+    //     const main = eq.getEquipment(EquipmentSlot.Mainhand)
+    //     const offhand = eq.getEquipment(EquipmentSlot.Offhand)
+
+    //     system.runTimeout(() => {
+
+
+    //         const temp = new ItemStack('darkoak:offhander', 1)
+    //         //console.error(eq.setEquipment(EquipmentSlot.Offhand, temp))
+    //         player.runCommand(`replaceitem entity @s slot.weapon.offhand 0 darkoak:offhander 1`)
+    //         console.error(eq.setEquipment(EquipmentSlot.Offhand, main))
+    //         console.error(eq.setEquipment(EquipmentSlot.Mainhand, offhand))
+    //     })
+    // })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:s',
+        description: 'Message Yourself',
+        permissionLevel: CommandPermissionLevel.Any,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.String,
+                name: 'message'
+            }
+        ]
+    }, (evd, message) => {
+        const player = evd?.sourceEntity
+        if (player && (player instanceof Player)) player.sendMessage(message)
+    })
+
+    evd.blockComponentRegistry.registerCustomComponent('darkoak:passover', {
+        onTick: (evd, p) => {
+            /**const bl lol */
+            const bl = evd.block.location
+            const entities = evd.dimension.getEntities({
+                location: bl,
+                volume: {
+                    x: 0,
+                    y: 10,
+                    z: 0,
+                }
+            })
+            if (entities && entities.length > 0) {
+                for (let index = 0; index < entities.length; index++) {
+                    const ent = entities[index]
+                    ent.addTag(`darkoak:passover${p.params.id}`)
+                }
+            }
+        },
     })
 
     // evd.customCommandRegistry.registerCommand({

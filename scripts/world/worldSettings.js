@@ -1,4 +1,4 @@
-import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent, EntityHitEntityAfterEvent, PlayerPlaceBlockBeforeEvent, PlayerPlaceBlockAfterEvent, GameMode, ItemComponentTypes, EntityComponentTypes, Entity, EntityDieAfterEvent } from "@minecraft/server"
+import { world, system, EntityDamageCause, Player, PlayerSpawnAfterEvent, PlayerBreakBlockAfterEvent, PlayerBreakBlockBeforeEvent, PlayerInteractWithBlockAfterEvent, PlayerInteractWithBlockBeforeEvent, PlayerLeaveAfterEvent, PlayerLeaveBeforeEvent, ItemReleaseUseAfterEvent, ItemUseAfterEvent, EntityHitEntityAfterEvent, PlayerPlaceBlockBeforeEvent, PlayerPlaceBlockAfterEvent, GameMode, ItemComponentTypes, EntityComponentTypes, Entity, EntityDieAfterEvent, ShutdownEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData, uiManager } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
@@ -47,6 +47,8 @@ export function worldSettingsBreak(evd) {
     }
 }
 
+/**@type {Set<string>} */
+let decaySet = new Set()
 /**
  * @param {PlayerPlaceBlockBeforeEvent} evd 
  */
@@ -56,13 +58,86 @@ export function worldSettingsBuild(evd) {
         const loc = evd.block.location
         if (mcl.allowCheck(evd.block)) return
         if (d?.builddecay) {
+            const blockDetails = JSON.stringify({
+                type: evd.block.typeId,
+                loc: loc,
+                dimension: evd.block.dimension.id,
+                name: evd.player.name,
+            })
+            decaySet.add(blockDetails)
             system.runTimeout(() => {
                 if (d?.buildreturn) evd.player.runCommand(`give @s ${evd.block.typeId} 1`)
                 evd.block.setType('minecraft:air')
+                decaySet.delete(blockDetails)
             }, d?.builddecayrate * 20)
         }
     }
 }
+
+/**
+ * @param {ShutdownEvent | PlayerLeaveBeforeEvent | undefined} evd 
+ */
+export function decayCleanup(evd) {
+    const clean = Array.from(decaySet)
+
+    if (evd instanceof ShutdownEvent) {
+        for (let index = 0; index < clean.length; index++) {
+            try {
+                const c = JSON.parse(clean[index])
+                world.getDimension(c.dimension)?.getBlock(c.loc)?.setType('minecraft:air')
+            } catch {
+                addToQueue(clean[index])
+            }
+            decaySet.delete(clean[index])
+        }
+    } else if (evd instanceof PlayerLeaveBeforeEvent) {
+        const ptc = clean.filter(e => {
+            try {
+                if (JSON.parse(e)?.name === evd.player.name) return true
+                return false
+            } catch {
+                return false
+            }
+        })
+        system.runTimeout(() => {
+            for (let index = 0; index < ptc.length; index++) {
+                try {
+                    const c = JSON.parse(ptc[index])
+                    world.getDimension(c.dimension)?.getBlock(c.loc)?.setType('minecraft:air')
+                } catch {
+                    addToQueue(ptc[index])
+                }
+                decaySet.delete(ptc[index])
+            }
+        })
+    } else if (mcl.tickTimer(1200)) {
+        /**@type {string[]} */
+        let queue = mcl.jsonWGet('darkoak:decayqueue') ?? []
+        const l = queue.length
+        if (queue && queue.length > 0) {
+            mcl.arraySpreader3(queue, 60, (cl, i) => {
+                try {
+                    const c = JSON.parse(cl)
+                    world.getDimension(c.dimension).getBlock(c.loc).setType('minecraft:air')
+                    queue = queue.filter(e => e != cl)
+                    mcl.jsonWSet('darkoak:decayqueue', queue)
+                } catch {
+
+                }
+            })
+        }
+    }
+
+    function addToQueue(obj) {
+        /**@type {string[]} */
+        let queue = mcl.jsonWGet('darkoak:decayqueue') ?? []
+        queue.push(obj)
+        while (!mcl.jsonWSet('darkoak:decayqueue', queue)) {
+            queue.shift()
+        }
+    }
+}
+
 
 /**
  * 
@@ -179,12 +254,12 @@ export function welcomeMessage(evd) {
         }, 50)
     } else if (evd instanceof PlayerLeaveBeforeEvent) {
         //system.runTimeout(() => {
-            if (d?.byeS) {
-                world.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
-            } else {
-                evd.player.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
-            }
-            if (d?.byeCommand) mcl.pCommand(evd.player, arrays.replacer(evd.player, d?.byeCommand))
+        if (d?.byeS) {
+            world.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
+        } else {
+            evd.player.sendMessage(arrays.replacer(evd.player, d?.bye || ''))
+        }
+        if (d?.byeCommand) mcl.pCommand(evd.player, arrays.replacer(evd.player, d?.byeCommand))
         //})
     } else {
         system.runTimeout(() => {
@@ -549,6 +624,44 @@ export function lagClear() {
         const e = items[index]
         const i = e.getComponent(EntityComponentTypes.Item)?.itemStack
         if (!i) continue
+
+    }
+}
+
+/**
+ * @param {Player} player 
+ */
+export function walls(player) {
+    const blockUp = player.dimension.getBlockBelow(player.location, {
+        includeTypes: ['darkoak:upwards_wall'],
+    })
+    if (blockUp && !mcl.isCreating(player)) {
+        const loc = player.location
+        const dx = loc.x - (blockUp.location.x + 0.5)
+        const dz = loc.z - (blockUp.location.z + 0.5)
+
+        if (Math.abs(dx) > Math.abs(dz)) {
+            if (dx > 0) {
+                //player.applyImpulse({ x: velo.x * -1.5, y: 0, z: 0 })
+                player.teleport({ x: loc.x + 0.2, y: loc.y, z: loc.z })
+            } else {
+                //player.applyImpulse({ x: velo.x * 1.5, y: 0, z: 0 })
+                player.teleport({ x: loc.x - 0.2, y: loc.y, z: loc.z })
+            }
+        } else {
+            if (dz > 0) {
+                player.teleport({ x: loc.x, y: loc.y, z: loc.z + 0.2 })
+            } else {
+                player.teleport({ x: loc.x, y: loc.y, z: loc.z - 0.2 })
+            }
+        }
+
+        // possible better teleport
+        // player.teleport({
+        //     x: bx + Math.sign(dx) * 0.49,
+        //     y: pos.y,
+        //     z: bz + Math.sign(dz) * 0.49
+        // })
 
     }
 }

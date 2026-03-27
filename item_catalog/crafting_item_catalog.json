@@ -133,6 +133,110 @@
                             },
                             {
                                 "name": "minecraft:info_update"
+                            },
+                            {
+                                "name": "minecraft:fire"
+                            },
+                            {
+                                "name": "minecraft:piston_arm_collision"
+                            },
+                            {
+                                "name": "minecraft:portal"
+                            },
+                            {
+                                "name": "minecraft:carrots"
+                            },
+                            {
+                                "name": "minecraft:unlit_redstone_torch"
+                            },
+                            {
+                                "name": "minecraft:flowing_water"
+                            },
+                            {
+                                "name": "minecraft:flowing_lava"
+                            },
+                            {
+                                "name": "minecraft:jigsaw"
+                            },
+                            {
+                                "name": "minecraft:farmland"
+                            },
+                            {
+                                "name": "minecraft:lit_furnace"
+                            },
+                            {
+                                "name": "minecraft:info_update2"
+                            },
+                            {
+                                "name": "minecraft:standing_sign"
+                            },
+                            {
+                                "name": "minecraft:wall_sign"
+                            },
+                            {
+                                "name": "minecraft:frosted_ice"
+                            },
+                            {
+                                "name": "minecraft:end_portal"
+                            },
+                            {
+                                "name": "minecraft:reserved6"
+                            },
+                            {
+                                "name": "minecraft:daylight_detector_inverted"
+                            },
+                            {
+                                "name": "minecraft:bubble_column"
+                            },
+                            {
+                                "name": "minecraft:melon_stem"
+                            },
+                            {
+                                "name": "minecraft:agent_spawn_egg"
+                            },
+                            {
+                                "name": "minecraft:powder_snow"
+                            },
+                            {
+                                "name": "minecraft:firework_rocket:2147483647"
+                            },
+                            {
+                                "name": "minecraft:cave_vines"
+                            },
+                            {
+                                "name": "minecraft:cave_vines_body_with_berries"
+                            },
+                            {
+                                "name": "minecraft:cave_vines_head_with_berries"
+                            },
+                            {
+                                "name": "minecraft:petrified_oak_slab"
+                            },
+                            {
+                                "name": "minecraft:soul_fire"
+                            }
+                        ]
+                    },
+                    {
+                        "group_identifier": {
+                            "name": "darkoak:utility_blocks",
+                            "icon": "darkoak:upwards_wall"
+                        },
+                        "items": [
+                            {
+                                "name": "darkoak:upwards_wall"
+                            },
+                            {
+                                "name": "darkoak:interact_no_movement"
+                            },
+                            {
+                                "name": "darkoak:passover1"
+                            },
+                            {
+                                "name": "darkoak:passover2"
+                            },
+                            {
+                                "name": "darkoak:frictionless"
                             }
                         ]
                     }
