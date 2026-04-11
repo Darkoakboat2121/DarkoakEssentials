@@ -239,6 +239,41 @@
                                 "name": "darkoak:frictionless"
                             }
                         ]
+                    },
+                    {
+                        "group_identifier": {
+                            "name": "darkoak:creator_items",
+                            "icon": "minecraft:command_block"
+                        },
+                        "items": [
+                            {
+                                "name": "minecraft:command_block"
+                            },
+                            {
+                                "name": "minecraft:repeating_command_block"
+                            },
+                            {
+                                "name": "minecraft:chain_command_block"
+                            },
+                            {
+                                "name": "minecraft:deny"
+                            },
+                            {
+                                "name": "minecraft:allow"
+                            },
+                            {
+                                "name": "minecraft:barrier"
+                            },
+                            {
+                                "name": "minecraft:border_block"
+                            },
+                            {
+                                "name": "minecraft:structure_void"
+                            },
+                            {
+                                "name": "minecraft:structure_block"
+                            }
+                        ]
                     }
                 ]
             }

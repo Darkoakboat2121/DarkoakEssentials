@@ -1,7 +1,7 @@
 import { world, system, Container, ItemEnchantableComponent, ItemStack, Player, PlayerPlaceBlockBeforeEvent, PlayerBreakBlockBeforeEvent, PlayerGameModeChangeBeforeEvent, GameMode, EntityComponentTypes, ItemComponentTypes, EntityHitEntityAfterEvent, ItemReleaseUseAfterEvent, MemoryTier, PlayerInteractWithEntityBeforeEvent, EffectTypes, InputPermissionCategory, EquipmentSlot, PlayerJoinAfterEvent, CommandPermissionLevel, DataDrivenEntityTriggerAfterEvent, PlayerSpawnAfterEvent } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl, miu } from "../logic"
-import { badBlocksList, hackedItemsList, hackedItemsVanilla, susNames } from "../data/arrays"
+import { badBlocksList, crasherSymbol, hackedItemsList, hackedItemsVanilla, susNames } from "../data/arrays"
 import { transferPlayer } from "@minecraft/server-admin"
 import { getPlayerSkin } from "@minecraft/server-gametest"
 
@@ -406,6 +406,40 @@ export function dupeIDChecker(player, d, reset) {
             }
         }
 
+        
+
+        if (d?.antibookbans) {
+            const bo = item?.getComponent(ItemComponentTypes.Book)
+            if (bo) {
+                if (bo?.author?.length > 14 || bo?.title?.length > 16) {
+                    resetBook(`author or title field is too long (title: ${bo?.title?.length}, author: ${bo?.title?.length})`)
+                    continue
+                }
+
+                if (bo?.contents?.length > 0) {
+                    try {
+                        let contents = bo.contents
+                        for (let n = 0; n < contents.length; n++) {
+                            let page = contents[n]
+                            if (!page) continue
+                            const sym = mcl.stringContainsLagtext(page)
+                            if (sym) {
+                                resetBook('has lag text unicode')
+                            }
+                        }
+                    } catch (e) {
+                        mcl.debugLog('anti-book-bans', String(e))
+                    }
+                }
+
+
+                function resetBook(reason) {
+                    let newItem = new ItemStack(item.type, item.amount)
+                    mcl.getItemContainer(player).setItem(index, newItem)
+                    log(player, `anti-book-ban: ${reason}`)
+                }
+            }
+        }
     }
 
     const gm = player.getGameMode()

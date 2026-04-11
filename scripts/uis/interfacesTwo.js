@@ -718,6 +718,9 @@ export function anticheatSettings(player, message = '') {
     bui.toggle(f, 'Anti-Ghost-Interact', d?.antighostinteract)
     bui.label(f, 'Prevents Players From Interacting With Blocks Through Walls. Does Not Log')
 
+    bui.toggle(f, 'Anti-book-bans', d?.antibookbans)
+    bui.label(f, 'Prevents Book Bans From Being Created')
+
     f.show(player).then((evd) => {
         if (evd.canceled || evd.cancelationReason) return
         const e = bui.formValues(evd)
@@ -807,6 +810,9 @@ export function anticheatSettings(player, message = '') {
             antifly1: e[i++],
             antispeed: e[i++],
             antispeedsense: e[i++],
+
+            antighostinteract: e[i++],
+            antibookbans: e[i++],
         })
     }).catch()
 }
@@ -1647,8 +1653,10 @@ export function scriptSettings(player) {
     bui.header(f, 'Other')
 
     bui.toggle(f, 'Cancel Watchdog Terminating', d?.cancelWatchdog, 'If Enabled, Attempts To Cancel A Scripting Crash')
-    bui.toggle(f, 'Log Data To Console', d?.datalog, 'Logs Data Changes To The Console')
+    bui.toggle(f, 'Log Data To Console', d?.datalog, 'Logs Data Changes To The Console. Don\'t Enable This, It Causes Lag')
     bui.toggle(f, 'Collect Player Data?', d?.collectPlayers)
+    bui.toggle(f, 'Compress Data?', d?.compressdata, 'If Enabled, Compresses Data. This Will Reduce The Total Amount Of Data Stored')
+
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -1683,6 +1691,7 @@ export function scriptSettings(player) {
             cancelWatchdog: e[i++], // not working
             datalog: e[i++], // not working
             collectPlayers: e[i++],
+            compressdata: e[i++], // not working
         })
     }).catch()
 }
@@ -4086,6 +4095,54 @@ export function testUI(player) {
     })
 }
 
+export function compressTestUI(player) {
+    let f = CustomForm.create(player, 'Compress Test')
+
+    const text = Observable.create('', {
+        clientWritable: true
+    })
+    let compressed = Observable.create('', {
+        clientWritable: true
+    })
+    let uncompressed = Observable.create('', {
+        clientWritable: true
+    })
+    let ratio = Observable.create('NaN% Smaller', {
+        clientWritable: true
+    })
+    text.subscribe((evd) => {
+        let f = evd
+        let g = mcl.stringCompress(f, false, false)
+        compressed.setData(`${g} | Length: ${g.length}`)
+        let h = mcl.stringCompress(g, false, true)
+        uncompressed.setData(`${h} | Length: ${h.length}`)
+
+        ratio.setData((100 - ((g.length / h.length) * 100)).toFixed(2) + '% Smaller')
+    })
+
+
+    f.textField('Text To Compress', text)
+
+    f.spacer()
+
+    f.label('Compressed:')
+    f.spacer()
+    f.label(compressed)
+
+    f.spacer()
+    f.divider()
+
+    f.label('Compressed then decompressed:')
+    f.spacer()
+    f.label(uncompressed)
+
+    f.spacer()
+
+    f.label(ratio)
+
+    f.show()
+}
+
 /**
  * @param {Player} player 
  */
@@ -4223,6 +4280,332 @@ export function dataDeleterSearchUIV2(player, search = '', searchVal = '', useRe
         }, 20)
     })
 
+
+    f.show()
+}
+
+
+export function anticheatSettingsV2(player) {
+    let f = CustomForm.create(player, 'Anticheat Settings V2')
+
+    const d = mcl.jsonWGet('darkoak:anticheat')
+
+    // oh my lord
+    let modules = {
+        prebans: bui.observable(d?.prebans ?? false),
+        antinuker: bui.observable(d?.antinuker ?? false),
+        antinukersense: bui.observable(d?.antinukersense ?? 0),
+        antifastplace: bui.observable(d?.antifastplace ?? false),
+        antifastplacesense: bui.observable(d?.antifastplacesense ?? 10),
+        antispam: bui.observable(d?.antispam ?? false),
+        antispam2: bui.observable(d?.antispam2 ?? false),
+        antispam2sense: bui.observable(d?.antispam2sense ?? 10),
+        antispam3: bui.observable(d?.antispam3 ?? false),
+        antichatflood: bui.observable(d?.antichatflood ?? false),
+        antichatfloodsense: bui.observable(d?.antichatfloodsense ?? 100),
+        antiillegalenchant: bui.observable(d?.antiillegalenchant ?? false),
+        antigamemode: bui.observable(d?.antigamemode ?? false),
+        npcdetect: bui.observable(d?.npcdetect ?? false),
+        antifly2: bui.observable(d?.antifly2 ?? false),
+        antifly3: bui.observable(d?.antifly3 ?? false),
+        antiinvalid1: bui.observable(d?.antiinvalid1 ?? false),
+        antiinvalid2: bui.observable(d?.antiinvalid2 ?? false),
+        antiinvalid3: bui.observable(d?.antiinvalid3 ?? false),
+        antiinvalid3sense: bui.observable(d?.antiinvalid3sense ?? 1),
+        antiblockreach: bui.observable(d?.antiblockreach ?? false),
+        notify: bui.observable(d?.notify ?? false),
+        strike: bui.observable(d?.strike ?? false),
+        strikeamount: bui.observable(d?.strikeamount ?? 3),
+        strikedamage: bui.observable(d?.strikedamage ?? 1),
+        anticrasher1: bui.observable(d?.anticrasher1 ?? false),
+        anticrasher1books: bui.observable(d?.anticrasher1books ?? false),
+        antinuker2: bui.observable(d?.antinuker2 ?? false),
+        antinbt: bui.observable(d?.antinbt ?? false),
+        antidupe1: bui.observable(d?.antidupe1 ?? false),
+        antidupeclear: bui.observable(d?.antidupeclear ?? false),
+        antidupe2: bui.observable(d?.antidupe2 ?? false),
+        antidupeversion: bui.observable(d?.antidupeversion ?? 1),
+        antinbt2: bui.observable(d?.antinbt2 ?? false),
+        antiadminitems: bui.observable(d?.antiadminitems ?? false),
+        antiairplace: bui.observable(d?.antiairplace ?? false),
+        antistreamermode: bui.observable(d?.antistreamermode ?? false),
+        anticrasher2: bui.observable(d?.anticrasher2 ?? false),
+        antiinvalid4: bui.observable(d?.antiinvalid4 ?? false),
+        antiinvalid4kick: bui.observable(d?.antiinvalid4kick ?? false),
+        antispamactive: bui.observable(d?.antispamactive ?? false),
+        antiphase: bui.observable(d?.antiphase ?? false),
+        antiphasesense: bui.observable(d?.antiphasesense ?? 0),
+        antiscaffold: bui.observable(d?.antiscaffold ?? false),
+        antibowspam: bui.observable(d?.antibowspam ?? false),
+        antivelocity: bui.observable(d?.antivelocity ?? false),
+        antinametags: bui.observable(d?.antinametags ?? false),
+        antiantiimmobile: bui.observable(d?.antiantiimmobile ?? false),
+        antiairswim: bui.observable(d?.antiairswim ?? false),
+        antiautoclicker: bui.observable(d?.antiautoclicker ?? false),
+        antiautoclickersense: bui.observable(d?.antiautoclickersense ?? 0),
+        antiairjump: bui.observable(d?.antiairjump ?? false),
+        antifly4: bui.observable(d?.antifly4 ?? false),
+        antizd: bui.observable(d?.antizd ?? false),
+        antiinvisskins: bui.observable(d?.antiinvisskins ?? false),
+        antibot: bui.observable(d?.antibot ?? false),
+        subsession: bui.observable(d?.subsession ?? false),
+        antiforceop: bui.observable(d?.antiforceop ?? false),
+        antiforceopowner: bui.observable(d?.antiforceopowner ?? mcl.decide(mcl.isHost(player?.name), player?.name, mcl.getHost()?.name ?? '')),
+        antiforceopallowed: bui.observable(d?.antiforceopallowed ?? player?.name ?? ''),
+        antikaura: bui.observable(d?.antikaura ?? false),
+        anticps: bui.observable(d?.anticps ?? false),
+        anticpssense: bui.observable(d?.anticpssense ?? 15),
+        antireach: bui.observable(d?.antireach ?? false),
+        antireachsense: bui.observable(d?.antireachsense ?? 55),
+        antifly1: bui.observable(d?.antifly1 ?? false),
+        antispeed: bui.observable(d?.antispeed ?? false),
+        antispeedsense: bui.observable(d?.antispeedsense ?? 10),
+        antighostinteract: bui.observable(d?.antighostinteract ?? false),
+        antibookbans: bui.observable(d?.antibookbans ?? false),
+    }
+
+    let movement = bui.observable(false)
+    let mo = {
+        visible: movement
+    }
+
+    f.button('Show/Hide Movement Anticheat', () => {
+        movement.setData(!movement.getData())
+    })
+
+    f.toggle('Anti-fly 1', modules.antifly1, mo)
+    f.label('Checks If A Player Is Flying Like In Creative Mode But Without Creative', mo)
+
+    f.toggle('Anti-fly 2', modules.antifly2, mo)
+    f.label('Checks If The Player Is Flying And Gliding At The Same Time', mo)
+
+    f.toggle('Anti-fly 3', modules.antifly3, mo)
+    f.label('Checks If The Player Is Gliding Weirdly (If Player Is Going Up Without Looking Up)', mo)
+
+    f.toggle('Anti-fly 4', modules.antifly4, mo)
+    f.label('Checks If A Player Is Gliding Without An Elytra Equiped', mo)
+
+    f.toggle('Anti-phase', modules.antiphase, mo)
+    f.slider('Anti-phase Sensitivity (Most Sensitive Is 0)', modules.antiphasesense, 0, 20, mo)
+
+    f.toggle('Anti-air-swim', modules.antiairswim, mo)
+    f.label('Checks If A Player Is Swimming Without Being In Water', mo)
+
+    f.toggle('Anti-air-jump', modules.antiairjump, mo)
+    f.label('Checks If A Player Is Not On The Ground And Is Jumping', mo)
+
+    f.divider()
+
+    let combat = bui.observable(false)
+    mo = {
+        visible: combat
+    }
+
+    f.button('Show/Hide Combat Anticheat', () => {
+        combat.setData(!combat.getData())
+    })
+
+    f.toggle('Anti-bow-spam', modules.antibowspam, mo)
+    f.label('Checks If The Delay Between Two Shots Isn\'t Within Normal Limits', mo)
+
+    f.toggle('Anti-kill-aura', modules.antikaura, mo)
+    f.label('Adds An Invisible Entity Behind A Player And Checks If The Player Hits It', mo)
+
+    f.toggle('Anti-CPS', modules.anticps, mo)
+    f.label('Checks If The Players CPS Is Above The Limit', mo)
+    f.slider('CPS Limit', modules.anticpssense, 15, 60, mo)
+
+    f.toggle('Anti-reach', modules.antireach, mo)
+    f.label('Checks How Far Away Two Players Are When One Hits Another', mo)
+    f.slider('Reach Limit', modules.antireachsense, 50, 100, mo)
+
+    f.toggle('Anti-auto-clicker', modules.antiautoclicker, mo)
+    f.label('Checks If A Player Is Hitting An Entity At The Same Delay Three Times In A Row', mo)
+    f.slider('Sensitivity (Smaller Is More Sensitive)', modules.antiautoclickersense, 0, 10, mo)
+
+    f.divider()
+
+    let prevent = bui.observable(false)
+    mo = {
+        visible: prevent
+    }
+
+    f.button('Show/Hide Prevention Anticheat', () => {
+        prevent.setData(!prevent.getData())
+    })
+
+    f.toggle('Anti-force-op', modules.antiforceop, mo)
+    f.label('Forces Everyone Except Allowed Names To Have Member Permissions For Commands.\n§4§lSeperate Names Using Commas!!!§r', mo)
+
+    const players = mcl.getPlayerList()
+    let forceOpOptionsOwner = bui.observable('')
+    modules.antiforceopowner.subscribe((evd) => {
+        if (players.includes(evd)) {
+            forceOpOptionsOwner.setData(`§aFound Player: ${evd}`)
+        } else {
+            forceOpOptionsOwner.setData(`§cPlayer "${evd}" Is Not In The Player List`)
+        }
+    })
+
+    f.textField('§a§lOwner / Host Name:', modules.antiforceopowner, mo)
+    f.label(forceOpOptionsOwner, mo)
+
+    let forceOpOptionsAllowed = bui.observable('')
+    modules.antiforceopallowed.subscribe((evd) => {
+        const ps = evd.split(',')
+        let list = []
+        for (let index = 0; index < ps.length; index++) {
+            const p = ps[index]
+            if (players.includes(p)) {
+                list.push(`§a${p}: Found§r`)
+            } else {
+                list.push(`§c${p}: Not Found§r`)
+            }
+        }
+        forceOpOptionsAllowed.setData(list.join(', '))
+    })
+
+    f.textField('§t§lAllowed Players:', modules.antiforceopallowed, {
+        description: 'Seperate Names Using Commas',
+        visible: mo.visible
+    })
+    f.label(forceOpOptionsAllowed, mo)
+
+    f.toggle('Anti-ZD', modules.antizd, mo)
+    f.label('Prevents Known Bots From Joining The Game', mo)
+
+    f.toggle('Anti-gamemode-switcher', modules.antigamemode, mo)
+    f.label('Prevents Non-Admins From Changing Gamemodes. Use The Tag "darkoak:canswitch" To Allow The Player To Switch Gamemodes', mo)
+
+    f.toggle('Pre-bans', modules.prebans, mo)
+    f.label('Automatically Bans Hackers The Developers Know About', mo)
+    let prebanShow = bui.observable(false)
+    prevent.subscribe((evd) => {
+        prebanShow.setData(false)
+    })
+    f.toggle('Show List?', prebanShow, mo)
+    f.label('Full List:', {
+        visible: prebanShow
+    })
+    f.label(preBannedList.join(' | '), {
+        visible: prebanShow
+    })
+
+    f.toggle('Anti-NBT 1', modules.antinbt, mo)
+    f.label('Checks If The Player Has An Item They Shouldn\'t Have At All And Clears It', mo)
+
+    f.toggle('Anti-NBT 2', modules.antinbt2, mo)
+    f.label('Bans Items That Are Named The Same As Common Hacked Kits And NBT Exploits', mo)
+
+    f.toggle('Anti-admin-items', modules.antiadminitems, mo)
+    f.label('Bans Items That Should Only Be Used By Admins, Like Command Blocks', mo)
+
+    f.toggle('Anti-bot', modules.antibot, mo)
+    f.label('Checks If A Player Is Deletable. Normally Players CANNOT Be Deleted, Bots CAN Be Deleted', mo)
+
+    f.toggle('Anti-subsession-abuse', modules.subsession, mo)
+    f.label('Checks If An Unkickable Bot Has Joined And Kicks The Host Account', mo)
+
+    f.toggle('Anti-book-bans', modules.antibookbans, mo)
+    f.label('Prevents Book Bans From Being Created', mo)
+
+
+
+    f.divider()
+
+    let building = bui.observable(false)
+    mo = {
+        visible: building
+    }
+
+    f.button('Show/Hide Building Anticheat', () => {
+        building.setData(!building.getData())
+    })
+
+    f.toggle('Anti-nuker 1', modules.antinuker, mo)
+    f.label('Checks If A Player Is Breaking Blocks Too Fast', mo)
+    f.slider('Block Limit', modules.antinukersense, 20, 100, mo)
+
+    f.toggle('Anti-nuker 2', modules.antinuker2, mo)
+    f.label('Checks If The Player Is Looking At A Different Block Than They Are Breaking', mo)
+
+    f.toggle('Anti-fast-place', modules.antifastplace, mo)
+    f.label('Checks If A Player Is Placing Blocks Too Fast', mo)
+    f.slider('Block Limit', modules.antifastplacesense, 10, 60, mo)
+
+    f.toggle('Anti-block-reach', modules.antiblockreach, mo)
+    f.label('Checks If The Player Places A Block Farther Away Than Allowed (Also Cancels Block Placement If Too Far)', mo)
+    
+    f.toggle('Anti-air-place', modules.antiairplace, mo)
+    f.label('Checks If A Player Places A Block Without Support', mo)
+
+    f.toggle('Anti-scaffold', modules.antiscaffold, mo)
+    f.label('Checks If A Player Is Placing Blocks Below Them While Looking Up', mo)
+
+    f.toggle('Anti-ghost-interact', modules.antighostinteract, mo)
+    f.label('Prevents Players From Interacting With Blocks Through Walls. Does Not Log', mo)
+    
+    f.divider()
+
+    let chat = bui.observable(false)
+    mo = {
+        visible: chat
+    }
+
+    f.button('Show/Hide Chat-Based Anticheat', () => {
+        chat.setData(!chat.getData())
+    })
+
+    f.divider(mo)
+
+    f.header('Anti-spams', mo)
+
+    f.toggle('Anti-spam', modules.antispam, mo)
+    f.label('Checks The Players Recent Messages For Repeats, Automatically Formats To Ensure Spaces And Formatting Codes Don\'t Bypass It. Also Checks If The Message Matches Common Hack Client Messages Such As Client Download Link Spam', mo)
+    f.spacer(mo)
+    f.toggle('Anti-spam-extra', modules.antispam2, {
+        visible: mo.visible,
+        description: 'Needs Anti-spam Enabled'
+    })
+    f.label('Attempts To Bypass Anti-Spam Bypasses By Detecting How Similar Two Messages Are By A Percentage', mo)
+    f.slider('Anti-spam-extra Sensitivity', modules.antispam2sense, mo)
+    f.spacer(mo)
+    f.toggle('Anti-spam-delay', modules.antispam3, {
+        visible: mo.visible,
+        description: 'Does Not Need Anti-spam Enabled'
+    })
+    f.label('Checks If Two Messages Were Sent Milliseconds Apart, If So, Prevents It', mo)
+    f.spacer(mo)
+    f.toggle('Anti-chat-flood', modules.antichatflood, mo)
+    f.label('Prevents Players From Sending Messages Larger Then Specified')
+    f.slider('Max Size Of Messages', modules.antichatfloodsense, 50, 500, {
+        visible: mo.visible,
+        step: 25
+    })
+    f.spacer(mo)
+    f.toggle('Anti-spammer-activity', modules.antispamactive, mo)
+    f.label('Blocks Messages From Actively Moving Players. Triggers Include: Sprinting, Jumping')
+    
+
+
+    f.divider(mo)
+
+
+
+    f.divider()
+    
+
+    f.button('Save?', () => {
+        const keys = Object.keys(modules)
+        const values = Object.values(modules).map(e => e.getData())
+        let no = {}
+        for (let index = 0; index < keys.length; index++) {
+            const key = keys[index]
+            no[key] = values[index]
+        }
+        mcl.jsonWSet('darkoak:anticheat', no)
+        f.close()
+    })
 
     f.show()
 }

@@ -199,6 +199,9 @@ export const preBannedList = [
     'FolkPineapple', //OP exploit
     'GoldenBroYT3096', //Racism
     'Eclpse G0d', //Racism
+    'l1u9', //Basic
+    'CjMustard1452', //Client dev
+    'ZyloxDeveloper', //Alt
 ]
 
 export const prebansSet = new Set(preBannedList)
@@ -613,7 +616,7 @@ export function replacer(d, text) {
                     if (min > max) {
                         f = f.replace(`#=${inside}=#`, 'Error: Min Is Greater Than Max')
                     } else {
-                        f = f.replace(`#=${inside}=#`, mcl.xorRandomNum(min, max).toString())
+                        f = f.replace(`#=${inside}=#`, mcl.xorRandomNum(min, max, mcl.randomNumber()).toString())
                     }
                 }
             }
@@ -2694,6 +2697,10 @@ export let rickrollLyrics = [
     `Never gonna let your server down`,
     `Never gonna run around and desync you`,
 ]
+
+export const letters = 'abcdefghijklmnopqrstuvwxyz'
+export const capitalLetters = letters.toUpperCase()
+export const numbers = '1234567890'
 
 
 

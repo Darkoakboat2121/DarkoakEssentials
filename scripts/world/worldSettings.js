@@ -665,3 +665,25 @@ export function walls(player) {
 
     }
 }
+
+/**
+ * @param {Player} player 
+ */
+export function blockDisplayAntiphase(player) {
+    const l = player.location
+    const bds = player.dimension.getEntitiesAtBlockLocation({
+        x: l.x,
+        y: l.y + 1.5,
+        z: l.z,
+    })?.filter(e => e.typeId === 'darkoak:block_display')
+
+    if (!bds || bds.length < 1) return
+
+    const b = bds[0].location
+
+    player.teleport({
+        x: b.x,
+        y: b.y + 2.5,
+        z: b.z
+    })
+}

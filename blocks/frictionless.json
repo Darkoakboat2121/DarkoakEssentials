@@ -1,5 +1,5 @@
 {
-    "format_version": "1.21.60",
+    "format_version": "1.26.0",
     "minecraft:block": {
         "description": {
             "identifier": "darkoak:frictionless",
@@ -23,7 +23,8 @@
             },
             "minecraft:destructible_by_mining": false,
             "minecraft:destructible_by_explosion": false,
-            "minecraft:friction": 0.0
+            "minecraft:friction": 0.0,
+            "darkoak:frictionless": {}
         }
     }
 }

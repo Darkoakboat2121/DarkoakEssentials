@@ -50,6 +50,11 @@ import { collectPluginStats, collectRuntimeStats, DebugBox, debugDrawer, DebugTe
 import { renderTexts } from "./miscellaneous/floatingtextv2"
 import { grapple } from "./miscellaneous/grapple"
 
+// import * as qr from "./debug/tests/qrcode"
+// system.runTimeout(() => {
+// qr.generateQR('google.com', {x: -19, y: 91, z: 369})
+// })
+
 
 let act = 0
 
@@ -60,6 +65,7 @@ world.afterEvents.itemUse.subscribe((evd) => {
     enchantOnUse(evd, cd.get('darkoak:scriptsettings'))
     worldSettings.bindedItems(evd)
     magicItem(evd)
+    worldEdit.otherTools(evd)
 
     // system.sendScriptEvent('darkoak:afteritemuse', JSON.stringify({
     //     itemStack: evd.itemStack,
@@ -399,6 +405,25 @@ system.runInterval(() => {
 
         controlFakeplayer(player)
         worldSettings.walls(player)
+        worldSettings.blockDisplayAntiphase(player)
+
+
+
+        // if (mcl.tickTimer(100)) {
+        //     // const stry = mcl.stringCompress('Hello and welcome to Darko Town!!! You\'re the 20th member.', false, false)
+        //     // console.error(stry)
+        //     // const ns = mcl.stringCompress(stry, false, true)
+        //     // console.error(ns)
+        //     // console.error(`Compressed: ${stry.length}, Uncompressed: ${ns.length}`)
+
+        //     // const obj = mcl.stringCompress(JSON.stringify(mcl.playerToData(player)), false, false)
+        //     // console.error(obj)
+
+        //     // const unc = mcl.stringCompress(obj, false, true)
+        //     // console.error(unc)
+        //     // console.error(`comp: ${obj.length}, unc: ${unc.length}`)
+
+        // }
 
         //plotAdder(player)
         // mcl.particleOutline({x: -167, y: 62, z: -76}, {x: -171, y: 66, z: -80}, undefined, 0.1, player.dimension.id)
@@ -1249,6 +1274,8 @@ function scriptEvents(evd) {
 }
 
 system.beforeEvents.watchdogTerminate.subscribe((evd) => {
+    console.error(evd.terminateReason)
+
     const d = mcl.jsonWGet('darkoak:scriptsettings')
     if (!d) return
     if (d?.cancelWatchdog) {
@@ -1565,6 +1592,8 @@ function playerLister(player) {
         mcl.jsonWSet('darkoak:modlist', mods)
     }
 }
+
+let frictionMap = new Map()
 
 /**
  * @param {StartupEvent} evd 
@@ -3461,6 +3490,18 @@ function customSlashCommands(evd) {
                 }
             }
         },
+    })
+
+    evd.blockComponentRegistry.registerCustomComponent('darkoak:frictionless', {
+        onStepOn: (evd, p) => {
+            const player = evd?.entity
+            if (!player) return
+            const bl = evd.block.location
+
+            const speed = player.getVelocity()
+            frictionMap.set(player?.id, JSON.stringify(speed))
+            player.applyImpulse(JSON.parse(frictionMap.get(player?.id)))
+        }
     })
 
     // evd.customCommandRegistry.registerCommand({

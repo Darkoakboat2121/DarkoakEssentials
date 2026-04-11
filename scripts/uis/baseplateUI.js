@@ -1,5 +1,5 @@
 import { world, system, Player } from "@minecraft/server"
-import { MessageFormData, ModalFormData, ActionFormData, ModalFormResponse, MessageFormResponse, ActionFormResponse } from "@minecraft/server-ui"
+import { MessageFormData, ModalFormData, ActionFormData, ModalFormResponse, MessageFormResponse, ActionFormResponse, Observable, CustomForm } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { cd } from "../data/defaults"
 
@@ -221,6 +221,26 @@ export class bui {
                 return new MessageFormData()
                 break
         }
+    }
+
+    /**
+     * @template T
+     * @param {T} data 
+     * @param {boolean} clientWritable 
+     * @returns {Observable<T>}
+     */
+    static observable(data, clientWritable = true) {
+        return Observable.create(data, {
+            clientWritable: clientWritable ?? true
+        })
+    }
+
+    /**
+     * @param {CustomForm} f 
+     * @returns 
+     */
+    static cButton(f, label, onClick) {
+        return f.button(label, onClick)
     }
 
     // subclass here, its like bui.cf.____

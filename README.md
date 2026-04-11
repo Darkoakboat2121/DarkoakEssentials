@@ -91,16 +91,23 @@ changelog:
         upwards wall & interact no movement blocks & passover blocks (any entity above them with a limit of ten blocks gets a tag, basically a gate system)
         data deleter v2
         anti-dupe v2
+        more illegal items to the illegal items giver
+        anti-book-ban
 
 
+        elevator ----------- needs new collsion detection
+        string compression system --------needs work? ------------
         alt finder UI -----still needs work
         crates (rewards should be commands) -----still needs work
         
 
+
+        /weselect * - make it RI - RI (formally N)
+        command blocks/structureblocks vreator items in creative inventory *
         actual clans (should have: clan leader (can kick outta clan), clan members, private clan messaging) *
         scythe dummy item *
         dev tools: emulated packet reading *
-        we circle maker /wecircle *
+        we: paint (item that uses command to set blocks & size, use item to toggle on/off, paints blocks that you look at), cut (straight through, circle scooper), *** partially done
         spawn protection settings *
         extra ui to community ui, has creatable buttons with commands *
         uis should have references to uis that it came from, allows all uis to have back buttons with only one length *
@@ -119,6 +126,7 @@ changelog:
         lava / water bucket use on world protected areas
         build decay
 
+        update the docs - N
         offline bans ------------------------ CHECK THIS N - P
 
 
@@ -164,7 +172,7 @@ changelog:
 
 whenever that one command error with looped out or whatever, try removing all commands, then adding them back
 
-NEW OP EXPLOIT
+NEW OP EXPLOIT (fixed)
 spoofs being host
 does not complete joining, aka showing a join message (may complete but is very delayed)
 prejoins does detect them
@@ -172,6 +180,14 @@ names are random and valid
 kicking the hosts name might be a work around, but runs into the setmaxplayers issue, the one where only real players can run it
 cannot /kick hacker because they register as host
 
+
+
+i have an idea, since certain symbols cant be used as input, what if i could convert certain parts into the symbols, then the symbols back into the parts? for example "like" -> "^", "dislike" -> "&^"
+most likely will only be used for keys
+
+
+SPLASHIFEDS IP LOGGER (he faked it lol, theres still a possibility that he lied about faking it so still find a way)
+we need a way to run commands entirely from the player to disconnect websockets
         
         
 dummy item icon changer
@@ -302,3 +318,39 @@ CLIENT DEFS:
 
 
 
+
+These `darkoak:anticheat` module keys are defined in `anticheatSettingsV2` but are not referenced by any toggle/slider/text field/label in the UI:
+
+- `antispam`
+- `antispam2`
+- `antispam2sense`
+- `antispam3`
+- `antichatflood`
+- `antichatfloodsense`
+- `antiillegalenchant`
+- `npcdetect`
+- `antiinvalid1`
+- `antiinvalid2`
+- `antiinvalid3`
+- `antiinvalid3sense`
+- `notify`
+- `strike`
+- `strikeamount`
+- `strikedamage`
+- `anticrasher1`
+- `anticrasher1books`
+- `antidupe1`
+- `antidupeclear`
+- `antidupe2`
+- `antidupeversion`
+- `antistreamermode`
+- `anticrasher2`
+- `antiinvalid4`
+- `antiinvalid4kick`
+- `antispamactive`
+- `antivelocity`
+- `antinametags`
+- `antiantiimmobile`
+- `antiinvisskins`
+- `antispeed`
+- `antispeedsense`

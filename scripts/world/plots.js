@@ -77,7 +77,7 @@ export function plotGenerator(start, i, player) {
             dimen.runCommand(`fill ${plotStart.x} ${plotStart.y + wallHeight} ${plotStart.z - 1} ${plotEnd.x} ${plotStart.y + 1} ${plotStart.z - 1} barrier`)
             dimen.runCommand(`fill ${plotStart.x} ${plotStart.y + wallHeight} ${plotEnd.z + 1} ${plotEnd.x} ${plotStart.y + 1} ${plotEnd.z + 1} barrier`)
 
-            world.tickingAreaManager.removeTickingArea(evd)
+            world.tickingAreaManager.removeTickingArea('darkoak:plotmaker')
         })
     })
     // } catch (e) {

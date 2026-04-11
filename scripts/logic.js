@@ -1,7 +1,7 @@
 import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel, CustomCommandOrigin, EquipmentSlot } from "@minecraft/server"
 import { transferPlayer } from "@minecraft/server-admin"
 import { cd, dataGet } from "./data/defaults"
-import { specialRanks } from "./data/arrays"
+import { capitalLetters, letters, numbers, specialRanks } from "./data/arrays"
 
 /**Minecraft Logic class, designed to add logic to the Minecraft Bedrock scripting API*/
 export class mcl {
@@ -54,6 +54,9 @@ export class mcl {
 
         const range = high - low + 1
         return (state >>> 0) % range + low
+
+        // const range = (state >>> 0) / 2 ** 32
+        // return low + range * (high - low)
     }
 
     /**Returns a random string based on the inputted length and whether to include numbers
@@ -212,6 +215,59 @@ export class mcl {
         return newMessage
     }
 
+    /**For compression systems. Don't use on fields that may contain emojis. Non-JSON mode has a ~40% compression rate while JSON mode has a ~10% compression rate.
+     * Make it compress the string from start to finish rather than patches to make it smaller
+     * @param {string | object} string 
+     * @param {boolean} jsonMode False by default
+     * @param {boolean} decompress False by default
+     */
+    static stringCompress(string, jsonMode = (typeof string === 'object'), decompress = false) {
+        /**@type {Map<string, string>} */
+        let encodeMap = new Map()
+        /**@type {Map<string, string>} */
+        let decodeMap = new Map()
+        let pairs = []
+        const allCombos = letters + capitalLetters + numbers + '"[],{}%|:*&^$#@!. ' // this is the limit, no more changes
+        for (let i = 0; i < allCombos.length; i++) {
+            for (let j = 0; j < allCombos.length; j++) {
+                pairs.push(allCombos[i] + allCombos[j])
+            }
+        }
+        const startCode = 0xE000
+        for (let index = 0; index < pairs.length; index++) {
+            const p = pairs[index]
+            const char = String.fromCharCode(startCode + index)
+            encodeMap.set(p, char)
+            decodeMap.set(char, p)
+        }
+
+
+        if (jsonMode) {
+            const obj = (typeof string === 'object') ? string : JSON.parse(string)
+            const kvp = Object.entries(obj)
+            let newObj = {}
+            for (let index = 0; index < kvp.length; index++) {
+                const key = kvp[index][0]
+                const value = kvp[index][1]
+                newObj[compress(key)] = value
+            }
+            return (typeof string === 'object') ? newObj : JSON.stringify(newObj)
+        } else return compress(string)
+
+        /**
+         * @param {string} str 
+         */
+        function compress(str) {
+            let finished = str
+            const codeArray = Array.from((decompress ? decodeMap : encodeMap)).sort((a, b) => b[0].length - a[0].length)
+            for (let index = 0; index < codeArray.length; index++) {
+                const element = codeArray[index]
+                finished = finished.replaceAll(element[0], element[1])
+            }
+            return finished
+        }
+    }
+
     /**Gets a variety of number properties
      * @param {number} num 
      */
@@ -226,6 +282,18 @@ export class mcl {
             isNumber: !isNaN(num),
             factorial: mcl.factorial(num),
         }
+    }
+
+    /**
+     * @param {string} string 
+     */
+    static stringContainsLagtext(string) {
+        for (let index = 0xE000; index <= 0xF8FF; index++) {
+            const symbol = String.fromCodePoint(index)
+
+            if (string.includes(symbol)) return symbol
+        }
+        return false
     }
 
     // /**
@@ -444,14 +512,19 @@ export class mcl {
      * @param {string} id 
      * @returns {object | undefined}
      */
-    static jsonWGet(id) {
+    static jsonWGet(id, decompress = false) {
         // const t = world.getDynamicProperty(id)
         // if (t == undefined) {
         //     return undefined
         // } else {
         //     return JSON.parse(t)
         // }
-        return cd.get(id)
+        let data = cd.get(id)
+
+        // if (decompress) data = mcl.stringCompress(JSON.stringify(data), true, decompress)
+
+        // if (cd.get('darkoak:scriptsettings')?.datalog && data) console.log(JSON.stringify(data))
+        return data
     }
 
     /**Sets a global data object
@@ -459,9 +532,10 @@ export class mcl {
      * @param {object} data 
      * @returns {boolean} Returns true if it successfully saved, false if didn't save
      */
-    static jsonWSet(id, data, instantSet = true) {
+    static jsonWSet(id, data, instantSet = true, compress = false) {
         try {
             const jd = JSON.stringify(data)
+            //if (compress) jd = mcl.stringCompress(jd, true, false)
             world.setDynamicProperty(id, jd)
             if (instantSet) cd.set(id, data)
             return true
@@ -1938,6 +2012,63 @@ export class mcl {
         if (condition) return option1
         return option2
     }
+
+    /**
+     * @param {Player} player 
+     * @param {Entity} wall 
+     */
+    static playerCollision(player, wall) {
+        const pl = player.location
+        const wl = wall.location
+
+        const pb = minMax(player.getAABB())
+        const wb = minMax(wall.getAABB())
+
+        const o = overlap(pb, wb)
+
+        if (o.ox <= 0 || o.oy <= 0 || o.oz <= 0) return
+
+        const minOverlap = Math.min(o.ox, o.oy, o.oz)
+
+        const pc = player.getAABB().center
+        const wc = wall.getAABB().center
+
+        if (minOverlap === o.oy) {
+            const dir = pc.y > wc.y ? 1 : -1
+            
+            player.applyImpulse({
+                x: 0,
+                y: dir / 10,
+                z: 0,
+            })
+        }
+
+
+        function overlap(a, b) {
+            return {
+                ox: Math.min(a.max.x, b.max.x) - Math.max(a.min.x, b.min.x),
+                oy: Math.min(a.max.y, b.max.y) - Math.max(a.min.y, b.min.y),
+                oz: Math.min(a.max.z, b.max.z) - Math.max(a.min.z, b.min.z),
+            }
+        }
+
+
+        function minMax(aabb) {
+            return {
+                min: {
+                    x: aabb.center.x - aabb.extent.x,
+                    y: aabb.center.y - aabb.extent.y,
+                    z: aabb.center.z - aabb.extent.z,
+                },
+                max: {
+                    x: aabb.center.x + aabb.extent.x,
+                    y: aabb.center.y + aabb.extent.y,
+                    z: aabb.center.z + aabb.extent.z,
+                }
+            }
+        }
+    }
+
 
 
     static async classToData(instance) {

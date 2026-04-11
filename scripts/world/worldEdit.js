@@ -1,4 +1,4 @@
-import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus, EquipmentSlot, EnchantmentTypes, EntityComponentTypes, ItemComponentTypes, Block, BlockTypes } from "@minecraft/server"
+import { world, system, Player, PlayerBreakBlockBeforeEvent, PlayerPlaceBlockBeforeEvent, ExplosionBeforeEvent, PlayerInteractWithBlockBeforeEvent, StartupEvent, ItemUseAfterEvent, CommandPermissionLevel, CustomCommandParamType, StructureRotation, StructureMirrorAxis, CustomCommandStatus, EquipmentSlot, EnchantmentTypes, EntityComponentTypes, ItemComponentTypes, Block, BlockTypes, Direction } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { enchantments, particles, sounds } from "../data/arrays"
@@ -6,6 +6,9 @@ import { DebugBox, debugDrawer } from "@minecraft/debug-utilities"
 
 /**@type {Map<string, string[]>} */
 export let undoMap = new Map()
+
+/**@type {Map<string, {}>} */
+export let toolsMap = new Map()
 
 /**
  * @param {StartupEvent} evd 
@@ -983,6 +986,112 @@ export function WEcommands(evd) {
         })
     })
 
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:wepaint',
+        description: 'Command For Painter Tool',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'radius'
+            },
+            {
+                type: CustomCommandParamType.Boolean,
+                name: 'surface only'
+            },
+            {
+                type: CustomCommandParamType.BlockType,
+                name: 'block1'
+            },
+        ],
+        optionalParameters: [
+            {
+                type: CustomCommandParamType.BlockType,
+                name: 'block2'
+            },
+        ]
+    }, (evd, radius, surface, block1, block2) => {
+        /**@type {Player} */
+        const player = evd?.sourceEntity
+        if (!player) return {
+            status: CustomCommandStatus.Failure,
+            message: 'No Player'
+        }
+
+        const d = toolsMap.get(player.name)
+
+        toolsMap.set(player.name, {
+            paint: {
+                radius: radius,
+                surface: surface,
+                block1: block1?.id,
+                block2: block2?.id
+            },
+            cut: {
+                type: d?.cut?.type,
+                size: d?.cut?.size,
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:cuttypes', ['straight', 'scoop'])
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:wecut',
+        description: 'Command For Cut Tool',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:cuttypes'
+            },
+            {
+                type: CustomCommandParamType.Integer,
+                name: 'size'
+            }
+        ]
+    }, (evd, type, size) => {
+        /**@type {Player} */
+        const player = evd?.sourceEntity
+        if (!player) return {
+            status: CustomCommandStatus.Failure,
+            message: 'No Player'
+        }
+
+        const d = toolsMap.get(player.name)
+
+        toolsMap.set(player.name, {
+            paint: {
+                radius: d?.paint?.radius,
+                surface: d?.paint?.surface,
+                block1: d?.paint?.block1,
+                block1: d?.paint?.block2,
+            },
+            cut: {
+                type: type,
+                size: size,
+            }
+        })
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:weselect',
+        description: 'Selects Points Using Coords',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.Location,
+                name: 'loc1'
+            },
+            {
+                type: CustomCommandParamType.Location,
+                name: 'loc2'
+            },
+        ]
+    }, (evd, loc1, loc2) => {
+        
+    })
+
     // evd.customCommandRegistry.registerCommand({
     //     name: 'darkoak:qrcode',
     //     description: 'Makes A QR Code',
@@ -1186,9 +1295,14 @@ export function WEselector(evd) {
     const c = mcl.jsonWGet('darkoak:scriptsettings')
     if (c?.worldeditmaster) return
 
+    if (!mcl.isDOBAdmin(player) && item && item?.typeId === 'darkoak:world_edit') {
+        player.sendMessage('§cYou Are Not An Admin§r')
+        return
+    }
+
     /**@type {{p1: {x: number, y: number, z: number}, p2: {x: number, y: number, z: number}, p3: {x: number, y: number, z: number}, id: number}} */
     const selected = mcl.jsonPGet(player, 'darkoak:worldedit')
-    if (mcl.isDOBAdmin(player) && item && item.typeId === 'darkoak:world_edit' && evd.isFirstEvent) {
+    if (item && item.typeId === 'darkoak:world_edit' && evd.isFirstEvent) {
         if (!selected?.p1) {
             mcl.jsonPUpdate(player, 'darkoak:worldedit', 'p1', evd.block.location)
         } else if (!selected?.p2) {
@@ -1217,6 +1331,123 @@ export function WEselector(evd) {
             }, (20 * 60))
             mcl.jsonPUpdate(player, 'darkoak:worldedit', 'id', idadder)
             console.log(JSON.stringify(mcl.jsonPGet(player, 'darkoak:worldedit')))
+        }
+    }
+}
+
+
+
+/**
+ * @param {ItemUseAfterEvent} evd 
+ */
+export function otherTools(evd) {
+    const player = evd.source
+    const item = evd.itemStack
+
+    const c = mcl.jsonWGet('darkoak:scriptsettings')
+    if (c?.worldeditmaster) return
+
+    const r = toolsMap.get(player.name)
+
+    switch (item.typeId) {
+        case 'darkoak:world_edit_paint': {
+            const d = r?.paint
+            if (!d) return
+            const bvd = player.getBlockFromViewDirection()
+            if (!bvd || !bvd?.block) return
+
+
+            let visited = new Set()
+            let blocks = [bvd.block]
+
+            /**@type {Set<Block>} */
+            let blocksSet = new Set()
+
+            for (let index = 0; index < d.radius; index++) {
+                let next = []
+
+                for (let index = 0; index < blocks.length; index++) {
+                    try {
+                        const block = blocks[index]
+                        if (!block || visited.has(JSON.stringify(block.location))) continue
+                        visited.add(JSON.stringify(block.location))
+                        blocksSet.add(block)
+
+                        next.push(block.above(), block.north(), block.south(), block.east(), block.west(), block.below())
+
+                        // switch (bvd.face) {
+                        //     case Direction.Down: {
+                        //         next.push(block.above(), block.north(), block.south(), block.east(), block.west())
+                        //         break
+                        //     }
+                        //     case Direction.East: {
+                        //         next.push(block.above(), block.north(), block.south(), block.below(), block.west())
+                        //         break
+                        //     }
+                        //     case Direction.North: {
+                        //         next.push(block.above(), block.below(), block.south(), block.east(), block.west())
+                        //         break
+                        //     }
+                        //     case Direction.South: {
+                        //         next.push(block.above(), block.north(), block.below(), block.east(), block.west())
+                        //         break
+                        //     }
+                        //     case Direction.Up: {
+                        //         next.push(block.below(), block.north(), block.south(), block.east(), block.west())
+                        //         break
+                        //     }
+                        //     case Direction.West: {
+                        //         next.push(block.above(), block.below(), block.south(), block.east(), block.north())
+                        //         break
+                        //     }
+                        // }
+                    } catch {
+                        continue
+                    }
+                }
+
+
+
+                blocks = next.filter(e => {
+                    if (!e) return false
+                    let touchingAir = false
+
+                    if (d.surface) {
+                        let list = [e.above(), e.north(), e.south(), e.east(), e.west(), e.below()]
+                        for (let index = 0; index < list.length; index++) {
+                            const b = list[index]
+                            if (b.isAir || touchingAir) {
+                                touchingAir = true
+                                continue
+                            }
+                        }
+                    } else touchingAir = true
+
+                    if (e.typeId != 'minecraft:air' && e.typeId != d.block1 && touchingAir) return true
+                    return false
+                })
+            }
+
+            const blocksArray = Array.from(blocksSet)
+            // for (let index3 = 0; index3 < blocksArray.length; index3++) {
+            //     const block = blocksArray[index3]
+            //     block?.setType(d.block1)
+
+            // }
+
+            mcl.arraySpreader3(blocksArray, Math.min(15, blocksArray.length / 10), (e, i) => {
+                try {
+                    e?.setType(d.block1)
+                } catch {
+
+                }
+            })
+
+            break
+        }
+        case 'darkoak:world_edit_cutter': {
+
+            break
         }
     }
 }
@@ -1454,6 +1685,28 @@ export function betterVanillaCommands(evd) {
             }
         })
 
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:dobsay',
+        description: 'Better Say Command (Supports Replacers And Tellraw JSON)',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'players'
+            },
+            {
+                type: CustomCommandParamType.String,
+                name: 'message or json raw message'
+            }
+        ]
+    }, (evd, players, message) => {
+        for (let index = 0; index < players.length; index++) {
+            /**@type {Player} */
+            const player = players[index]
+            player.runCommand(`say ${message}`)
+        }
     })
 
     // evd.customCommandRegistry.registerEnum('darkoak:slots', [EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet, EquipmentSlot.Mainhand, EquipmentSlot.Offhand, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36'])

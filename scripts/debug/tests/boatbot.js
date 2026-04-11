@@ -33,32 +33,6 @@ function getKeywordFrequency(history) {
     return freq
 }
 
-export function expandIntentKeywords(history, intents) {
-    // Map: intent name -> {word: count}
-    let intentWordCounts = {}
-    for (const intent of intents) {
-        intentWordCounts[intent.name] = {}
-    }
-    for (const entry of history) {
-        if (!entry.intent) continue
-        const words = entry.message.toLowerCase().split(/\s+/)
-        for (const word of words) {
-            if (word.length < 3) continue // skip very short words
-            intentWordCounts[entry.intent][word] = (intentWordCounts[entry.intent][word] || 0) + 1
-        }
-    }
-    // Suggest new keywords: words that appear often for an intent but are not in its keywords
-    const suggestions = {}
-    for (const intent of intents) {
-        const current = new Set(intent.keywords)
-        const wordCounts = intentWordCounts[intent.name]
-        suggestions[intent.name] = Object.entries(wordCounts)
-            .filter(([word, count]) => !current.has(word) && count > 2) // threshold: appears >2 times
-            .map(([word]) => word)
-    }
-    return suggestions
-}
-
 /**
  * @param {{name: string, message: string, time: number}[]} history 
  */
