@@ -44,7 +44,19 @@ export function prejoinSystem(evd) {
             if (evd.isValid()) disconnect('Anti-ZD')
             return `No PFID or invalid PFID, length: ${evd?.persistentId?.length}`
         }
-        // pfidSet.add(evd?.persistentId)
+
+        // checks if the player is still waiting after around 10 seconds
+        system.runTimeout(() => {
+            try {
+                if (evd?.isValid()) {
+                    disconnect('Anti-ZD')
+                    return `Took too long to join`
+                }
+            } catch {
+
+            }
+        }, 200)
+
     }
 
     if (d?.prebans && arrays.prebansSet.has(name)) {

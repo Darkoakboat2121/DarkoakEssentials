@@ -1,5 +1,5 @@
 import { world, system, Player } from "@minecraft/server"
-import { MessageFormData, ModalFormData, ActionFormData, ModalFormResponse, MessageFormResponse, ActionFormResponse, Observable, CustomForm } from "@minecraft/server-ui"
+import { MessageFormData, ModalFormData, ActionFormData, ModalFormResponse, MessageFormResponse, ActionFormResponse, CustomForm, ObservableString, ObservableNumber, ObservableBoolean, ObservableUIRawMessage } from "@minecraft/server-ui"
 import { mcl } from "../logic"
 import { cd } from "../data/defaults"
 
@@ -227,12 +227,38 @@ export class bui {
      * @template T
      * @param {T} data 
      * @param {boolean} clientWritable 
-     * @returns {Observable<T>}
      */
     static observable(data, clientWritable = true) {
-        return Observable.create(data, {
-            clientWritable: clientWritable ?? true
-        })
+        // return Observable.create(data, {
+        //     clientWritable: clientWritable ?? true
+        // })
+        switch (typeof data) {
+            case 'string': return new ObservableString(data, {
+                clientWritable: clientWritable ?? true
+            })
+            case 'number': return new ObservableNumber(data, {
+                clientWritable: clientWritable ?? true
+            })
+            case 'boolean': return new ObservableBoolean(data, {
+                clientWritable: clientWritable ?? true
+            })
+            case 'object': return new ObservableUIRawMessage(data, {
+                clientWritable: clientWritable ?? true
+            })
+            default: {
+                console.error(`observable data doesnt match a type: ${(typeof data) ?? 'undefined'}`)
+                break
+            }
+        }
+    }
+
+    /**
+     * @param {Player} player 
+     * @param {ObservableString | ObservableUIRawMessage | string} title 
+     * @returns 
+     */
+    static customForm(player, title) {
+        return new CustomForm(player, title)
     }
 
     /**

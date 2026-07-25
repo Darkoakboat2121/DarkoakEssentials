@@ -47,7 +47,7 @@ export function plotGenerator(start, i, player) {
     })
 
     //try {
-    const dimens = ['overworld', 'nether', 'the_end']
+    const dimens = ['overworld', 'nether', 'the_end', 'darkoak:void']
     const dimen = world.getDimension(dimens[d?.dimension || 0])
     system.runTimeout(() => {
         if (world.tickingAreaManager.hasTickingArea('darkoak:plotmaker')) {

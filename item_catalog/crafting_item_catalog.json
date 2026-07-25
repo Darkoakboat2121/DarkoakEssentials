@@ -159,9 +159,6 @@
                                 "name": "minecraft:jigsaw"
                             },
                             {
-                                "name": "minecraft:farmland"
-                            },
-                            {
                                 "name": "minecraft:lit_furnace"
                             },
                             {
@@ -196,9 +193,6 @@
                             },
                             {
                                 "name": "minecraft:powder_snow"
-                            },
-                            {
-                                "name": "minecraft:firework_rocket:2147483647"
                             },
                             {
                                 "name": "minecraft:cave_vines"

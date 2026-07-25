@@ -2,13 +2,13 @@
     "format_version": "1.26.0",
     "minecraft:block": {
         "description": {
-            "identifier": "darkoak:passover2",
+            "identifier": "darkoak:hardlight_generator",
             "menu_category": {
                 "category": "items"
             }
         },
         "components": {
-            "minecraft:display_name": "Passover 2\nAdds The Tag \"darkoak:passover2\"\nTo Any Player Above This Block",
+            "minecraft:display_name": "Hardlight Generator",
             "minecraft:collision_box": {
                 "origin": [
                     -8,
@@ -23,14 +23,15 @@
             },
             "minecraft:destructible_by_mining": false,
             "minecraft:destructible_by_explosion": false,
-            "minecraft:friction": 0.4,
-            "minecraft:tick": {
-                "interval_range": [0, 0],
-                "looping": true
+            "minecraft:redstone_conductivity": {
+                "allows_wire_to_step_down": true,
+                "redstone_conductor": true
             },
-            "darkoak:passover": {
-                "id": 2
-            }
+            "minecraft:redstone_consumer": {
+                "min_power": 0,
+                "propagates_power": true
+            },
+            "darkoak:hardlight_generator": {}
         }
     }
 }

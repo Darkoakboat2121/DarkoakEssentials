@@ -670,20 +670,48 @@ export function walls(player) {
  * @param {Player} player 
  */
 export function blockDisplayAntiphase(player) {
-    const l = player.location
-    const bds = player.dimension.getEntitiesAtBlockLocation({
-        x: l.x,
-        y: l.y + 1.5,
-        z: l.z,
-    })?.filter(e => e.typeId === 'darkoak:block_display')
+    // const l = player.location
+    // const bds = player.dimension.getEntitiesAtBlockLocation({
+    //     x: l.x,
+    //     y: l.y + 1.5,
+    //     z: l.z,
+    // })?.filter(e => e.typeId === 'darkoak:block_display')
 
-    if (!bds || bds.length < 1) return
+    // if (!bds || bds.length < 1) return
 
-    const b = bds[0].location
+    // const b = bds[0].location
 
-    player.teleport({
-        x: b.x,
-        y: b.y + 2.5,
-        z: b.z
-    })
+    // player.teleport({
+    //     x: b.x,
+    //     y: b.y + 2.5,
+    //     z: b.z
+    // })
+}
+
+/**
+ * @param {PlayerInteractWithBlockBeforeEvent} evd 
+ */
+export function glueAddRemove(evd) {
+    if (evd.itemStack?.typeId === 'darkoak:glue' && evd.isFirstEvent) {
+        /**@type {{x: number, y: number, z: number, dimension: string}[]} */
+        const glued = mcl.jsonWGet('darkoak:gluedblocks') ?? []
+        const glueConfirmed = Array.from(new Set(glued.map(e => JSON.stringify(e))))
+        const loc = JSON.stringify({x: evd.block.location.x, y: evd.block.location.y, z: evd.block.location.z, dimension: evd.block.dimension.id})
+
+
+        let newGlued = []
+        if (glueConfirmed.includes(loc)) {
+            newGlued = glueConfirmed.filter(e => e != loc)
+        } else {
+            newGlued = glueConfirmed
+            newGlued.push(loc)
+        }
+        // for (let index = 0; index < glued.length; index++) {
+        //     const gb = glued[index]
+        //     if (JSON.stringify(gb) === JSON.stringify(evd.block.location)) {
+                
+        //     }
+        // }
+        mcl.jsonWSet('darkoak:gluedblocks', newGlued.map(e => JSON.parse(e)))
+    }
 }

@@ -1,5 +1,5 @@
 import { world, system, Player, Entity, ItemStack, Block, ItemTypes, ItemComponentTypes } from "@minecraft/server"
-import { ActionFormData, CustomForm, MessageFormData, ModalFormData, Observable, uiManager, UIManager } from "@minecraft/server-ui"
+import { ActionFormData, CustomForm, MessageFormData, ModalFormData, uiManager, UIManager } from "@minecraft/server-ui"
 import { debugDrawer, DebugText } from "@minecraft/debug-utilities"
 import { mcl } from "../logic"
 import * as interfaces from "./interfaces"
@@ -12,6 +12,7 @@ import { crashSet } from "../entityHandlers/players"
 import { renderTexts } from "../miscellaneous/floatingtextv2"
 import { cd, playerLog } from "../data/defaults"
 import { pfidMap } from "../miscellaneous/prejoins"
+import { generateMapText } from "../miscellaneous/maptextgen"
 
 
 /**UI for data editor item
@@ -107,6 +108,8 @@ export function genMainUI(player) {
     bui.button(f, 'Add New Floating Text V2')
     bui.button(f, 'Remove A Floating Text V2')
     bui.button(f, 'Modify A Floating Text V2')
+    bui.divider(f)
+    bui.button(f, 'Make A Text Map')
 
     f.show(player).then((evd) => {
         if (evd.canceled) return
@@ -136,6 +139,10 @@ export function genMainUI(player) {
             }
             case 7: {
                 floatingTextV2RemoveUI(player)
+                break
+            }
+            case 8: {
+                mapTextGeneratorUI(player)
                 break
             }
             default:
@@ -3283,9 +3290,10 @@ export function invSeeUI(player) {
 
         const invseerContainer = mcl.getItemContainer(invSeer)
         const playerContainer = mcl.getItemContainer(mcl.getPlayer(names[e[0]]), e[1])
-        for (let slot = 9; slot < 36; slot++) {
+        let maxLimit = mcl.decide(e[1], 0, 9)
+        for (let slot = maxLimit; slot < (maxLimit + 27); slot++) {
             const playerItem = playerContainer.getItem(slot)
-            invseerContainer.setItem(slot - 9, playerItem)
+            invseerContainer.setItem(slot - maxLimit, playerItem)
         }
 
         invSeer.nameTag = names[e[0]]
@@ -3594,7 +3602,7 @@ export function plotSettingsUI(player) {
 
     const d = mcl.jsonWGet('darkoak:plotsettings')
 
-    const dimens = ['overworld', 'nether', 'the_end']
+    const dimens = ['overworld', 'nether', 'the_end', 'darkoak:void']
 
     bui.toggle(f, 'Enabled?', d?.enabled)
     bui.textField(f, 'Start Coords:', 'Example: 100 0 0', d?.start)
@@ -4049,105 +4057,142 @@ export function altFinderList(player, list, info) {
     f.show(player)
 }
 
+export function altFinderUIV2(player) {
+    let f = bui.customForm(player, 'Alt Finder')
+    f.label('This Scans Through All Players That Have Joined And Finds Possible Alts')
 
-export function testUI(player) {
-    const f = CustomForm.create(player, 'Test Form')
+    let playerName = bui.observable('')
+    f.textField('Player Name:', playerName)
 
-    const text = Observable.create('test lol', {
-        clientWritable: true
-    })
-    const vis = Observable.create(true, {
-        clientWritable: true
-    })
+    const d = mcl.jsonWGet('darkoak:scriptsettings')
+    let collectFromData = bui.observable(d?.collectPlayers ?? false)
+    f.toggle(f, 'Retrieve From Data Instead Of Memory?', collectFromData)
 
-    f.textField('Test 1:', text, { 'visible': vis })
-    f.button('Try hiding', () => {
-        vis.setData(!vis.getData())
-    })
-
-    f.button('add element?', () => {
-        f.label('hey this is cool')
-    }, {
-
-    })
-    const isVisible = Observable.create(true)
-    f.button('disable myself', () => {
-        isVisible.setData(false)
-    }, {
-        visible: isVisible
-    })
-
-    const rro = Observable.create(rickrollLyrics[0])
-    let l = rickrollLyrics.length
-    let i = 0
-    f.label(rro)
-    let r = system.runInterval(() => {
-        i++
-        if (i > l - 1) {
-            system.clearRun(r)
+    let tg, info
+    playerName.subscribe((evd) => {
+        if (collectFromData.getData()) {
+            const p = mcl.jsonWGet(`darkoak:player:${evd}`)
+            if (typeof p === 'undefined') return
+            tg = p
         } else {
-            rro.setData(rickrollLyrics[i])
+            const p = playerLog.get(evd)
+            if (typeof p === 'undefined') return
+            tg = p
         }
-    }, 30)
-
-    f.show().then((evd) => {
-
-    })
-}
-
-export function compressTestUI(player) {
-    let f = CustomForm.create(player, 'Compress Test')
-
-    const text = Observable.create('', {
-        clientWritable: true
-    })
-    let compressed = Observable.create('', {
-        clientWritable: true
-    })
-    let uncompressed = Observable.create('', {
-        clientWritable: true
-    })
-    let ratio = Observable.create('NaN% Smaller', {
-        clientWritable: true
-    })
-    text.subscribe((evd) => {
-        let f = evd
-        let g = mcl.stringCompress(f, false, false)
-        compressed.setData(`${g} | Length: ${g.length}`)
-        let h = mcl.stringCompress(g, false, true)
-        uncompressed.setData(`${h} | Length: ${h.length}`)
-
-        ratio.setData((100 - ((g.length / h.length) * 100)).toFixed(2) + '% Smaller')
+        info = {
+            clientSystemInfo: tg?.clientSystemInfo,
+            graphicsMode: tg?.graphicsMode,
+            inputInfo: tg?.inputInfo,
+            pfid: pfidMap?.get(tg?.name)
+        }
     })
 
-
-    f.textField('Text To Compress', text)
-
-    f.spacer()
-
-    f.label('Compressed:')
-    f.spacer()
-    f.label(compressed)
-
-    f.spacer()
     f.divider()
 
-    f.label('Compressed then decompressed:')
-    f.spacer()
-    f.label(uncompressed)
+    
 
-    f.spacer()
 
-    f.label(ratio)
-
-    f.show()
 }
+
+
+// export function testUI(player) {
+//     const f = CustomForm.create(player, 'Test Form')
+
+//     const text = Observable.create('test lol', {
+//         clientWritable: true
+//     })
+//     const vis = Observable.create(true, {
+//         clientWritable: true
+//     })
+
+//     f.textField('Test 1:', text, { 'visible': vis })
+//     f.button('Try hiding', () => {
+//         vis.setData(!vis.getData())
+//     })
+
+//     f.button('add element?', () => {
+//         f.label('hey this is cool')
+//     }, {
+
+//     })
+//     const isVisible = Observable.create(true)
+//     f.button('disable myself', () => {
+//         isVisible.setData(false)
+//     }, {
+//         visible: isVisible
+//     })
+
+//     const rro = Observable.create(rickrollLyrics[0])
+//     let l = rickrollLyrics.length
+//     let i = 0
+//     f.label(rro)
+//     let r = system.runInterval(() => {
+//         i++
+//         if (i > l - 1) {
+//             system.clearRun(r)
+//         } else {
+//             rro.setData(rickrollLyrics[i])
+//         }
+//     }, 30)
+
+//     f.show().then((evd) => {
+
+//     })
+// }
+
+// export function compressTestUI(player) {
+//     let f = CustomForm.create(player, 'Compress Test')
+
+//     const text = Observable.create('', {
+//         clientWritable: true
+//     })
+//     let compressed = Observable.create('', {
+//         clientWritable: true
+//     })
+//     let uncompressed = Observable.create('', {
+//         clientWritable: true
+//     })
+//     let ratio = Observable.create('NaN% Smaller', {
+//         clientWritable: true
+//     })
+//     text.subscribe((evd) => {
+//         let f = evd
+//         let g = mcl.stringCompress(f, false, false)
+//         compressed.setData(`${g} | Length: ${g.length}`)
+//         let h = mcl.stringCompress(g, false, true)
+//         uncompressed.setData(`${h} | Length: ${h.length}`)
+
+//         ratio.setData((100 - ((g.length / h.length) * 100)).toFixed(2) + '% Smaller')
+//     })
+
+
+//     f.textField('Text To Compress', text)
+
+//     f.spacer()
+
+//     f.label('Compressed:')
+//     f.spacer()
+//     f.label(compressed)
+
+//     f.spacer()
+//     f.divider()
+
+//     f.label('Compressed then decompressed:')
+//     f.spacer()
+//     f.label(uncompressed)
+
+//     f.spacer()
+
+//     f.label(ratio)
+
+//     f.show()
+// }
 
 /**
  * @param {Player} player 
  */
 export function dataDeleterUIV2(player, search = '', searchVal = '', useReg = false) {
-    let f = CustomForm.create(player, 'Data Deleter V2')
+    let f = bui.customForm(player, 'Data Deleter V2')
 
     let data = world.getDynamicPropertyIds()
     if (!useReg) {
@@ -4176,15 +4221,9 @@ export function dataDeleterUIV2(player, search = '', searchVal = '', useReg = fa
 
     for (let index = 0; index < data.length; index++) {
         const d = data[index]
-        const buttonShower = Observable.create(false, {
-            clientWritable: true
-        })
-        const buttonText = Observable.create(`Show: ${d}?`, {
-            clientWritable: true
-        })
-        const hider = Observable.create(true, {
-            clientWritable: true
-        })
+        const buttonShower = bui.observable(false)
+        const buttonText = bui.observable(`Show: ${d}?`)
+        const hider = bui.observable(true)
         f.divider({
             visible: buttonShower
         })
@@ -4238,24 +4277,16 @@ export function dataDeleterUIV2(player, search = '', searchVal = '', useReg = fa
  * @param {Player} player 
  */
 export function dataDeleterSearchUIV2(player, search = '', searchVal = '', useReg = false) {
-    let f = CustomForm.create(player, 'Data Deleter V2 Searcher')
+    let f = bui.customForm(player, 'Data Deleter V2 Searcher')
 
-    const toggled = Observable.create(useReg, {
-        clientWritable: true
-    })
-    const untoggled = Observable.create(!useReg, {
-        clientWritable: true
-    })
+    const toggled = bui.observable(useReg)
+    const untoggled = bui.observable(!useReg)
     toggled.subscribe((evd) => {
         untoggled.setData(!evd)
     })
 
-    const idValue = Observable.create(search, {
-        clientWritable: true
-    })
-    const valueValue = Observable.create(searchVal, {
-        clientWritable: true
-    })
+    const idValue = bui.observable(search)
+    const valueValue = bui.observable(searchVal)
 
     f.toggle('Use RegExp', toggled, {
         description: 'For Those Who Prefer RegExp'
@@ -4286,7 +4317,7 @@ export function dataDeleterSearchUIV2(player, search = '', searchVal = '', useRe
 
 
 export function anticheatSettingsV2(player) {
-    let f = CustomForm.create(player, 'Anticheat Settings V2')
+    let f = bui.customForm(player, 'Anticheat Settings V2')
 
     const d = mcl.jsonWGet('darkoak:anticheat')
 
@@ -4394,6 +4425,17 @@ export function anticheatSettingsV2(player) {
     f.toggle('Anti-air-jump', modules.antiairjump, mo)
     f.label('Checks If A Player Is Not On The Ground And Is Jumping', mo)
 
+    f.toggle('Anti-anti-immobile', modules.antiantiimmobile, mo)
+    f.label('Checks If A Player Is Moving When Immobile Flags Are Set', mo)
+
+    f.toggle('Anti-speed', modules.antispeed, mo)
+    f.label('Checks If Player Is Moving Too Fast', mo)
+    f.slider('Speed Limit', modules.antispeedsense, 10, 40, {
+        visible: mo.visible,
+    })
+
+
+
     f.divider()
 
     let combat = bui.observable(false)
@@ -4422,6 +4464,11 @@ export function anticheatSettingsV2(player) {
     f.toggle('Anti-auto-clicker', modules.antiautoclicker, mo)
     f.label('Checks If A Player Is Hitting An Entity At The Same Delay Three Times In A Row', mo)
     f.slider('Sensitivity (Smaller Is More Sensitive)', modules.antiautoclickersense, 0, 10, mo)
+
+    f.toggle('Anti-velocity', modules.antivelocity, mo)
+    f.label('Checks If A Players Location Has Changed After Being Hit', mo)
+
+
 
     f.divider()
 
@@ -4462,7 +4509,7 @@ export function anticheatSettingsV2(player) {
                 list.push(`§c${p}: Not Found§r`)
             }
         }
-        forceOpOptionsAllowed.setData(list.join(', '))
+        forceOpOptionsAllowed.setData(list.join('\n'))
     })
 
     f.textField('§t§lAllowed Players:', modules.antiforceopallowed, {
@@ -4509,7 +4556,29 @@ export function anticheatSettingsV2(player) {
     f.toggle('Anti-book-bans', modules.antibookbans, mo)
     f.label('Prevents Book Bans From Being Created', mo)
 
+    f.toggle('Anti-illegal-enchants', modules.antiillegalenchant, mo)
+    f.label('Checks If The Held Item Of A Player Has Illegal Enchants', mo)
 
+    f.toggle('Anti-crasher', modules.anticrasher2, {
+        visible: mo.visible,
+        description: 'For Outdated Crashers',
+    })
+    f.label('Limits World Size To 1mil By 1mil, If A Player Goes Farther, They Get Killed', mo)
+
+    f.toggle('Anti-dupe', modules.antidupe1, mo)
+    f.label('Adds An ID To Each Non-Stackable Item And Checks If Two ID\'s Are The Same', mo)
+    f.toggle('Anti-dupe-extra', modules.antidupe2, {
+        visible: mo.visible,
+        description: 'Requires Anti-dupe To Be Enabled'
+    })
+    f.label('Adds An ID To Max Stacked Items And Removes The ID Once Unstacked', mo)
+    f.toggle('Clear Item?', modules.antidupeclear, mo)
+    f.label('Clears The Duped Items. §cHeavily Recommended To Disable This While Testing§r', mo)
+    f.slider('Anti-dupe Version To Use', modules.antidupeversion, 1, 2, {
+        visible: mo.visible,
+        description: 'V2 Has Better Security But May Give False Positives If Previously Using V1',
+        step: 1,
+    })
 
     f.divider()
 
@@ -4535,7 +4604,7 @@ export function anticheatSettingsV2(player) {
 
     f.toggle('Anti-block-reach', modules.antiblockreach, mo)
     f.label('Checks If The Player Places A Block Farther Away Than Allowed (Also Cancels Block Placement If Too Far)', mo)
-    
+
     f.toggle('Anti-air-place', modules.antiairplace, mo)
     f.label('Checks If A Player Places A Block Without Support', mo)
 
@@ -4544,7 +4613,7 @@ export function anticheatSettingsV2(player) {
 
     f.toggle('Anti-ghost-interact', modules.antighostinteract, mo)
     f.label('Prevents Players From Interacting With Blocks Through Walls. Does Not Log', mo)
-    
+
     f.divider()
 
     let chat = bui.observable(false)
@@ -4552,7 +4621,7 @@ export function anticheatSettingsV2(player) {
         visible: chat
     }
 
-    f.button('Show/Hide Chat-Based Anticheat', () => {
+    f.button('Show/Hide Chat/Text-Based Anticheat', () => {
         chat.setData(!chat.getData())
     })
 
@@ -4568,7 +4637,11 @@ export function anticheatSettingsV2(player) {
         description: 'Needs Anti-spam Enabled'
     })
     f.label('Attempts To Bypass Anti-Spam Bypasses By Detecting How Similar Two Messages Are By A Percentage', mo)
-    f.slider('Anti-spam-extra Sensitivity', modules.antispam2sense, mo)
+    f.slider('Anti-spam-extra Sensitivity', modules.antispam2sense, 10, 90, {
+        visible: mo.visible,
+        step: 10,
+        description: '70 To 90 Range Is Recommended',
+    })
     f.spacer(mo)
     f.toggle('Anti-spam-delay', modules.antispam3, {
         visible: mo.visible,
@@ -4577,25 +4650,125 @@ export function anticheatSettingsV2(player) {
     f.label('Checks If Two Messages Were Sent Milliseconds Apart, If So, Prevents It', mo)
     f.spacer(mo)
     f.toggle('Anti-chat-flood', modules.antichatflood, mo)
-    f.label('Prevents Players From Sending Messages Larger Then Specified')
+    f.label('Prevents Players From Sending Messages Larger Then Specified', mo)
     f.slider('Max Size Of Messages', modules.antichatfloodsense, 50, 500, {
         visible: mo.visible,
         step: 25
     })
     f.spacer(mo)
     f.toggle('Anti-spammer-activity', modules.antispamactive, mo)
-    f.label('Blocks Messages From Actively Moving Players. Triggers Include: Sprinting, Jumping')
-    
-
+    f.label('Blocks Messages From Actively Moving Players. Triggers Include: Sprinting, Jumping', mo)
 
     f.divider(mo)
+
+    f.toggle('Anti-chat-crasher', modules.anticrasher1, mo)
+    f.label('Prevents Certain Characters From Showing In Chat (The Characters Lag The Server)', mo)
+
+    f.toggle('Anti-streamer-mode', modules.antistreamermode, mo)
+    f.label('Bypasses The Streamer Mode Hack. Streamer Mode Is A Hack Designed To Hide The Hackers Username While Streaming. Exposing Hackers Is Important', mo)
+
+    f.toggle('Anti-nametags', modules.antinametags, mo)
+    f.label('Flickers Players Nametags Every Five Ticks So Hack Clients Are Forced To Redraw Them (May Cause Lag To Hackers)', mo)
+
+    f.divider()
+
+    let miscellaneous = bui.observable(false)
+    mo = {
+        visible: miscellaneous
+    }
+
+    f.button('Show/Hide Miscellaneous Anticheat', () => {
+        miscellaneous.setData(!miscellaneous.getData())
+    })
+
+    f.toggle('Anti-invalid 1', modules.antiinvalid1, mo)
+    f.label('Checks If The Player Is Sneaking And Sprinting At The Same Time', mo)
+
+    f.toggle('Anti-invalid 2', modules.antiinvalid2, mo)
+    f.label('Checks If The Player Is Sprinting Backwards', mo)
+
+    f.toggle('Anti-invalid 3', modules.antiinvalid3, mo)
+    f.label('Checks If The Player Is Climbing A Ladder Too Quickly', mo)
+    f.slider('Sensitivity', modules.antiinvalid3sense, 1, 3, mo)
+
+    f.toggle('Anti-invalid 4', modules.antiinvalid4, mo)
+    f.label('Checks If Certain Values Like A Hotbar Slot Are Above Or Below Normal Limits. Only Logs Certain Things And Attempts To Set To Normal', mo)
+    f.toggle('Kick On Specific Detections?', modules.antiinvalid4kick, {
+        visible: mo.visible,
+        description: 'Only Kicks If The Players Render Distance Is 0'
+    })
+
+    f.toggle('NPC-detect', modules.npcdetect, mo)
+    f.label('Sends Chat Message To Admins When A Npc Is Interacted With, Also Prevents Usage Of Npc\'s §c(Don\'t Enable If You Use Npc\'s)§r', mo)
+
+    f.toggle('Anti-invis-skins', modules.antiinvisskins, mo)
+    f.label('Checks If A Players Skin Is Invisible', mo)
+
+    f.toggle('Notify Admins In Chat', modules.notify, mo)
+    f.label('If This Is On It Notifies Admins When An Anticheat Module Triggers', mo)
+
+    f.toggle('Strike Action', modules.strike, mo)
+    f.label('If This Is On And If A Player Triggers Anticheat Measures, The Player Gets Damaged', mo)
+    f.slider('Amount Of Strikes Until Damage Penalty', modules.strikeamount, 1, 20, mo)
+    f.slider('Damage Amount', modules.strikedamage, 2, 40, {
+        step: 2,
+        visible: mo.visible,
+    })
+
+
 
 
 
     f.divider()
-    
+
+    let saveload = bui.observable(false)
+    mo = {
+        visible: saveload
+    }
+
+    f.button('Show/Hide Anticheat Quick Loading', () => {
+        saveload.setData(!saveload.getData())
+    })
+
+    f.spacer(mo)
+
+    let currentSL = bui.observable('')
+    let SLText = bui.observable('Put Your Quick Load Code Here:')
+
+    f.button('Save Current Config', () => {
+        saveData()
+        currentSL.setData(mcl.stringCompress(JSON.stringify(mcl.jsonWGet('darkoak:anticheat'))))
+        SLText.setData('Save This Code Elsewhere')
+    }, mo)
+
+    f.textField(SLText, currentSL, mo)
+
+    f.button('Load Quick Load Code', () => {
+
+        const data = JSON.parse(mcl.stringCompress(currentSL.getData(), false, true))
+        console.error(JSON.stringify(data))
+        console.error(JSON.stringify(data) === JSON.stringify(mcl.jsonWGet('darkoak:anticheat')))
+        mcl.jsonWSet('darkoak:anticheat', data)
+
+        currentSL.setData('Closing UI')
+        SLText.setData('Loaded Data!')
+
+        system.runTimeout(() => {
+            f.close()
+        }, 10)
+    }, mo)
+
+    f.divider()
+
 
     f.button('Save?', () => {
+        saveData()
+        f.close()
+    })
+
+    f.show()
+
+    function saveData() {
         const keys = Object.keys(modules)
         const values = Object.values(modules).map(e => e.getData())
         let no = {}
@@ -4604,8 +4777,104 @@ export function anticheatSettingsV2(player) {
             no[key] = values[index]
         }
         mcl.jsonWSet('darkoak:anticheat', no)
+    }
+}
+
+/**
+ * @param {Player} player 
+ */
+export function mapTextGeneratorUI(player) {
+    let f = bui.customForm(player, 'Text Map Generator')
+
+    const lines = [
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+        bui.observable(''),
+    ]
+
+    f.label('Spawns At Your Location. Stand On The Platform The Text Will Be On-Top Of')
+
+    for (let index = 0; index < lines.length; index++) {
+        const o = lines[index]
+        f.textField(`Line ${index}:`, o)
+    }
+
+    f.button('Generate?', () => {
+        const t = lines.map(e => e.getData().slice(0, 30).toLowerCase()).filter(e => e.length > 0)
+        if (t.length > 0) generateMapText(player, player.location, t)
         f.close()
     })
+
+    f.show()
+}
+
+
+export function playerDataViewerV2(player) {
+    let f = bui.customForm(player, 'Player Data Viewer V2')
+
+    const inSelection = bui.observable(true)
+    const sh = bui.observable(false)
+    const selected = bui.observable(0)
+
+    let ps = []
+
+    const players = world.getAllPlayers()
+    for (let index = 0; index < players.length; index++) {
+        const pla = players[index]
+        ps.push({
+            value: index,
+            label: pla?.name ?? 'EMPTY'
+        })
+    }
+    f.dropdown('Player:', selected, ps, {
+        visible: inSelection
+    })
+
+    f.button('Select', () => {
+        inSelection.setData(false)
+        sh.setData(true)
+    }, {
+        visible: inSelection
+    })
+
+    // /**@type {Player} */
+    // let pl = player
+
+    // const r = system.runInterval(() => {
+
+    //     pl = players[selected.getData()]
+
+
+
+    //     if (!f.isShowing()) {
+    //         system.clearRun(r)
+    //     }
+    // }, 30)
+
+    // let p = {
+    //     name: pl.name,
+    //     id: pl.id
+    // }
+
+
+
+
+
 
     f.show()
 }

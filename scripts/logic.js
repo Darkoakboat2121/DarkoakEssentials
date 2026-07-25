@@ -1,4 +1,4 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel, CustomCommandOrigin, EquipmentSlot } from "@minecraft/server"
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel, CustomCommandOrigin, EquipmentSlot, EntityQueryOptions} from "@minecraft/server"
 import { transferPlayer } from "@minecraft/server-admin"
 import { cd, dataGet } from "./data/defaults"
 import { capitalLetters, letters, numbers, specialRanks } from "./data/arrays"
@@ -935,7 +935,7 @@ export class mcl {
      */
     static getItemContainer(player, ender = false) {
         if (ender) {
-            return player.getComponent('minecraft:ender_inventory').container
+            return player.getComponent(EntityComponentTypes.EnderInventory).container
         } else {
             return player.getComponent(EntityComponentTypes.Inventory).container
         }
@@ -1519,6 +1519,20 @@ export class mcl {
     }
 
     /**
+     * 
+     * @param {Entity} ent 
+     * @param {EntityQueryOptions} filters 
+     */
+    static closestEntityToAnother(ent, filters) {
+        const ents = ent.dimension.getEntities({
+            location: ent.location,
+            closest: 1,
+            ...filters
+        })
+        return ents[0]
+    }
+
+    /**
      * @param {Player} player Player to soft-kick
      */
     static softKick(player) {
@@ -1546,14 +1560,21 @@ export class mcl {
 
     /**
      * @param {string} type 
+     * @param {string} exclude
      */
-    static getAllEntities(type) {
+    static getAllEntities(type = undefined, exclude = undefined) {
         const entities = world.getDimension('overworld').getEntities({
-            type: type
+            type: type,
+            excludeTypes: mcl.decide(exclude, [exclude], undefined)
         }).concat(world.getDimension('nether').getEntities({
-            type: type
+            type: type,
+            excludeTypes: mcl.decide(exclude, [exclude], undefined)
         })).concat(world.getDimension('the_end').getEntities({
-            type: type
+            type: type,
+            excludeTypes: mcl.decide(exclude, [exclude], undefined)
+        })).concat(world.getDimension('darkoak:void').getEntities({
+            type: type,
+            excludeTypes: mcl.decide(exclude, [exclude], undefined)
         }))
         return entities
     }
@@ -1785,25 +1806,25 @@ export class mcl {
      * @param {{x: number, y: number, z: number}} loc 
      * @param {(evd: TickingArea) => {}} callback 
      */
-    static loader(loc, dimension, callback) {
+    static loader(loc, dimension, callback, size = 10) {
         const id = `darkoak:loader:${mcl.timeUuid()}`
         if (world.tickingAreaManager.hasTickingArea(id)) {
             world.tickingAreaManager.removeTickingArea(id)
         }
         world.tickingAreaManager.createTickingArea(id, {
             from: {
-                x: loc.x - 10,
-                y: loc.y - 10,
-                z: loc.z - 10,
+                x: loc.x - size,
+                y: loc.y - size,
+                z: loc.z - size,
             },
             to: {
-                x: loc.x + 10,
-                y: loc.y + 10,
-                z: loc.z + 10,
+                x: loc.x + size,
+                y: loc.y + size,
+                z: loc.z + size,
             },
             dimension: dimension
-        }).then((evd) => {
-            callback(evd)
+        }).then(() => {
+            callback()
             world.tickingAreaManager.removeTickingArea(id)
         })
     }
@@ -2004,9 +2025,12 @@ export class mcl {
     }
 
     /**If condition is true returns option1, if false returns option2
+     * @template T
+     * @template Y
      * @param {boolean} condition 
-     * @param {any} option1 
-     * @param {any} option2 
+     * @param {T} option1 
+     * @param {Y} option2 
+     * @returns {T | Y}
      */
     static decide(condition, option1, option2) {
         if (condition) return option1
@@ -2035,7 +2059,7 @@ export class mcl {
 
         if (minOverlap === o.oy) {
             const dir = pc.y > wc.y ? 1 : -1
-            
+
             player.applyImpulse({
                 x: 0,
                 y: dir / 10,
@@ -2066,6 +2090,76 @@ export class mcl {
                     z: aabb.center.z + aabb.extent.z,
                 }
             }
+        }
+    }
+
+    /**
+     * @template T
+     * @param {T} obj 
+     * @deprecated
+     */
+    static objectTo128(obj, reverse = false) {
+        if (!reverse) {
+            let newCode = ''
+            const v = Object.values(obj)
+            for (let index = 0; index < v.length; index++) {
+                const c = v[index]
+                switch (typeof c) {
+                    case 'string': {
+                        newCode += `${mcl.stringCompress(c, false)}|`
+                        break
+                    }
+                    case 'bigint': {
+                        break
+                    }
+                    case 'boolean': {
+                        newCode += `b${mcl.decide(c, 1, 0)}|`
+                        break
+                    }
+                    case 'function': {
+                        break
+                    }
+                    case 'number': {
+                        newCode += `${c}|`
+                        break
+                    }
+                    case 'object': {
+                        newCode += `\\${mcl.objectTo128(c)}\\|`
+                        break
+                    }
+                    case 'symbol': {
+                        newCode += `${c.toString()}|`
+                        break
+                    }
+                    case 'undefined': {
+                        newCode += 'undefined|'
+                        break
+                    }
+                }
+            }
+            return newCode.slice(0, -1)
+        } else {
+            let newArray = []
+            /**@type {string[]} */
+            const split = obj.split('|')
+
+            for (let index = 0; index < split.length; index++) {
+                const c = split[index]
+                if (c.startsWith('b')) {
+                    if (parseInt(c.split('')) === 0) {
+                        newArray.push(false)
+                        continue
+                    } else {
+                        newArray.push(true)
+                        continue
+                    }
+                } else if (!isNaN(c)) {
+                    newArray.push(c)
+                    continue
+                }
+            }
+
+            return newArray
         }
     }
 

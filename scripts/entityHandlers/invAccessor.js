@@ -40,14 +40,14 @@ export function invSeeLinker() {
         if (!player) continue
 
         const invseerContainer = mcl.getItemContainer(invseer)
-        const playerContainer = mcl.getItemContainer(player, /**set?.ender*/) // ender here
+        const playerContainer = mcl.getItemContainer(player, set?.ender) // ender here
 
         let invHistory = invHistoryMap.get(invseer.id) || Array(invseerContainer.size).fill(undefined)
         let playerHistory = playerHistoryMap.get(player.name) || Array(playerContainer.size).fill(undefined)
 
 
         for (let slot = 0; slot < invseerContainer.size; slot++) {
-            const playerSlot = slot + /**(set?.ender ? 0 : */9//) // ender here
+            const playerSlot = slot + (set?.ender ? 0 : 9) // ender here
             const invItem = invseerContainer.getItem(slot)
             const playerItem = playerContainer.getItem(playerSlot)
 

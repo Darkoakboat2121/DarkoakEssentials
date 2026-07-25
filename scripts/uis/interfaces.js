@@ -2,7 +2,7 @@ import { world, system, Player } from "@minecraft/server"
 import { MessageFormData, ModalFormData, ActionFormData } from "@minecraft/server-ui"
 import * as arrays from "../data/arrays"
 import { mcl } from "../logic"
-import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, invSeeUI, itemGiverUI, itemSettingsUI, lagClearSettingsUI, messageLogUI, mistyBio, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, plotSettingsUI, pressionUI, redeemGiftcodeUI, removeRankUI, rolesMainUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
+import { addGiftcode, addRankUI, adminAndPlayerListUI, animatedActionUIMakerUI, auctionMain, autoResponseMainUI, banOfflineUI, bountyMainUI, canineyetiBio, chatGamesSettings, crashPlayerUI, createWarpUI, CUIEditPicker, darkoakboatBio, deleteWarpUI, dimensionBansUI, floatingTextMainUI, gamblingMainUI, invSeeUI, itemGiverUI, itemSettingsUI, lagClearSettingsUI, messageLogUI, mistyBio, modalTextUIMakerUI, modalUIMakerUI, nokiBio, otherPlayerSettingsUI, personalLogUI, playerDataViewerV2, plotSettingsUI, pressionUI, redeemGiftcodeUI, removeRankUI, rolesMainUI, scriptSettings, tpaSettings, tpaUI, tygerBio, wertwertBio } from "./interfacesTwo"
 import { bui } from "./baseplateUI"
 import { transferPlayer } from "@minecraft/server-admin"
 import { cd, playerLog } from "../data/defaults"
@@ -333,6 +333,7 @@ export function playerSettingsUI(player) {
     bui.body(f, 'Manage Player Settings')
 
     bui.button(f, 'Player Data\n§7View A Player\'s Data', arrays.icons.whitePlayer)
+    bui.button(f, 'Player Data Viewer V2')
     bui.button(f, 'Player Invsee')
     bui.button(f, 'Punishments\n§7Punish A Player', arrays.icons.cancel)
     bui.button(f, 'Player Tracking\n§7Modify Tracking Settings')
@@ -351,6 +352,10 @@ export function playerSettingsUI(player) {
             case i++:
                 playerDataMainUI(player)
                 break
+            case i++: {
+                playerDataViewerV2(player)
+                break
+            }
             case i++:
                 invSeeUI(player)
                 break

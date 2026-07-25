@@ -202,6 +202,15 @@ export const preBannedList = [
     'l1u9', //Basic
     'CjMustard1452', //Client dev
     'ZyloxDeveloper', //Alt
+    'ChosenPoem2831', //Bot
+    'ItsVap0r', //Bot
+    'FireGraph9729', //Bot
+    'xNyzqa', //Bot
+    'TrinalBull8898', //Bot
+    'AlteredThing', //Homophobia
+    'Ultragys', //Homophobia
+    'Tubs1808', //Basic
+    'lordcc7', //Basic (probably guilty, shared a clip showing pvp using a hack client and nver claimed or denied that the clip was theirs, additionally they are in multiple hacking discord servers)
 ]
 
 export const prebansSet = new Set(preBannedList)
@@ -483,7 +492,13 @@ export function replacer(d, text) {
                 .replaceAll('#slot#', d?.selectedSlotIndex?.toString())
                 .replaceAll('#cps#', `${(d.getDynamicProperty('darkoak:ac:cps') || '0').toString()}`)
                 .replaceAll('#gamemode#', d?.getGameMode())
+                .replaceAll('#xp#', d?.getTotalXp() ?? 0)
+                .replaceAll('#xpe#', d?.xpEarnedAtCurrentLevel ?? 0)
+                .replaceAll('#xpn#', d?.totalXpNeededForNextLevel ?? 0)
+                .replaceAll('#level#', d?.level ?? 0)
+                .replaceAll('#nick#', mcl.decide(mcl.jsonWGet('darkoak:nicknamesettings')?.enabled ?? false, mcl.jsonPGet(d, 'darkoak:nickname')?.nick ?? '', ''))
         }
+        const eq = d?.getComponent(EntityComponentTypes.Equippable)
 
         f = f
             .replaceAll('#health#', Math.ceil(mcl.healthValue(d)).toString())
@@ -499,6 +514,8 @@ export function replacer(d, text) {
             .replaceAll('#year#', time.getFullYear().toString())
             .replaceAll('#money#', mcl.getScore(d).toString())
             .replaceAll('#nametag#', d?.nameTag)
+            .replaceAll('#armor#', eq?.totalArmor ?? 0)
+            .replaceAll('#toughness#', eq?.totalToughness ?? 0)
 
         if (f.includes('#hand#')) {
             const item = mcl.getHeldItem(d)

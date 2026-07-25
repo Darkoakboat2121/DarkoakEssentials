@@ -2,7 +2,7 @@ import { Block, Entity, EntityComponentTypes, Player, PlayerJoinAfterEvent, Play
 import { mcl } from "../logic"
 import { messageMap, spammerMap } from "../chat"
 import { jumpMap } from "../enchanting"
-import { cooldown } from "../main"
+import { cooldown, grabMap } from "../main"
 import { combatMap, lightingMap, magicMap, sitMap } from "../entityHandlers/players"
 import { antiAutoMap, bowSpam, nukerMap, placeMap, strikeMap } from "../world/anticheat"
 import { undoMap } from "../world/worldEdit"
@@ -14,7 +14,7 @@ export function cleanMapsAndSets(players) {
     if (!mcl.tickTimer(2400)) return
     const names = players.map(e => e.name)
 
-    let mapsArray = [messageMap, spammerMap, jumpMap, cooldown, sitMap, magicMap, combatMap, lightingMap, nukerMap, placeMap, antiAutoMap, bowSpam, strikeMap, undoMap]
+    let mapsArray = [messageMap, spammerMap, jumpMap, cooldown, sitMap, magicMap, combatMap, lightingMap, nukerMap, placeMap, antiAutoMap, bowSpam, strikeMap, undoMap, grabMap]
     mcl.arraySpreader3(mapsArray, 120, ((e, i) => {
         for (const key of e.keys()) {
             if (!names.includes(key)) {

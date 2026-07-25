@@ -69,30 +69,12 @@ changelog:
         animated sidebar *
         dynamic shops (player shops?) *
         export one player[] for all things to use if they dont have filters, put it in defaults lol * --------------------------no from N
-        grabber item *
 
 
         world edit item to move where /weactivecopy places and to move the selection area **
         
         
         
-        offhand command
-        players now get messages when they violated an antispam
-        /p (private messaging system)
-        search button to adminandplayer list
-        ender dragons, withers, and command block minecarts to world protection
-        world edit now has red/blue particles where p1 and p2 are
-        /wecylinder, makes a line of blocks from point 1 to point 2 in a cylindrical pattern, set rad to 1 to have line
-        /wecircle, makes a circle
-        /weactivecopy, copies an area with a special viewing part
-        more emojis!
-        resetting system, for when the addon breaks
-        /weundo, only works for sphere, activecopy, and cylinder
-        upwards wall & interact no movement blocks & passover blocks (any entity above them with a limit of ten blocks gets a tag, basically a gate system)
-        data deleter v2
-        anti-dupe v2
-        more illegal items to the illegal items giver
-        anti-book-ban
 
 
         elevator ----------- needs new collsion detection
@@ -118,13 +100,7 @@ changelog:
 
 
     fixed:
-        dynamic lighting void bug
-        data deleter ui crash (data deleter v2 may be a better alternative)
-        anti-gamemode-switcher
-        anti-streamer-mode, it also now doesnt make chat look weird
-        anti-force-op bug
-        lava / water bucket use on world protected areas
-        build decay
+        
 
         update the docs - N
         offline bans ------------------------ CHECK THIS N - P
@@ -140,14 +116,7 @@ changelog:
 
         
     changes:
-        the data deleter UI now has a searchval option
-        plot players ui now have option for adding players so that player cant modify the plot. the toggle is on by default
-        the addrankui now has chat and name color adding options
-        auto-reponse now accepts multipel words/phrases to a replay
-        anti-dupe only logs every 5 seconds
-        anti-force-op has new improvements
-        mob gens got improvements
-        /dobclone is more performant with the linear animation feature
+        
 
         
         zones system should have private chats *
@@ -319,38 +288,3 @@ CLIENT DEFS:
 
 
 
-These `darkoak:anticheat` module keys are defined in `anticheatSettingsV2` but are not referenced by any toggle/slider/text field/label in the UI:
-
-- `antispam`
-- `antispam2`
-- `antispam2sense`
-- `antispam3`
-- `antichatflood`
-- `antichatfloodsense`
-- `antiillegalenchant`
-- `npcdetect`
-- `antiinvalid1`
-- `antiinvalid2`
-- `antiinvalid3`
-- `antiinvalid3sense`
-- `notify`
-- `strike`
-- `strikeamount`
-- `strikedamage`
-- `anticrasher1`
-- `anticrasher1books`
-- `antidupe1`
-- `antidupeclear`
-- `antidupe2`
-- `antidupeversion`
-- `antistreamermode`
-- `anticrasher2`
-- `antiinvalid4`
-- `antiinvalid4kick`
-- `antispamactive`
-- `antivelocity`
-- `antinametags`
-- `antiantiimmobile`
-- `antiinvisskins`
-- `antispeed`
-- `antispeedsense`

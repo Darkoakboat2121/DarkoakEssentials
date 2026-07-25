@@ -1556,8 +1556,12 @@ export function betterVanillaCommands(evd) {
                 type: CustomCommandParamType.String,
                 name: 'name'
             },
+            {
+                type: CustomCommandParamType.String,
+                name: 'tag'
+            }
         ]
-    }, (evd, type, loc, amount, name) => {
+    }, (evd, type, loc, amount, name, tag) => {
         const dimen = mcl.customSlashDimen(evd)
         let r = ''
         let i = 0
@@ -1568,6 +1572,7 @@ export function betterVanillaCommands(evd) {
                 system.runTimeout(() => {
                     const ent = dimen.spawnEntity(type, loc)
                     if (name) ent.nameTag = name
+                    if (tag) ent.addTag(tag)
                 })
             } catch (e) {
                 if (r === 'success') {
@@ -1707,6 +1712,36 @@ export function betterVanillaCommands(evd) {
             const player = players[index]
             player.runCommand(`say ${message}`)
         }
+    })
+
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:dobtp',
+        description: 'Better TP Command',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.PlayerSelector,
+                name: 'players'
+            },
+            {
+                type: CustomCommandParamType.Location,
+                name: 'loc'
+            },
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:dimensions'
+            }
+        ]
+    }, (evd, players, loc, dimen) => {
+        system.runTimeout(() => {
+            for (let index = 0; index < players.length; index++) {
+                /**@type {Player} */
+                const player = players[index]
+                player.teleport(loc, {
+                    dimension: world.getDimension(mcl.decide(dimen === 'void', 'darkoak:void', `minecraft:${dimen}`))
+                })
+            }
+        })
     })
 
     // evd.customCommandRegistry.registerEnum('darkoak:slots', [EquipmentSlot.Head, EquipmentSlot.Chest, EquipmentSlot.Legs, EquipmentSlot.Feet, EquipmentSlot.Mainhand, EquipmentSlot.Offhand, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36'])

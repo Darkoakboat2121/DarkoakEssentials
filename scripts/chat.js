@@ -401,9 +401,13 @@ export function nametag(p, ocs, d) {
     if (ocs?.nametag) lines.push(((messageMap.get(p.name)?.message) ?? ''))
     if (ocs?.nametagRanks) lines.push(`${cr.start}${replacer(p, ranks.join(cr.middle))}${cr.end}`)
 
+    let final = lines.join('\n')
+
+    if (p.nameTag === final) return
+
     system.runTimeout(() => {
         try {
-            p.nameTag = lines.join('\n')
+            p.nameTag = final
         } catch {
 
         }

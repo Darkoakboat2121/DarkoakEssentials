@@ -35,7 +35,7 @@ import { signsPlus } from "./miscellaneous/signsplus"
 import { combatManager, controlFakeplayer, controlFakeplayerPrevent, fakePlayerCommand } from "./entityHandlers/fakeplayers"
 import { scoreboardHandler } from "./entityHandlers/floatingtext"
 import { invSeeLinker, invSeeLocker } from "./entityHandlers/invAccessor"
-import { crashJob, crashSet, customCombatSystem, customCombatToggle, dynamicLighting, magicItem, magicSlotter, magicTalismanActionBar, sitCheck, sitMap } from "./entityHandlers/players"
+import { crashJob, crashSet, customCombatSystem, customCombatToggle, dynamicLighting, grabbed, magicItem, magicSlotter, magicTalismanActionBar, sitCheck, sitMap } from "./entityHandlers/players"
 
 // seventh set up external uis / commands
 import * as external from "./external/external"
@@ -49,6 +49,9 @@ import { cleanMapsAndSets } from "./data/cleaner"
 import { collectPluginStats, collectRuntimeStats, DebugBox, debugDrawer, DebugText } from "@minecraft/debug-utilities"
 import { renderTexts } from "./miscellaneous/floatingtextv2"
 import { grapple } from "./miscellaneous/grapple"
+import { voidCreation } from "./dimensions/void"
+import { hardlightGeneratorRegistry } from "./miscellaneous/hardlight"
+import { entityTeams } from "./entityHandlers/teams"
 
 // import * as qr from "./debug/tests/qrcode"
 // system.runTimeout(() => {
@@ -66,7 +69,7 @@ world.afterEvents.itemUse.subscribe((evd) => {
     worldSettings.bindedItems(evd)
     magicItem(evd)
     worldEdit.otherTools(evd)
-
+    
     // system.sendScriptEvent('darkoak:afteritemuse', JSON.stringify({
     //     itemStack: evd.itemStack,
     //     source: evd.source
@@ -124,6 +127,7 @@ world.beforeEvents.playerInteractWithBlock.subscribe((evd) => {
     worldProtection.placeBreakProtection(evd)
     plotBreakPlaceProtection(evd)
     controlFakeplayerPrevent(evd)
+    worldSettings.glueAddRemove(evd)
 
     // system.runTimeout(() => {
     //     system.sendScriptEvent('darkoak:beforeplayerinteractwithblock', JSON.stringify({
@@ -320,6 +324,14 @@ world.afterEvents.itemReleaseUse.subscribe((evd) => {
 
 world.afterEvents.messageReceive.subscribe((evd) => {
     console.error(evd.id, evd.message, evd?.player?.name)
+    
+})
+
+world.afterEvents.pistonActivate.subscribe((evd) => {
+    /**@type {{x: number, y: number, z: number, dimension: string}[]} */
+    let glued = mcl.jsonWGet('darkoak:gluedblocks')
+
+    // add the glue to pistons thing
 })
 
 system.runTimeout(() => {
@@ -371,6 +383,8 @@ system.runInterval(() => {
 
     worldSettings.decayCleanup()
 
+    entityTeams()
+
 
     const players = world.getAllPlayers()
     //bans(players, cd.get('darkoak:anticheat'))
@@ -407,6 +421,14 @@ system.runInterval(() => {
         worldSettings.walls(player)
         worldSettings.blockDisplayAntiphase(player)
 
+        grabbed(player)
+
+
+
+        // import('./data/arrays').then((evd) => {
+        //     console.error(evd.capitalLetters)
+        // }) // works?????
+
 
 
         // if (mcl.tickTimer(100)) {
@@ -439,6 +461,9 @@ system.runInterval(() => {
     //     currentTick: system.currentTick
     // }))
 })
+
+/**@type {Map<string, string>} */
+export let grabMap = new Map()
 
 /**
  * @param {ItemUseAfterEvent} evd 
@@ -540,6 +565,29 @@ function itemOpeners(evd) {
             }
         }
     }
+
+    if (item.typeId === 'darkoak:grabber') {
+        if (!mcl.isDOBAdmin(player)) {
+            player.sendMessage('§cYou Need To Be an Admin To Use This Item.§r')
+            return
+        }
+        const currentGrab = grabMap.get(player?.name)
+        if ((currentGrab?.length ?? 0) > 0) {
+            grabMap.delete(player?.name)
+            return
+        }
+
+        const p = player.getEntitiesFromViewDirection({
+            type: 'minecraft:player',
+            ignoreBlockCollision: true,
+            maxDistance: 25,
+        })[0]?.entity?.name
+        grabMap.set(player.name, p)
+
+        return
+    }
+
+    
 }
 
 function communityGiver(evd) {
@@ -1551,6 +1599,34 @@ function onHold(player, players) {
             debugDrawer.addShape(t, player.dimension)
         }
     }
+    if (item?.main?.typeId === 'darkoak:glue') {
+        /**@type {{x: number, y: number, z: number, dimension: string}[]} */
+        let glued = mcl.jsonWGet('darkoak:gluedblocks')
+        if (!glued || glued?.length === 0) return
+        glued = glued.filter(e => mcl.distance(e, player.location) < 10)
+
+
+        for (let index = 0; index < glued.length; index++) {
+            const gb = glued[index]
+            let gbd = world.getDimension(gb.dimension)
+            const t = new DebugBox({
+                dimension: gbd,
+                x: gb.x + 0.51,
+                y: gb.y + 0.51,
+                z: gb.z + 0.51,
+            })
+            t.bound = { x: 1.02, y: 1.02, z: 1.02 }
+            t.visibleTo = [player]
+            t.color = {
+                red: 0,
+                green: 1.0,
+                blue: 0.5,
+                alpha: 1.0
+            }
+            t.timeLeft = 0.1
+            debugDrawer.addShape(t, gbd)
+        }
+    }
 }
 
 /**
@@ -1600,7 +1676,7 @@ let frictionMap = new Map()
  */
 function customSlashCommands(evd) {
     evd.customCommandRegistry.registerEnum('darkoak:directions', ['X+', 'X-', 'Z+', 'Z-', 'Y+', 'Y-'])
-    evd.customCommandRegistry.registerEnum('darkoak:dimensions', ['overworld', 'nether', 'end'])
+    evd.customCommandRegistry.registerEnum('darkoak:dimensions', ['overworld', 'nether', 'the_end', 'void'])
     evd.customCommandRegistry.registerEnum('darkoak:compare', ['==', '!=', '<', '>', '<=', '>='])
 
     worldEdit.WEcommands(evd)
@@ -1608,6 +1684,11 @@ function customSlashCommands(evd) {
     fakePlayerCommand(evd)
     worldEdit.betterVanillaCommands(evd)
     plotCommands(evd)
+    voidCreation(evd)
+
+    hardlightGeneratorRegistry(evd)
+
+
 
     evd.customCommandRegistry.registerEnum('darkoak:moneyfunctions', ['add', 'remove', 'set', 'test', 'list'])
     evd.customCommandRegistry.registerCommand({
@@ -3603,6 +3684,34 @@ function customSlashCommands(evd) {
         //     z: loc1.z + 5
         // }
         // debugDrawer.addShape(y, mcl.customSlashDimen(evd))
+    })
+
+    evd.customCommandRegistry.registerEnum('darkoak:teams', ['darkoak:team1', 'darkoak:team2', 'darkoak:team3', 'darkoak:team4'])
+    evd.customCommandRegistry.registerCommand({
+        name: 'darkoak:team',
+        description: 'Teams Command (Does Not Work Yet)',
+        permissionLevel: CommandPermissionLevel.GameDirectors,
+        mandatoryParameters: [
+            {
+                type: CustomCommandParamType.EntitySelector,
+                name: 'entities'
+            },
+            {
+                type: CustomCommandParamType.Enum,
+                name: 'darkoak:teams'
+            }
+        ]
+    }, (evd, entities, team) => {
+        for (let index = 0; index < entities.length; index++) {
+            /**@type {Entity} */
+            const ent = entities[index]
+            system.runTimeout(() => {
+                ent.addTag(team)
+                if (ent.target && ent.target.hasTag(team)) {
+                    ent.target = undefined
+                }
+            })
+        }
     })
 }
 

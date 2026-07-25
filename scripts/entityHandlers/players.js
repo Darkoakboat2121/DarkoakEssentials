@@ -3,6 +3,7 @@ import { mcl } from "../logic"
 import { itemToDamage } from "../data/arrays"
 import { bui } from "../uis/baseplateUI"
 import { ActionFormData } from "@minecraft/server-ui"
+import { grabMap } from "../main"
 
 export let sitMap = new Map()
 export let sittersMap = new Map()
@@ -740,5 +741,20 @@ export function dynamicLighting(player) {
 
     function clearLight() {
         if (light && player.dimension.getBlock(light)?.typeId?.startsWith('minecraft:light_block')) player.dimension.setBlockType(light, 'minecraft:air')
+    }
+}
+
+/**
+ * @param {Player} player 
+ */
+export function grabbed(player) {
+    if (grabMap.size <= 0) return
+    if (!mcl.tickTimer(10)) return
+    const grabbed = Array.from(grabMap)
+    for (let index = 0; index < grabbed.length; index++) {
+        const g = grabbed[index]
+        if (g[0] === player.name) {
+            mcl.pCommand(player, `tp ${g[1]} ^ ^ ^${player.selectedSlotIndex + 3} facing ${player?.name ?? g[1]}`)
+        }
     }
 }
