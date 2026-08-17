@@ -4879,6 +4879,32 @@ export function playerDataViewerV2(player) {
     f.show()
 }
 
+/**
+ * @param {Player} player 
+ */
+export function gifsUI(player) {
+    let f = bui.customForm(player, 'GIFs')
+
+    // f.image('textures/extra/mgunnp.gif', '5c9d1330-a02d-4d9b-97c7-216a604b047c', {
+    //     width: 1,
+    //     visible: true
+    // })
+
+    f.image('textures/extra/test.png', '5c9d1330-a02d-4d9b-97c7-216a604b047c', {
+        width: 1,
+        visible: true
+    })
+
+    f.image('textures/extra/adios.gif', '5c9d1330-a02d-4d9b-97c7-216a604b047c', {
+        width: 1,
+        visible: true
+    })
+
+    f.closeButton()
+
+    f.show()
+}
+
 
 
 

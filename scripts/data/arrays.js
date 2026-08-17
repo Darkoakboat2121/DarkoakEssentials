@@ -211,6 +211,16 @@ export const preBannedList = [
     'Ultragys', //Homophobia
     'Tubs1808', //Basic
     'lordcc7', //Basic (probably guilty, shared a clip showing pvp using a hack client and nver claimed or denied that the clip was theirs, additionally they are in multiple hacking discord servers)
+    'Jack102928', //Basic (https://youtu.be/n8pwFJMjd14)
+    'DARK DEVIL56271', //Basic (https://youtu.be/g8I72xUQp-0)
+    'Leyla9393', //Basic (https://discord.com/channels/1424798387664064687/1518373850709102682/1535466978897301604)
+    'ASTA KING 56909', //Basic (https://discord.com/channels/1424798387664064687/1518373850709102682/1535466978897301604)
+    'StuckThree47212', //Basic (https://discord.com/channels/1424798387664064687/1518373850709102682/1534295010369999080)
+    'SepiaChart2344', //Basic (https://discord.com/channels/1424798387664064687/1518373850709102682/1533880227300769914)
+    'NITH I Xip', //Basic (https://discord.com/channels/1424798387664064687/1518373850709102682/1529182342558519428)
+    'mommymarlowfeet', //Client dev (why is this a user, https://discord.com/channels/1534677063607255132/1537330645817237565/1537685693827125269)
+    'mrbeast jeet', //Alt
+    'gaysmartblackma', //Alt (what are these names???, https://youtu.be/edj3fO4Ocv8)
 ]
 
 export const prebansSet = new Set(preBannedList)

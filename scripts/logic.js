@@ -1,4 +1,4 @@
-import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel, CustomCommandOrigin, EquipmentSlot, EntityQueryOptions} from "@minecraft/server"
+import { world, system, Player, ItemStack, Container, EntityComponentTypes, Block, BlockComponentTypes, BlockSignComponent, DyeColor, ItemComponentTypes, ItemDurabilityComponent, Dimension, Entity, SignSide, PlayerPermissionLevel, GameMode, CommandPermissionLevel, CustomCommandOrigin, EquipmentSlot} from "@minecraft/server"
 import { transferPlayer } from "@minecraft/server-admin"
 import { cd, dataGet } from "./data/defaults"
 import { capitalLetters, letters, numbers, specialRanks } from "./data/arrays"
@@ -1521,7 +1521,7 @@ export class mcl {
     /**
      * 
      * @param {Entity} ent 
-     * @param {EntityQueryOptions} filters 
+     * @param {} filters 
      */
     static closestEntityToAnother(ent, filters) {
         const ents = ent.dimension.getEntities({

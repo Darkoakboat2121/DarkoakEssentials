@@ -1542,9 +1542,9 @@ function onHold(player, players) {
             const p = players[index]
             const dimenLoc = {
                 dimension: p.dimension,
-                x: p.location.x - 0.3,
-                y: p.location.y,
-                z: p.location.z - 0.3,
+                x: p.location.x + 0,
+                y: p.location.y + 0.9,
+                z: p.location.z + 0,
             }
             const t = new DebugBox(dimenLoc)
             t.bound = {
@@ -1583,9 +1583,9 @@ function onHold(player, players) {
             const b = blocks[index]
             const t = new DebugBox({
                 dimension: b.dimension,
-                x: b.x - 0,
-                y: b.y,
-                z: b.z - 0,
+                x: b.x + 0.5,
+                y: b.y + 0.5,
+                z: b.z + 0.5,
             })
             t.bound = { x: 1, y: 1, z: 1 }
             t.visibleTo = [player]

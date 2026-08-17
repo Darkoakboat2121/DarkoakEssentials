@@ -103,7 +103,7 @@ changelog:
         
 
         update the docs - N
-        offline bans ------------------------ CHECK THIS N - P
+        offline bans ------------------------ CHECK THIS RI - P
 
 
         ghost building midair ** (possibly fixed)

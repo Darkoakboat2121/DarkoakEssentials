@@ -191,6 +191,13 @@ export function magicTalismanActionBar(player) {
     player.onScreenDisplay.setActionBar(`§${magic?.slot1 || '0'}& §${magic?.slot2 || '0'}& §${magic?.slot3 || '0'}& §${magic?.slot4 || '0'}&\n§rMana: ${magic?.mana ?? (d?.maxmana ?? 20)}`)
 }
 
+/**
+ * 
+ * @param {string} spell 
+ * @param {object} d 
+ * @param {Player} player 
+ * @returns 
+ */
 function spellTyper(spell, d, player) {
     const vd = player.getViewDirection()
     const loc = player.location
@@ -325,17 +332,15 @@ function spellTyper(spell, d, player) {
                         y: loc.y,
                         z: loc.z + z,
                     }, {
-                        checkForBlocks: true,
-                        keepVelocity: true,
+                        checkForBlocks: true
                     })
                 }, Math.abs(x * 4))
             })
             system.runTimeout(() => {
                 player.teleport(loc, {
-                    checkForBlocks: true,
-                    keepVelocity: true,
+                    checkForBlocks: true
                 })
-            }, 20)
+            }, 30)
             type = 'Disorient'
             break
         case '4111':
